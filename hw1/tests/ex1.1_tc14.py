@@ -24,5 +24,5 @@ w = v + 2
 x = w + 2
 y = x + 2
 z = y + 2
-tmp0 = x - 54
-print tmp
+tmp0 = - 54 + x
+print tmp0

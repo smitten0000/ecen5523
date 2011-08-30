@@ -127,7 +127,7 @@ def pretty(node):
         raise Exception('Unknown node: %s' % node.__class__)
 
 
-def flatten (node, stmtlist):
+def flatten (node, stmtlist, discard=False):
     """Takes an AST as input, and then "flattens" the tree into a
 list of statements.  These are stored in the StatementList
 object, which is given as the 2nd argument."""
@@ -144,23 +144,31 @@ object, which is given as the 2nd argument."""
         stmtlist.append(Assign(node.nodes, flatten(node.expr, stmtlist)))
         return node.nodes[0]
     elif isinstance(node, Discard):
-        # discard nodes should be ignored.
+        # discard nodes should be ignored; except for function calls with side effects.
+        # call flatten() with discard=True
+        flatten(node.expr, stmtlist, True)
         return None
     elif isinstance(node, Add):
         left = flatten (node.left, stmtlist)
         right = flatten (node.right, stmtlist)
+        if discard:
+            return None
         varname = 'tmp%d' % stmtlist.varnum
         stmtlist.append(Assign([AssName(varname, 'OP_ASSIGN')], Add((left,right))))
         stmtlist.varnum = stmtlist.varnum + 1
         return Name(varname)
-        pass
     elif isinstance(node, UnarySub):
         f = flatten(node.expr,stmtlist)
+        if discard:
+            return None
         varname = 'tmp%d' % stmtlist.varnum
         stmtlist.append(Assign([AssName(varname, 'OP_ASSIGN')], UnarySub(f)))
         stmtlist.varnum = stmtlist.varnum + 1
         return Name(varname)
     elif isinstance(node, CallFunc):
+        if discard:
+            stmtlist.append(node)
+            return None
         varname = 'tmp%d' % stmtlist.varnum
         stmtlist.append(Assign([AssName(varname, 'OP_ASSIGN')], node))
         stmtlist.varnum = stmtlist.varnum + 1
@@ -186,8 +194,8 @@ if __name__ == "__main__":
         ast = compiler.parseFile(testcase)
         stmtlist = StatementList()
         flatten(ast, stmtlist)
-        code = '%s' % stmtlist
-        eval(compile(code,'test.txt','exec'))
+        #code = '%s' % stmtlist
+        #eval(compile(code,'test.txt','exec'))
         output = generate_assembly(stmtlist, CompilerContext())
         outputfile = '%s.s' % testcase[:testcase.rfind('.')]
         f = open(outputfile, 'w')
