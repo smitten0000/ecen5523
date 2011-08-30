@@ -189,7 +189,7 @@ if __name__ == "__main__":
         code = '%s' % stmtlist
         eval(compile(code,'test.txt','exec'))
         output = generate_assembly(stmtlist, CompilerContext())
-        outputfile = '%s.S' % testcase[:testcase.rfind('.')]
+        outputfile = '%s.s' % testcase[:testcase.rfind('.')]
         f = open(outputfile, 'w')
         print >> f, output
         f.close()
