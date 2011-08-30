@@ -1,1 +1,1 @@
-print
+print 5
