@@ -65,7 +65,6 @@ main:
 \tret
 """ % (ctxt.get_stacksize(), program)
     elif isinstance(node, Printnl):
-        print node
         arg = node.nodes[0]
         return '%s\tpushl %%eax\n\tcall print_int_nl\n\taddl $4, %%esp\n' % (generate_assembly(arg,ctxt))
     elif isinstance(node, Assign):
@@ -184,18 +183,13 @@ if __name__ == "__main__":
 
     testcases = sys.argv[1:]
     for testcase in testcases:
-        print '\nTest case "%s"' % testcase
-        os.system('cat -n %s' % testcase)
         ast = compiler.parseFile(testcase)
-        print 'AST: %s' % ast
         stmtlist = StatementList()
         flatten(ast, stmtlist)
         code = '%s' % stmtlist
-        print 'Flattened expressions for AST:\n%s' % code
         eval(compile(code,'test.txt','exec'))
         output = generate_assembly(stmtlist, CompilerContext())
         outputfile = '%s.S' % testcase[:testcase.rfind('.')]
         f = open(outputfile, 'w')
         print >> f, output
         f.close()
-        print "Assembly written to '%s'" % outputfile
