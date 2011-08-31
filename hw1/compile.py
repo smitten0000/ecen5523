@@ -11,10 +11,21 @@ class StatementList(list):
 variable number"""
     def __init__(self, varnum=0):
         self.varnum = 0
+        self.vardict = {}
     def __repr__(self):
         return "\n".join([str(x) for x in self])
         #return "\n".join([pretty(x) for x in self])
-
+    def add_var(self, varname):
+        self.vardict[varname] = True
+    def get_next_var(self):
+        done = False
+        while not done:
+            varname = 'tmp%d' % self.varnum
+            self.varnum = self.varnum + 1
+            if varname not in self.vardict or not self.vardict[varname]:
+                done = True
+        self.vardict[varname] = True
+        return varname
 
 class CompilerContext:
     def __init__(self):
@@ -141,6 +152,7 @@ object, which is given as the 2nd argument."""
         if len(node.nodes) > 0:
             stmtlist.append(Printnl([flatten(node.nodes[0], stmtlist, discard)], node.dest))
     elif isinstance(node, Assign):
+        stmtlist.add_var(node.nodes[0].name)
         stmtlist.append(Assign(node.nodes, flatten(node.expr, stmtlist, discard)))
         return node.nodes[0]
     elif isinstance(node, Discard):
@@ -153,31 +165,29 @@ object, which is given as the 2nd argument."""
         right = flatten (node.right, stmtlist, discard)
         if discard:
             return None
-        varname = 'tmp%d' % stmtlist.varnum
+        varname = stmtlist.get_next_var()
         stmtlist.append(Assign([AssName(varname, 'OP_ASSIGN')], Add((left,right))))
-        stmtlist.varnum = stmtlist.varnum + 1
         return Name(varname)
     elif isinstance(node, UnarySub):
         f = flatten(node.expr,stmtlist, discard)
         if discard:
             return None
-        varname = 'tmp%d' % stmtlist.varnum
+        varname = stmtlist.get_next_var()
         stmtlist.append(Assign([AssName(varname, 'OP_ASSIGN')], UnarySub(f)))
-        stmtlist.varnum = stmtlist.varnum + 1
         return Name(varname)
     elif isinstance(node, CallFunc):
         if discard:
             stmtlist.append(node)
             return None
-        varname = 'tmp%d' % stmtlist.varnum
+        varname = stmtlist.get_next_var()
         stmtlist.append(Assign([AssName(varname, 'OP_ASSIGN')], node))
-        stmtlist.varnum = stmtlist.varnum + 1
         return Name(varname)
     elif isinstance(node, Const):
         return node
     elif isinstance(node, Name):
         return node
     elif isinstance(node, AssName):
+        stmtlist.add_var(node.assname)
         return node
     else:
         print node
