@@ -132,16 +132,16 @@ def flatten (node, stmtlist, discard=False):
 list of statements.  These are stored in the StatementList
 object, which is given as the 2nd argument."""
     if isinstance(node, Module):
-        flatten(node.node, stmtlist)
+        flatten(node.node, stmtlist, discard)
     elif isinstance(node, Stmt):
         for node in node.nodes:
             if node is not None:
-                flatten(node, stmtlist)
+                flatten(node, stmtlist, discard)
     elif isinstance(node, Printnl):
         if len(node.nodes) > 0:
-            stmtlist.append(Printnl([flatten(node.nodes[0], stmtlist)], node.dest))
+            stmtlist.append(Printnl([flatten(node.nodes[0], stmtlist, discard)], node.dest))
     elif isinstance(node, Assign):
-        stmtlist.append(Assign(node.nodes, flatten(node.expr, stmtlist)))
+        stmtlist.append(Assign(node.nodes, flatten(node.expr, stmtlist, discard)))
         return node.nodes[0]
     elif isinstance(node, Discard):
         # discard nodes should be ignored; except for function calls with side effects.
@@ -149,8 +149,8 @@ object, which is given as the 2nd argument."""
         flatten(node.expr, stmtlist, True)
         return None
     elif isinstance(node, Add):
-        left = flatten (node.left, stmtlist)
-        right = flatten (node.right, stmtlist)
+        left = flatten (node.left, stmtlist, discard)
+        right = flatten (node.right, stmtlist, discard)
         if discard:
             return None
         varname = 'tmp%d' % stmtlist.varnum
@@ -158,7 +158,7 @@ object, which is given as the 2nd argument."""
         stmtlist.varnum = stmtlist.varnum + 1
         return Name(varname)
     elif isinstance(node, UnarySub):
-        f = flatten(node.expr,stmtlist)
+        f = flatten(node.expr,stmtlist, discard)
         if discard:
             return None
         varname = 'tmp%d' % stmtlist.varnum
