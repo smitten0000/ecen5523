@@ -84,8 +84,7 @@ object, which is given as the 2nd argument."""
         stmtlist.add_var(node.assname)
         return node
     else:
-        print node
-        raise Exception('Unknown node: %s' % node.__class__)
+        None
     
 
 def imm32_or_mem(arg, ctxt):

@@ -1,11 +1,12 @@
-#/usr/bin/python
+#! /usr/bin/python
 # vim: set ts=4 sw=4 expandtab:
 # Brent Smith <brent.m.smith@colorado.edu>
 # Robert Elsner <robert.elsner@colorado.edu>
 # CSCI5525, Fall 2011
 # HW1
-import compiler, sys, os
-from compiler.ast import *
+
+
+from comp_util import *
 
 class StatementList(list):
     """Class to encapsulate a list of statements and the next unused 
@@ -49,22 +50,39 @@ class CompilerContext:
         return self.numvars*4
 
 
-def imm32_or_mem(arg, ctxt):
-    if isinstance(arg,Const):
-        return '$%s' % arg.value
-    elif isinstance(arg,Name):
-        if not ctxt.is_allocated(arg.name):
-            raise Exception("Attempt to access an undefined variable '%s'" % arg.name)
-        return '%s(%%ebp)' % ctxt.get_location(arg.name)
-    else:
-        raise Exception("Only constants or variables are supported: '%s'" % arg)
+# Concept borrowed from http://peter-hoffmann.com/2010/extrinsic-visitor-pattern-python-inheritance.html
 
+class Visitor(object):
+    def __init__(self, ctxt):
+        self.ctxt = ctxt
+        
+    def visit(self, node, *args, **kwargs):
+        meth = None
+        meth_name = 'visit_'+node.__class__.__name__
+        meth = getattr(self, meth_name, None)
 
-def generate_assembly(node, ctxt):
-    if isinstance(node, StatementList):
+        if not meth:
+            meth = self.generic_visit
+        return meth(node, *args, **kwargs)
+
+    def generic_visit(self, node, *args, **kwargs):
+        return ''
+    def visit_Assign(self, node, *args, **kwargs):
+        assname = node.nodes[0]
+        expr = node.expr
+        if not self.ctxt.is_allocated(assname.name):
+            self.ctxt.allocate_var(assname.name)
+        # here, we assume that the result of the expression is in %eax
+        return '%s\tmovl %%eax, %s(%%ebp)\n' % (self.visit(expr), self.ctxt.get_location(assname.name))
+        
+    def visit_Printnl(self, node, *args, **kwargs):
+        arg = node.nodes[0]
+        return '%s\tpushl %%eax\n\tcall print_int_nl\n\taddl $4, %%esp\n' % (self.visit(arg))
+    
+    def visit_StatementList(self, node, *args, **kwargs):
         program = ""
         for stmt in node:
-            program = '%s\n\t# %s\n%s' % (program, pretty(stmt), generate_assembly(stmt, ctxt))
+            program = '%s\n\t# %s\n%s' % (program, pretty(stmt), self.visit(stmt))
         return """
 .globl main
 main:
@@ -75,129 +93,28 @@ main:
 \tmovl $0, %%eax # put return value in eax
 \tleave
 \tret
-""" % (ctxt.get_stacksize(), program)
-    elif isinstance(node, Printnl):
-        arg = node.nodes[0]
-        return '%s\tpushl %%eax\n\tcall print_int_nl\n\taddl $4, %%esp\n' % (generate_assembly(arg,ctxt))
-    elif isinstance(node, Assign):
-        assname = node.nodes[0]
-        expr = node.expr
-        if not ctxt.is_allocated(assname.name):
-            ctxt.allocate_var(assname.name)
-        # here, we assume that the result of the expression is in %eax
-        return '%s\tmovl %%eax, %s(%%ebp)\n' % (generate_assembly(expr, ctxt), ctxt.get_location(assname.name))
-    elif isinstance(node, Add):
-        # result of addition is in %eax
-        return '%s\taddl %s,%%eax\n' % (generate_assembly(node.left,ctxt), imm32_or_mem(node.right,ctxt))
-    elif isinstance(node, UnarySub):
+""" % (self.ctxt.get_stacksize(), program)
+    
+    def visit_Add(self, node, *args, **kwargs):
+        return '%s\taddl %s,%%eax\n' % (self.visit(node.left), imm32_or_mem(node.right, self.ctxt))
+    def visit_UnarySub(self, node, *args, **kwargs):
         # result of negation is in %eax
-        return '%s\tnegl %%eax\n' % (generate_assembly(node.expr,ctxt))
-    elif isinstance(node, CallFunc):
+        return '%s\tnegl %%eax\n' % (self.visit(node.expr))
+    def visit_CallFunc(self, node, *args, **kwargs):
         # result of function call is in %eax
         return '\tcall input\n'
-    elif isinstance(node, Const):
+    def visit_Const(self, node, *args, **kwargs):
         # constant has been moved into %eax
         return '\tmovl $%s, %%eax\n' % node.value
-    elif isinstance(node, Name):
-        if not ctxt.is_allocated(node.name):
+    def visit_Name(self, node, *args, **kwargs):
+        if not self.ctxt.is_allocated(node.name):
             raise Exception("Attempt to access an undefined variable '%s'" % node.name)
         # variable has been moved into %eax
-        return '\tmovl %s(%%ebp), %%eax\n' % (ctxt.get_location(node.name))
-    else:
-        print node
-        raise Exception('Unknown node: %s' % node.__class__)
-
-
-def pretty(node):
-    """Given an AST node, print out a human readable form."""
-    if isinstance(node, Printnl):
-        if node.dest is not None:
-            return 'print >> %s, %s' % (node.dest, pretty(node.nodes[0]))
-        else:
-            return 'print %s' % (pretty(node.nodes[0]))
-    elif isinstance(node, Assign):
-        return '%s = %s' % (pretty(node.nodes[0]), pretty(node.expr))
-    elif isinstance(node, Discard):
-        pass
-    elif isinstance(node, CallFunc):
-        if node.args is not None and len(node.args) > 0:
-            return '%s(%s)' % (pretty(node.node), node.args)
-        else:
-            return '%s()' % (pretty(node.node))
-    elif isinstance(node, Add):
-        return '%s + %s' % (pretty(node.left), pretty(node.right))
-    elif isinstance(node, UnarySub):
-        return '- %s' % (pretty(node.expr))
-    elif isinstance(node, Const):
-        return node.value
-    elif isinstance(node, Name):
-        return node.name
-    elif isinstance(node, AssName):
-        return node.name
-    else:
-        print node
-        raise Exception('Unknown node: %s' % node.__class__)
-
-
-def flatten (node, stmtlist, discard=False):
-    """Takes an AST as input, and then "flattens" the tree into a
-list of statements.  These are stored in the StatementList
-object, which is given as the 2nd argument."""
-    if isinstance(node, Module):
-        flatten(node.node, stmtlist, discard)
-    elif isinstance(node, Stmt):
-        for node in node.nodes:
-            if node is not None:
-                flatten(node, stmtlist, discard)
-    elif isinstance(node, Printnl):
-        if len(node.nodes) > 0:
-            stmtlist.append(Printnl([flatten(node.nodes[0], stmtlist, discard)], node.dest))
-    elif isinstance(node, Assign):
-        stmtlist.add_var(node.nodes[0].name)
-        stmtlist.append(Assign(node.nodes, flatten(node.expr, stmtlist, discard)))
-        return node.nodes[0]
-    elif isinstance(node, Discard):
-        # discard nodes should be ignored; except for function calls with side effects.
-        # call flatten() with discard=True
-        flatten(node.expr, stmtlist, True)
-        return None
-    elif isinstance(node, Add):
-        left = flatten (node.left, stmtlist, discard)
-        right = flatten (node.right, stmtlist, discard)
-        if discard:
-            return None
-        varname = stmtlist.get_next_var()
-        stmtlist.append(Assign([AssName(varname, 'OP_ASSIGN')], Add((left,right))))
-        return Name(varname)
-    elif isinstance(node, UnarySub):
-        f = flatten(node.expr,stmtlist, discard)
-        if discard:
-            return None
-        varname = stmtlist.get_next_var()
-        stmtlist.append(Assign([AssName(varname, 'OP_ASSIGN')], UnarySub(f)))
-        return Name(varname)
-    elif isinstance(node, CallFunc):
-        if discard:
-            stmtlist.append(node)
-            return None
-        varname = stmtlist.get_next_var()
-        stmtlist.append(Assign([AssName(varname, 'OP_ASSIGN')], node))
-        return Name(varname)
-    elif isinstance(node, Const):
-        return node
-    elif isinstance(node, Name):
-        return node
-    elif isinstance(node, AssName):
-        stmtlist.add_var(node.assname)
-        return node
-    else:
-        print node
-        raise Exception('Unknown node: %s' % node.__class__)
-    
+        return '\tmovl %s(%%ebp), %%eax\n' % (self.ctxt.get_location(node.name))
+   
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print "Usage: %s <testcase> [testcases...]"
         sys.exit(1)
 
     testcases = sys.argv[1:]
@@ -207,7 +124,8 @@ if __name__ == "__main__":
         flatten(ast, stmtlist)
         #code = '%s' % stmtlist
         #eval(compile(code,'test.txt','exec'))
-        output = generate_assembly(stmtlist, CompilerContext())
+        visitor = Visitor(CompilerContext())
+        output = visitor.visit(stmtlist)
         outputfile = '%s.s' % testcase[:testcase.rfind('.')]
         f = open(outputfile, 'w')
         print >> f, output
