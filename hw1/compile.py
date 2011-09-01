@@ -1,6 +1,7 @@
 #/usr/bin/python
 # vim: set ts=4 sw=4 expandtab:
 # Brent Smith <brent.m.smith@colorado.edu>
+# Robert Elsner <robert.elsner@colorado.edu>
 # CSCI5525, Fall 2011
 # HW1
 import compiler, sys, os
