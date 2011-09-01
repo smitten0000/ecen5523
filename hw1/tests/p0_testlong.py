@@ -30,7 +30,6 @@ tmp29 = input() + - input()
 tmp30 = 0
 print 4+ -input()
 print tmp18+tmp1
-tmp1 = input() + tmp10
 tmp1 = input() + - input()
 tmp2 = input() + - input()
 tmp3 = input() + - input()
@@ -63,7 +62,6 @@ tmp29 = input() + - input()
 tmp30 = 0
 print 4+ -input()
 print tmp18+tmp1
-tmp1 = input() + tmp10
 tmp1 = input() + - input()
 tmp2 = input() + - input()
 tmp3 = input() + - input()
@@ -96,7 +94,6 @@ tmp29 = input() + - input()
 tmp30 = 0
 print 4+ -input()
 print tmp18+tmp1
-tmp1 = input() + tmp10
 tmp1 = input() + - input()
 tmp2 = input() + - input()
 tmp3 = input() + - input()
@@ -129,7 +126,6 @@ tmp29 = input() + - input()
 tmp30 = 0
 print 4+ -input()
 print tmp18+tmp1
-tmp1 = input() + tmp10
 tmp1 = input() + - input()
 tmp2 = input() + - input()
 tmp3 = input() + - input()
@@ -162,7 +158,6 @@ tmp29 = input() + - input()
 tmp30 = 0
 print 4+ -input()
 print tmp18+tmp1
-tmp1 = input() + tmp10
 tmp1 = input() + - input()
 tmp2 = input() + - input()
 tmp3 = input() + - input()
@@ -195,7 +190,6 @@ tmp29 = input() + - input()
 tmp30 = 0
 print 4+ -input()
 print tmp18+tmp1
-tmp1 = input() + tmp10
 tmp1 = input() + - input()
 tmp2 = input() + - input()
 tmp3 = input() + - input()
@@ -228,7 +222,6 @@ tmp29 = input() + - input()
 tmp30 = 0
 print 4+ -input()
 print tmp18+tmp1
-tmp1 = input() + tmp10
 tmp1 = input() + - input()
 tmp2 = input() + - input()
 tmp3 = input() + - input()
@@ -261,7 +254,6 @@ tmp29 = input() + - input()
 tmp30 = 0
 print 4+ -input()
 print tmp18+tmp1
-tmp1 = input() + tmp10
 tmp1 = input() + - input()
 tmp2 = input() + - input()
 tmp3 = input() + - input()
@@ -294,7 +286,6 @@ tmp29 = input() + - input()
 tmp30 = 0
 print 4+ -input()
 print tmp18+tmp1
-tmp1 = input() + tmp10
 tmp1 = input() + - input()
 tmp2 = input() + - input()
 tmp3 = input() + - input()
@@ -327,7 +318,6 @@ tmp29 = input() + - input()
 tmp30 = 0
 print 4+ -input()
 print tmp18+tmp1
-tmp1 = input() + tmp10
 tmp1 = input() + - input()
 tmp2 = input() + - input()
 tmp3 = input() + - input()
@@ -360,7 +350,6 @@ tmp29 = input() + - input()
 tmp30 = 0
 print 4+ -input()
 print tmp18+tmp1
-tmp1 = input() + tmp10
 tmp1 = input() + - input()
 tmp2 = input() + - input()
 tmp3 = input() + - input()
@@ -393,7 +382,6 @@ tmp29 = input() + - input()
 tmp30 = 0
 print 4+ -input()
 print tmp18+tmp1
-tmp1 = input() + tmp10
 tmp1 = input() + - input()
 tmp2 = input() + - input()
 tmp3 = input() + - input()
@@ -426,7 +414,6 @@ tmp29 = input() + - input()
 tmp30 = 0
 print 4+ -input()
 print tmp18+tmp1
-tmp1 = input() + tmp10
 tmp1 = input() + - input()
 tmp2 = input() + - input()
 tmp3 = input() + - input()
@@ -459,40 +446,6 @@ tmp29 = input() + - input()
 tmp30 = 0
 print 4+ -input()
 print tmp18+tmp1
-tmp1 = input() + tmp10
-tmp1 = input() + - input()
-tmp2 = input() + - input()
-tmp3 = input() + - input()
-tmp4 = input() + - input()
-tmp5 = input() + - input()
-tmp6 = input() + - input()
-tmp7 = input() + - input()
-tmp8 = input() + - input()
-tmp9 = input() + - input()
-tmp10 = input() + - input()
-tmp11 = input() + - input()
-tmp12 = input() + - input()
-tmp13 = input() + - input()
-tmp14 = input() + - input()
-tmp15 = input() + - input()
-tmp16 = input() + - input()
-tmp17 = input() + - input()
-tmp18 = input() + - input()
-tmp19 = input() + - input()
-tmp20 = input() + - input()
-tmp21 = input() + - input()
-tmp22 = input() + - input()
-tmp23 = input() + - input()
-tmp24 = input() + - input()
-tmp25 = input() + - input()
-tmp26 = input() + - input()
-tmp27 = input() + - input()
-tmp28 = input() + - input()
-tmp29 = input() + - input()
-tmp30 = 0
-print 4+ -input()
-print tmp18+tmp1
-tmp1 = input() + tmp10
 tmp1 = input() + - input()
 tmp2 = input() + - input()
 tmp3 = input() + - input()
