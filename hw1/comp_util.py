@@ -36,6 +36,11 @@ def flatten (node, stmtlist, discard=False):
     """Takes an AST as input, and then "flattens" the tree into a
 list of statements.  These are stored in the StatementList
 object, which is given as the 2nd argument."""
+    # XXX: optimization.  If direct descendant in AST is also UnarySub, then
+    # we should be able to optimize the two UnarySub nodes away.
+    # X = UnarySub(UnarySub(X))  
+    while isinstance(node, UnarySub) and isinstance(node.expr, UnarySub):
+        node = node.expr.expr
     if isinstance(node, Module):
         flatten(node.node, stmtlist, discard)
     elif isinstance(node, Stmt):
