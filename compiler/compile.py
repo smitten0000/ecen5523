@@ -3,8 +3,8 @@
 # Brent Smith <brent.m.smith@colorado.edu>
 # Robert Elsner <robert.elsner@colorado.edu>
 # CSCI5525, Fall 2011
-# HW1
 
+import lexxer
 
 from comp_util import *
 
@@ -119,14 +119,15 @@ if __name__ == "__main__":
 
     testcases = sys.argv[1:]
     for testcase in testcases:
-        ast = compiler.parseFile(testcase)
-        stmtlist = StatementList()
-        flatten(ast, stmtlist)
+	    
+        #ast = compiler.parseFile(testcase)
+        #stmtlist = StatementList()
+        #flatten(ast, stmtlist)
         #code = '%s' % stmtlist
         #eval(compile(code,'test.txt','exec'))
-        visitor = Visitor(CompilerContext())
-        output = visitor.visit(stmtlist)
-        outputfile = '%s.s' % testcase[:testcase.rfind('.')]
-        f = open(outputfile, 'w')
-        print >> f, output
-        f.close()
+        #visitor = Visitor(CompilerContext())
+        #output = visitor.visit(stmtlist)
+        #outputfile = '%s.s' % testcase[:testcase.rfind('.')]
+        #f = open(outputfile, 'w')
+        #print >> f, output
+        #f.close()
