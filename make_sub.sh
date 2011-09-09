@@ -1,4 +1,4 @@
 #!/bin/bash
 rm $1*.zip
-zip -j $1.zip $1/*.py $1/*.c $1/*.h
+( cd $1 && zip -r ../$1.zip *.py *.c *.h ply/ )
 zip -j $1-tests.zip $1/tests/*

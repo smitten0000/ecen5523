@@ -25,15 +25,16 @@ class P0Parser:
 
     def p_statements(self, p):
         r'''statements : empty
-                       | NEWLINE
                        | statement 
-                       | statements statement'''
+                       | statements statement
+                       | statements NEWLINE'''
         if len(p) > 2:
-            p[0] = Stmt(p[1].nodes + [p[2]])
+            if p[2] == '\n':
+                p[0] = p[1]
+            else:
+                p[0] = Stmt(p[1].nodes + [p[2]])
         else:
             if p[1] is None:
-                p[0] = Stmt([])
-            elif p[1] == '\n':
                 p[0] = Stmt([])
             else:
                 p[0] = Stmt([p[1]])
@@ -75,8 +76,8 @@ class P0Parser:
         p[0] = p[2]
 
     # Error rule for syntax errors
-    def p_error(self, p):
-        raise SyntaxError("Syntax error in input!")
+#    def p_error(self, p):
+#        raise SyntaxError("Syntax error in input!")
 
     def build(self, **kwargs):
         self.parser = yacc.yacc(module=self, **kwargs)
@@ -120,9 +121,9 @@ if __name__ == "__main__":
             result2 = 'failed parse'
         if result1 == result2:
             print "%-30s [%s%s%s]" % (filename, green, 'OK', reset)
-            print result1 
-            print result2
+            #print result1 
+            #print result2
         else:
             print "%-30s [%s%s%s]" % (filename, red, 'FAIL', reset)
-            print result1 
-            print result2
+            #print result1 
+            #print result2
