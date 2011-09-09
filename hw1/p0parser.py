@@ -84,6 +84,12 @@ class P0Parser:
     def parse(self, data):
         return self.parser.parse(data)
 
+    def parseFile(self, filename):
+        f = open(filename,'r')
+        data = f.read()
+        f.close()
+        return self.parse(data)
+
 # main function
 if __name__ == "__main__":
     import sys, compiler
@@ -107,12 +113,10 @@ if __name__ == "__main__":
         try:
             result1 = str(pars.parse(data))
         except:
-            raise
             result1 = 'failed parse'
         try:
             result2 = str(compiler.parse(data))
         except:
-            raise
             result2 = 'failed parse'
         if result1 == result2:
             print "%-30s [%s%s%s]" % (filename, green, 'OK', reset)

@@ -117,9 +117,14 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         sys.exit(1)
 
+    from p0parser import P0Parser
+
     testcases = sys.argv[1:]
     for testcase in testcases:
-        ast = compiler.parseFile(testcase)
+        parser = P0Parser()
+        parser.build()
+        #ast = compiler.parseFile(testcase)
+        ast = parser.parseFile(testcase)
         stmtlist = StatementList()
         flatten(ast, stmtlist)
         #code = '%s' % stmtlist
