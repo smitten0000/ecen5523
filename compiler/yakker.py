@@ -1,5 +1,116 @@
 import yacc
 
+from compiler.ast import Printnl, Add, Const, CallFunc, Assign, AssName, Stmt, Module, Discard, Name, UnarySub
+
 from lexxer import tokens
 
-def p_
+
+precedence = (
+    ('nonassoc', 'CONST', 'NEWLINE'),
+    ('left','PLUS', 'UNARYSUB', 'PRINT')
+    )
+
+#def p_unarysub_statement(t):
+#    'statement : UNARYSUB statement'
+#    t[0] = UnarySub(t[2])
+    
+#def p_equals_statement(t):
+#    '''expression : LEFT_PAREN expression RIGHT_PAREN
+#                  | const
+#                  | INPUT
+#                  | name
+#                  | CALL
+#                  | expression EQUALS expression
+#                  | name EQUALS expression'''
+#    t[0] = Assign(AssName(t[1], 'OP_ASSIGN'), Stmt(t[2]))
+#program ::= module
+#module ::= simple_statement+
+#simple_statement ::= "print" expression
+#| name "=" expression
+#| expression
+#expression ::= name
+#| decimalinteger
+#| "-" expression
+#| expression "+" expression
+#| "(" expression ")"
+#| "input" "(" ")"
+
+#def p_input_statement(t):
+#    'statement : INPUT'
+#    t[0] = CallFunc(Name("input"),[])
+def p_module(t):
+    '''module : statements'''
+    t[0] = Module([],t[1])
+def p_statements(t):
+    '''statements : empty
+                  | statement
+                  | statements statement'''
+    if len(t) == 3:
+        l = t[1].nodes
+        l.append(t[2])
+        t[0] = Stmt(l)
+    elif len(t)==2:
+        t[0] = Stmt([t[1]])
+    else:
+        t[0] = Stmt([])
+def p_empty(t):
+    r'empty :'
+    pass
+       
+def p_print_statement(t):
+    '''statement  : PRINT expression NEWLINE'''
+    if len(t) == 4:
+        t[0] = Printnl([t[2]], [])
+    else:
+        t[0] = Printnl([], [])
+
+def p_unarysub_expression(t):
+    '''expression : UNARYSUB expression'''
+    t[0] = UnarySub(t[2])
+    
+def p_plus_expression(t):
+    '''expression : expression PLUS expression'''
+    t[0] = Add([t[1], t[3]])
+
+def p_paren(t):
+    '''expression : LEFT_PAREN expression RIGHT_PAREN'''
+    t[0] = t[2]
+
+def p_equals_statement(t):
+    '''statement : NAME EQUALS expression NEWLINE'''
+    t[0] = Assign([AssName(t[1], 'OP_ASSIGN')], t[3])
+
+def p_name_statement(t):
+    '''expression : NAME'''
+    t[0] = Name(t[1])
+       
+def p_const_expression(t):
+    '''expression : CONST'''
+    t[0] = Const(t[1])
+    
+def p_statement_expr(t):
+    '''statement : expression NEWLINE'''
+    t[0] = Discard(t[1])
+    
+def p_input_expression(t):
+    '''expression : INPUT LEFT_PAREN RIGHT_PAREN'''
+    t[0] = CallFunc(Name('input'),[])
+    
+def p_comment_expression(t):
+    '''expression : expression COMMENT'''
+    t[0] = t[1]
+        
+def p_comment_empty(t):
+    '''empty : COMMENT'''
+    pass
+def p_newline_empty(t):
+    '''empty : NEWLINE'''
+    pass
+    
+def p_error(t):
+    print "Syntax error at '%s'" % t
+
+
+def parse(source, lex):
+    parser = yacc.yacc()
+    return parser.parse(source, lexer=lex)

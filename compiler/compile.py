@@ -3,8 +3,8 @@
 # Brent Smith <brent.m.smith@colorado.edu>
 # Robert Elsner <robert.elsner@colorado.edu>
 # CSCI5525, Fall 2011
-
 import lexxer
+import yakker
 
 from comp_util import *
 
@@ -119,15 +119,14 @@ if __name__ == "__main__":
 
     testcases = sys.argv[1:]
     for testcase in testcases:
-	    
-        #ast = compiler.parseFile(testcase)
-        #stmtlist = StatementList()
-        #flatten(ast, stmtlist)
-        #code = '%s' % stmtlist
-        #eval(compile(code,'test.txt','exec'))
-        #visitor = Visitor(CompilerContext())
-        #output = visitor.visit(stmtlist)
-        #outputfile = '%s.s' % testcase[:testcase.rfind('.')]
-        #f = open(outputfile, 'w')
-        #print >> f, output
-        #f.close()
+        f = open(testcase, 'r')
+        source = f.read()
+        ast = yakker.parse(source, lexxer.getLex())
+        stmtlist = StatementList()
+        flatten(ast, stmtlist)
+        visitor = Visitor(CompilerContext())
+        output = visitor.visit(stmtlist)
+        outputfile = '%s.s' % testcase[:testcase.rfind('.')]
+        f = open(outputfile, 'w')
+        print >> f, output
+        f.close()

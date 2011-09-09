@@ -29,7 +29,7 @@ def pretty(node):
         return node.name
     else:
         print node
-        raise Exception('Unknown node: %s' % node.__class__)
+        raise Exception('Unknown node: %s %s' % (node.__class__, node))
 
 
 def flatten (node, stmtlist, discard=False):
@@ -84,7 +84,7 @@ object, which is given as the 2nd argument."""
         stmtlist.add_var(node.assname)
         return node
     else:
-        raise Exception('Unknown node: %s' % node.__class__)
+        raise Exception('Unknown node: %s: -%s-' % (node.__class__, node))
     
 
 def imm32_or_mem(arg, ctxt):
