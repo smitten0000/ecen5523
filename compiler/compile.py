@@ -108,7 +108,7 @@ main:
         return '\tmovl $%s, %%eax\n' % node.value
     def visit_Name(self, node, *args, **kwargs):
         if not self.ctxt.is_allocated(node.name):
-            raise Exception("Attempt to access an undefined variable '%s'" % node.name)
+            raise Exception("Attempt to access an undefined variable '%s' %s" % (node.name, node))
         # variable has been moved into %eax
         return '\tmovl %s(%%ebp), %%eax\n' % (self.ctxt.get_location(node.name))
    

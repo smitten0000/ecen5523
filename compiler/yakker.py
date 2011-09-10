@@ -10,40 +10,11 @@ precedence = (
     ('left','PLUS', 'UNARYSUB', 'PRINT')
     )
 
-#def p_unarysub_statement(t):
-#    'statement : UNARYSUB statement'
-#    t[0] = UnarySub(t[2])
-    
-#def p_equals_statement(t):
-#    '''expression : LEFT_PAREN expression RIGHT_PAREN
-#                  | const
-#                  | INPUT
-#                  | name
-#                  | CALL
-#                  | expression EQUALS expression
-#                  | name EQUALS expression'''
-#    t[0] = Assign(AssName(t[1], 'OP_ASSIGN'), Stmt(t[2]))
-#program ::= module
-#module ::= simple_statement+
-#simple_statement ::= "print" expression
-#| name "=" expression
-#| expression
-#expression ::= name
-#| decimalinteger
-#| "-" expression
-#| expression "+" expression
-#| "(" expression ")"
-#| "input" "(" ")"
-
-#def p_input_statement(t):
-#    'statement : INPUT'
-#    t[0] = CallFunc(Name("input"),[])
 def p_module(t):
     '''module : statements'''
     t[0] = Module([],t[1])
 def p_statements(t):
-    '''statements : empty
-                  | statement
+    '''statements : statement
                   | statements statement'''
     if len(t) == 3:
         l = t[1].nodes
@@ -54,11 +25,13 @@ def p_statements(t):
     else:
         t[0] = Stmt([])
 def p_empty(t):
-    r'empty :'
+    r'''statement : COMMENT NEWLINE
+              | NEWLINE'''
     pass
        
 def p_print_statement(t):
-    '''statement  : PRINT expression NEWLINE'''
+    '''statement  : PRINT expression NEWLINE
+                  | PRINT expression'''
     if len(t) == 4:
         t[0] = Printnl([t[2]], [])
     else:
@@ -99,13 +72,7 @@ def p_input_expression(t):
 def p_comment_expression(t):
     '''expression : expression COMMENT'''
     t[0] = t[1]
-        
-def p_comment_empty(t):
-    '''empty : COMMENT'''
-    pass
-def p_newline_empty(t):
-    '''empty : NEWLINE'''
-    pass
+
     
 def p_error(t):
     print "Syntax error at '%s'" % t

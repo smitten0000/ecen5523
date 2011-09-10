@@ -15,3 +15,4 @@ y = y + x
 w = y
            # live {w,x}
 w = w + x
+print z # input ()

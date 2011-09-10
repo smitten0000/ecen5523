@@ -92,7 +92,7 @@ def imm32_or_mem(arg, ctxt):
         return '$%s' % arg.value
     elif isinstance(arg,Name):
         if not ctxt.is_allocated(arg.name):
-            raise Exception("Attempt to access an undefined variable '%s'" % arg.name)
+            raise Exception("Attempt to access an undefined variable '%s' %s" % (arg, arg))
         return '%s(%%ebp)' % ctxt.get_location(arg.name)
     else:
         raise Exception("Only constants or variables are supported: '%s'" % arg)    
