@@ -121,6 +121,7 @@ if __name__ == "__main__":
     for testcase in testcases:
         f = open(testcase, 'r')
         source = f.read()
+        f.close()
         ast = yakker.parse(source, lexxer.getLex())
         stmtlist = StatementList()
         flatten(ast, stmtlist)
@@ -129,4 +130,4 @@ if __name__ == "__main__":
         outputfile = '%s.s' % testcase[:testcase.rfind('.')]
         f = open(outputfile, 'w')
         print >> f, output
-        f.close()
+        

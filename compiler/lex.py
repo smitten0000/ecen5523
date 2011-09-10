@@ -857,6 +857,26 @@ class LexerReflect(object):
                     self.error = 1
             linen += 1
             
+            
+class FilterLexxer(Lexer):
+    def __init__(self):
+        Lexer.__init__(self)
+        self.finished = False
+        
+    def token(self):
+        b = Lexer.token(self)
+        if b == None:
+            if self.finished == True:
+                return None 
+
+            b = LexToken()
+            b.type = 'EOF'
+            b.value = []
+            b.lineno = 0 
+            b.lexpos = 0
+            self.finished = True 
+        return b
+                
 # -----------------------------------------------------------------------------
 # lex(module)
 #
@@ -866,7 +886,7 @@ def lex(module=None,object=None,debug=0,optimize=0,lextab="lextab",reflags=0,now
     global lexer
     ldict = None
     stateinfo  = { 'INITIAL' : 'inclusive'}
-    lexobj = Lexer()
+    lexobj = FilterLexxer()
     lexobj.lexoptimize = optimize
     global token,input
 

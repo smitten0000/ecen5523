@@ -29,13 +29,18 @@ def pretty(node):
         return node.name
     else:
         print node
-        raise Exception('Unknown node: %s %s' % (node.__class__, node))
+        raise Exception('Unknown node: %s' % node.__class__)
 
 
 def flatten (node, stmtlist, discard=False):
     """Takes an AST as input, and then "flattens" the tree into a
 list of statements.  These are stored in the StatementList
 object, which is given as the 2nd argument."""
+    # XXX: optimization.  If direct descendant in AST is also UnarySub, then
+    # we should be able to optimize the two UnarySub nodes away.
+    # X = UnarySub(UnarySub(X))  
+    while isinstance(node, UnarySub) and isinstance(node.expr, UnarySub):
+        node = node.expr.expr
     if isinstance(node, Module):
         flatten(node.node, stmtlist, discard)
     elif isinstance(node, Stmt):
@@ -84,7 +89,7 @@ object, which is given as the 2nd argument."""
         stmtlist.add_var(node.assname)
         return node
     else:
-        raise Exception('Unknown node: %s: -%s-' % (node.__class__, node))
+        raise Exception('Unknown node: %s' % node.__class__)
     
 
 def imm32_or_mem(arg, ctxt):
@@ -92,7 +97,7 @@ def imm32_or_mem(arg, ctxt):
         return '$%s' % arg.value
     elif isinstance(arg,Name):
         if not ctxt.is_allocated(arg.name):
-            raise Exception("Attempt to access an undefined variable '%s' %s" % (arg, arg))
+            raise Exception("Attempt to access an undefined variable '%s'" % arg.name)
         return '%s(%%ebp)' % ctxt.get_location(arg.name)
     else:
         raise Exception("Only constants or variables are supported: '%s'" % arg)    

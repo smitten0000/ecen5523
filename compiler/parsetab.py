@@ -5,9 +5,9 @@ _tabversion = '3.2'
 
 _lr_method = 'LALR'
 
-_lr_signature = '\xe5\rU\x1d\x9d\x8e[\xddD\xcc&\x08}\xe8\x0c\x1f'
+_lr_signature = '49{\x8ea\xc6\xce\xd5\xed\x15v4T\xb5Y\xea'
     
-_lr_action_items = {'COMMENT':([0,2,3,4,5,8,12,13,14,16,17,19,20,21,23,24,25,26,27,28,29,],[1,1,-12,-13,-5,-2,21,-4,-3,-12,21,-7,-8,-16,-14,21,-10,-15,-6,-9,-11,]),'CONST':([0,2,4,5,6,8,10,11,13,14,15,16,19,20,21,22,23,25,26,27,28,29,],[4,4,-13,-5,4,-2,4,4,-4,-3,4,-12,-7,-8,-16,4,-14,-10,-15,-6,-9,-11,]),'NAME':([0,2,4,5,6,8,10,11,13,14,15,16,19,20,21,22,23,25,26,27,28,29,],[3,3,-13,-5,16,-2,16,16,-4,-3,16,-12,-7,-8,-16,16,-14,-10,-15,-6,-9,-11,]),'NEWLINE':([0,1,2,3,4,5,8,12,13,14,16,19,20,21,23,24,25,26,27,28,29,],[5,13,5,-12,-13,-5,-2,23,-4,-3,-12,None,-8,-16,-14,29,-10,-15,-6,-9,-11,]),'LEFT_PAREN':([0,2,4,5,6,8,9,10,11,13,14,15,16,19,20,21,22,23,25,26,27,28,29,],[6,6,-13,-5,6,-2,18,6,6,-4,-3,6,-12,-7,-8,-16,6,-14,-10,-15,-6,-9,-11,]),'EQUALS':([3,],[15,]),'RIGHT_PAREN':([4,16,17,18,20,21,25,26,28,],[-13,-12,25,26,-8,-16,-10,-15,-9,]),'PLUS':([3,4,12,16,17,19,20,21,24,25,26,28,],[-12,-13,22,-12,22,22,-8,-16,22,-10,-15,-9,]),'UNARYSUB':([0,2,4,5,6,8,10,11,13,14,15,16,19,20,21,22,23,25,26,27,28,29,],[11,11,-13,-5,11,-2,11,11,-4,-3,11,-12,-7,-8,-16,11,-14,-10,-15,-6,-9,-11,]),'PRINT':([0,2,4,5,8,13,14,16,19,20,21,23,25,26,27,28,29,],[10,10,-13,-5,-2,-4,-3,-12,-7,-8,-16,-14,-10,-15,-6,-9,-11,]),'INPUT':([0,2,4,5,6,8,10,11,13,14,15,16,19,20,21,22,23,25,26,27,28,29,],[9,9,-13,-5,9,-2,9,9,-4,-3,9,-12,-7,-8,-16,9,-14,-10,-15,-6,-9,-11,]),'$end':([2,4,5,7,8,13,14,16,19,20,21,23,25,26,27,28,29,],[-1,-13,-5,0,-2,-4,-3,-12,-7,-8,-16,-14,-10,-15,-6,-9,-11,]),}
+_lr_action_items = {'CONST':([0,1,2,3,4,5,9,12,16,18,19,22,24,26,],[10,10,-2,10,-6,-7,10,10,-4,-8,-3,10,10,-5,]),'EOF':([0,2,3,4,5,7,10,11,13,14,16,17,18,19,21,23,25,26,27,28,29,],[4,-2,4,-6,18,4,-12,-11,-13,-13,-4,4,-8,-3,-9,-15,-17,-5,-16,-14,-10,]),'RPAREN':([10,14,15,20,23,25,27,28,],[-12,-13,25,27,-15,-17,-16,-14,]),'NEWLINE':([0,2,3,4,5,7,10,11,13,14,16,17,18,19,21,23,25,26,27,28,29,],[5,-2,5,-6,-7,5,-12,-11,-13,-13,-4,5,-8,-3,-9,-15,-17,-5,-16,-14,-10,]),'EQUALS':([13,],[24,]),'PLUS':([10,11,13,14,15,21,23,25,27,28,29,],[-12,22,-13,-13,22,22,-15,-17,-16,-14,22,]),'LPAREN':([0,1,2,3,4,5,8,9,12,16,18,19,22,24,26,],[1,1,-2,1,-6,-7,20,1,1,-4,-8,-3,1,1,-5,]),'PRINT':([0,2,3,4,5,16,18,19,26,],[9,-2,9,-6,-7,-4,-8,-3,-5,]),'INPUT':([0,1,2,3,4,5,9,12,16,18,19,22,24,26,],[8,8,-2,8,-6,-7,8,8,-4,-8,-3,8,8,-5,]),'$end':([2,3,4,5,6,16,18,19,26,],[-2,-1,-6,-7,0,-4,-8,-3,-5,]),'MINUS':([0,1,2,3,4,5,9,12,16,18,19,22,24,26,],[12,12,-2,12,-6,-7,12,12,-4,-8,-3,12,12,-5,]),'NAME':([0,1,2,3,4,5,9,12,16,18,19,22,24,26,],[13,14,-2,13,-6,-7,14,14,-4,-8,-3,14,14,-5,]),}
 
 _lr_action = { }
 for _k, _v in _lr_action_items.items():
@@ -16,7 +16,7 @@ for _k, _v in _lr_action_items.items():
       _lr_action[_x][_k] = _y
 del _lr_action_items
 
-_lr_goto_items = {'expression':([0,2,6,10,11,15,22,],[12,12,17,19,20,24,28,]),'statements':([0,],[2,]),'statement':([0,2,],[8,14,]),'module':([0,],[7,]),}
+_lr_goto_items = {'expression':([0,1,3,9,12,22,24,],[11,15,11,21,23,28,29,]),'endofstmt':([0,3,7,17,],[2,16,19,26,]),'statements':([0,],[3,]),'statement':([0,3,],[7,17,]),'module':([0,],[6,]),}
 
 _lr_goto = { }
 for _k, _v in _lr_goto_items.items():
@@ -26,20 +26,21 @@ for _k, _v in _lr_goto_items.items():
 del _lr_goto_items
 _lr_productions = [
   ("S' -> module","S'",1,None,None,None),
-  ('module -> statements','module',1,'p_module','/home/relsner/ecen5523/repo/compiler/yakker.py',14),
-  ('statements -> statement','statements',1,'p_statements','/home/relsner/ecen5523/repo/compiler/yakker.py',17),
-  ('statements -> statements statement','statements',2,'p_statements','/home/relsner/ecen5523/repo/compiler/yakker.py',18),
-  ('statement -> COMMENT NEWLINE','statement',2,'p_empty','/home/relsner/ecen5523/repo/compiler/yakker.py',28),
-  ('statement -> NEWLINE','statement',1,'p_empty','/home/relsner/ecen5523/repo/compiler/yakker.py',29),
-  ('statement -> PRINT expression NEWLINE','statement',3,'p_print_statement','/home/relsner/ecen5523/repo/compiler/yakker.py',33),
-  ('statement -> PRINT expression','statement',2,'p_print_statement','/home/relsner/ecen5523/repo/compiler/yakker.py',34),
-  ('expression -> UNARYSUB expression','expression',2,'p_unarysub_expression','/home/relsner/ecen5523/repo/compiler/yakker.py',41),
-  ('expression -> expression PLUS expression','expression',3,'p_plus_expression','/home/relsner/ecen5523/repo/compiler/yakker.py',45),
-  ('expression -> LEFT_PAREN expression RIGHT_PAREN','expression',3,'p_paren','/home/relsner/ecen5523/repo/compiler/yakker.py',49),
-  ('statement -> NAME EQUALS expression NEWLINE','statement',4,'p_equals_statement','/home/relsner/ecen5523/repo/compiler/yakker.py',53),
-  ('expression -> NAME','expression',1,'p_name_statement','/home/relsner/ecen5523/repo/compiler/yakker.py',57),
-  ('expression -> CONST','expression',1,'p_const_expression','/home/relsner/ecen5523/repo/compiler/yakker.py',61),
-  ('statement -> expression NEWLINE','statement',2,'p_statement_expr','/home/relsner/ecen5523/repo/compiler/yakker.py',65),
-  ('expression -> INPUT LEFT_PAREN RIGHT_PAREN','expression',3,'p_input_expression','/home/relsner/ecen5523/repo/compiler/yakker.py',69),
-  ('expression -> expression COMMENT','expression',2,'p_comment_expression','/home/relsner/ecen5523/repo/compiler/yakker.py',73),
+  ('module -> statements','module',1,'p_module','/home/relsner/ecen5523/repo/compiler/yakker.py',13),
+  ('statements -> endofstmt','statements',1,'p_statements','/home/relsner/ecen5523/repo/compiler/yakker.py',17),
+  ('statements -> statement endofstmt','statements',2,'p_statements','/home/relsner/ecen5523/repo/compiler/yakker.py',18),
+  ('statements -> statements endofstmt','statements',2,'p_statements','/home/relsner/ecen5523/repo/compiler/yakker.py',19),
+  ('statements -> statements statement endofstmt','statements',3,'p_statements','/home/relsner/ecen5523/repo/compiler/yakker.py',20),
+  ('endofstmt -> EOF','endofstmt',1,'p_endofstmt','/home/relsner/ecen5523/repo/compiler/yakker.py',32),
+  ('endofstmt -> NEWLINE','endofstmt',1,'p_endofstmt','/home/relsner/ecen5523/repo/compiler/yakker.py',33),
+  ('endofstmt -> NEWLINE EOF','endofstmt',2,'p_endofstmt','/home/relsner/ecen5523/repo/compiler/yakker.py',34),
+  ('statement -> PRINT expression','statement',2,'p_statement_print','/home/relsner/ecen5523/repo/compiler/yakker.py',38),
+  ('statement -> NAME EQUALS expression','statement',3,'p_statement_assign','/home/relsner/ecen5523/repo/compiler/yakker.py',42),
+  ('statement -> expression','statement',1,'p_statement_expr','/home/relsner/ecen5523/repo/compiler/yakker.py',46),
+  ('expression -> CONST','expression',1,'p_expression_const','/home/relsner/ecen5523/repo/compiler/yakker.py',50),
+  ('expression -> NAME','expression',1,'p_expression_name','/home/relsner/ecen5523/repo/compiler/yakker.py',54),
+  ('expression -> expression PLUS expression','expression',3,'p_expression_add','/home/relsner/ecen5523/repo/compiler/yakker.py',58),
+  ('expression -> MINUS expression','expression',2,'p_expression_unarysub','/home/relsner/ecen5523/repo/compiler/yakker.py',62),
+  ('expression -> INPUT LPAREN RPAREN','expression',3,'p_expression_input','/home/relsner/ecen5523/repo/compiler/yakker.py',66),
+  ('expression -> LPAREN expression RPAREN','expression',3,'p_expression_paren','/home/relsner/ecen5523/repo/compiler/yakker.py',70),
 ]

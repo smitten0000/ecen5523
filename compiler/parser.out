@@ -4,43 +4,45 @@ Grammar
 
 Rule 0     S' -> module
 Rule 1     module -> statements
-Rule 2     statements -> statement
-Rule 3     statements -> statements statement
-Rule 4     statement -> COMMENT NEWLINE
-Rule 5     statement -> NEWLINE
-Rule 6     statement -> PRINT expression NEWLINE
-Rule 7     statement -> PRINT expression
-Rule 8     expression -> UNARYSUB expression
-Rule 9     expression -> expression PLUS expression
-Rule 10    expression -> LEFT_PAREN expression RIGHT_PAREN
-Rule 11    statement -> NAME EQUALS expression NEWLINE
-Rule 12    expression -> NAME
-Rule 13    expression -> CONST
-Rule 14    statement -> expression NEWLINE
-Rule 15    expression -> INPUT LEFT_PAREN RIGHT_PAREN
-Rule 16    expression -> expression COMMENT
+Rule 2     statements -> endofstmt
+Rule 3     statements -> statement endofstmt
+Rule 4     statements -> statements endofstmt
+Rule 5     statements -> statements statement endofstmt
+Rule 6     endofstmt -> EOF
+Rule 7     endofstmt -> NEWLINE
+Rule 8     endofstmt -> NEWLINE EOF
+Rule 9     statement -> PRINT expression
+Rule 10    statement -> NAME EQUALS expression
+Rule 11    statement -> expression
+Rule 12    expression -> CONST
+Rule 13    expression -> NAME
+Rule 14    expression -> expression PLUS expression
+Rule 15    expression -> MINUS expression
+Rule 16    expression -> INPUT LPAREN RPAREN
+Rule 17    expression -> LPAREN expression RPAREN
 
 Terminals, with rules where they appear
 
-COMMENT              : 4 16
-CONST                : 13
-EQUALS               : 11
-INPUT                : 15
-LEFT_PAREN           : 10 15
-NAME                 : 11 12
-NEWLINE              : 4 5 6 11 14
-PLUS                 : 9
-PRINT                : 6 7
-RIGHT_PAREN          : 10 15
-UNARYSUB             : 8
+CONST                : 12
+EOF                  : 6 8
+EQUALS               : 10
+INPUT                : 16
+LPAREN               : 16 17
+MINUS                : 15
+NAME                 : 10 13
+NEWLINE              : 7 8
+PLUS                 : 14
+PRINT                : 9
+RPAREN               : 16 17
 error                : 
 
 Nonterminals, with rules where they appear
 
-expression           : 6 7 8 9 9 10 11 14 16
+endofstmt            : 2 3 4 5
+expression           : 9 10 11 14 14 15 17
 module               : 0
-statement            : 2 3
-statements           : 1 3
+statement            : 3 5
+statements           : 1 4 5
 
 Parsing method: LALR
 
@@ -48,486 +50,429 @@ state 0
 
     (0) S' -> . module
     (1) module -> . statements
-    (2) statements -> . statement
-    (3) statements -> . statements statement
-    (4) statement -> . COMMENT NEWLINE
-    (5) statement -> . NEWLINE
-    (6) statement -> . PRINT expression NEWLINE
-    (7) statement -> . PRINT expression
-    (11) statement -> . NAME EQUALS expression NEWLINE
-    (14) statement -> . expression NEWLINE
-    (8) expression -> . UNARYSUB expression
-    (9) expression -> . expression PLUS expression
-    (10) expression -> . LEFT_PAREN expression RIGHT_PAREN
-    (12) expression -> . NAME
-    (13) expression -> . CONST
-    (15) expression -> . INPUT LEFT_PAREN RIGHT_PAREN
-    (16) expression -> . expression COMMENT
+    (2) statements -> . endofstmt
+    (3) statements -> . statement endofstmt
+    (4) statements -> . statements endofstmt
+    (5) statements -> . statements statement endofstmt
+    (6) endofstmt -> . EOF
+    (7) endofstmt -> . NEWLINE
+    (8) endofstmt -> . NEWLINE EOF
+    (9) statement -> . PRINT expression
+    (10) statement -> . NAME EQUALS expression
+    (11) statement -> . expression
+    (12) expression -> . CONST
+    (13) expression -> . NAME
+    (14) expression -> . expression PLUS expression
+    (15) expression -> . MINUS expression
+    (16) expression -> . INPUT LPAREN RPAREN
+    (17) expression -> . LPAREN expression RPAREN
 
-    COMMENT         shift and go to state 1
+    EOF             shift and go to state 4
     NEWLINE         shift and go to state 5
-    PRINT           shift and go to state 10
-    NAME            shift and go to state 3
-    UNARYSUB        shift and go to state 11
-    LEFT_PAREN      shift and go to state 6
-    CONST           shift and go to state 4
-    INPUT           shift and go to state 9
+    PRINT           shift and go to state 9
+    NAME            shift and go to state 13
+    CONST           shift and go to state 10
+    MINUS           shift and go to state 12
+    INPUT           shift and go to state 8
+    LPAREN          shift and go to state 1
 
-    expression                     shift and go to state 12
-    statements                     shift and go to state 2
-    statement                      shift and go to state 8
-    module                         shift and go to state 7
+    expression                     shift and go to state 11
+    endofstmt                      shift and go to state 2
+    statements                     shift and go to state 3
+    statement                      shift and go to state 7
+    module                         shift and go to state 6
 
 state 1
 
-    (4) statement -> COMMENT . NEWLINE
+    (17) expression -> LPAREN . expression RPAREN
+    (12) expression -> . CONST
+    (13) expression -> . NAME
+    (14) expression -> . expression PLUS expression
+    (15) expression -> . MINUS expression
+    (16) expression -> . INPUT LPAREN RPAREN
+    (17) expression -> . LPAREN expression RPAREN
 
-    NEWLINE         shift and go to state 13
+    CONST           shift and go to state 10
+    NAME            shift and go to state 14
+    MINUS           shift and go to state 12
+    INPUT           shift and go to state 8
+    LPAREN          shift and go to state 1
 
+    expression                     shift and go to state 15
 
 state 2
 
-    (1) module -> statements .
-    (3) statements -> statements . statement
-    (4) statement -> . COMMENT NEWLINE
-    (5) statement -> . NEWLINE
-    (6) statement -> . PRINT expression NEWLINE
-    (7) statement -> . PRINT expression
-    (11) statement -> . NAME EQUALS expression NEWLINE
-    (14) statement -> . expression NEWLINE
-    (8) expression -> . UNARYSUB expression
-    (9) expression -> . expression PLUS expression
-    (10) expression -> . LEFT_PAREN expression RIGHT_PAREN
-    (12) expression -> . NAME
-    (13) expression -> . CONST
-    (15) expression -> . INPUT LEFT_PAREN RIGHT_PAREN
-    (16) expression -> . expression COMMENT
+    (2) statements -> endofstmt .
 
-    $end            reduce using rule 1 (module -> statements .)
-    COMMENT         shift and go to state 1
-    NEWLINE         shift and go to state 5
-    PRINT           shift and go to state 10
-    NAME            shift and go to state 3
-    UNARYSUB        shift and go to state 11
-    LEFT_PAREN      shift and go to state 6
-    CONST           shift and go to state 4
-    INPUT           shift and go to state 9
+    EOF             reduce using rule 2 (statements -> endofstmt .)
+    NEWLINE         reduce using rule 2 (statements -> endofstmt .)
+    PRINT           reduce using rule 2 (statements -> endofstmt .)
+    NAME            reduce using rule 2 (statements -> endofstmt .)
+    CONST           reduce using rule 2 (statements -> endofstmt .)
+    MINUS           reduce using rule 2 (statements -> endofstmt .)
+    INPUT           reduce using rule 2 (statements -> endofstmt .)
+    LPAREN          reduce using rule 2 (statements -> endofstmt .)
+    $end            reduce using rule 2 (statements -> endofstmt .)
 
-    expression                     shift and go to state 12
-    statement                      shift and go to state 14
 
 state 3
 
-    (11) statement -> NAME . EQUALS expression NEWLINE
-    (12) expression -> NAME .
+    (1) module -> statements .
+    (4) statements -> statements . endofstmt
+    (5) statements -> statements . statement endofstmt
+    (6) endofstmt -> . EOF
+    (7) endofstmt -> . NEWLINE
+    (8) endofstmt -> . NEWLINE EOF
+    (9) statement -> . PRINT expression
+    (10) statement -> . NAME EQUALS expression
+    (11) statement -> . expression
+    (12) expression -> . CONST
+    (13) expression -> . NAME
+    (14) expression -> . expression PLUS expression
+    (15) expression -> . MINUS expression
+    (16) expression -> . INPUT LPAREN RPAREN
+    (17) expression -> . LPAREN expression RPAREN
 
-    EQUALS          shift and go to state 15
-    NEWLINE         reduce using rule 12 (expression -> NAME .)
-    PLUS            reduce using rule 12 (expression -> NAME .)
-    COMMENT         reduce using rule 12 (expression -> NAME .)
+    $end            reduce using rule 1 (module -> statements .)
+    EOF             shift and go to state 4
+    NEWLINE         shift and go to state 5
+    PRINT           shift and go to state 9
+    NAME            shift and go to state 13
+    CONST           shift and go to state 10
+    MINUS           shift and go to state 12
+    INPUT           shift and go to state 8
+    LPAREN          shift and go to state 1
 
+    expression                     shift and go to state 11
+    endofstmt                      shift and go to state 16
+    statement                      shift and go to state 17
 
 state 4
 
-    (13) expression -> CONST .
+    (6) endofstmt -> EOF .
 
-    NEWLINE         reduce using rule 13 (expression -> CONST .)
-    PLUS            reduce using rule 13 (expression -> CONST .)
-    COMMENT         reduce using rule 13 (expression -> CONST .)
-    RIGHT_PAREN     reduce using rule 13 (expression -> CONST .)
-    PRINT           reduce using rule 13 (expression -> CONST .)
-    NAME            reduce using rule 13 (expression -> CONST .)
-    UNARYSUB        reduce using rule 13 (expression -> CONST .)
-    LEFT_PAREN      reduce using rule 13 (expression -> CONST .)
-    CONST           reduce using rule 13 (expression -> CONST .)
-    INPUT           reduce using rule 13 (expression -> CONST .)
-    $end            reduce using rule 13 (expression -> CONST .)
+    EOF             reduce using rule 6 (endofstmt -> EOF .)
+    NEWLINE         reduce using rule 6 (endofstmt -> EOF .)
+    PRINT           reduce using rule 6 (endofstmt -> EOF .)
+    NAME            reduce using rule 6 (endofstmt -> EOF .)
+    CONST           reduce using rule 6 (endofstmt -> EOF .)
+    MINUS           reduce using rule 6 (endofstmt -> EOF .)
+    INPUT           reduce using rule 6 (endofstmt -> EOF .)
+    LPAREN          reduce using rule 6 (endofstmt -> EOF .)
+    $end            reduce using rule 6 (endofstmt -> EOF .)
 
 
 state 5
 
-    (5) statement -> NEWLINE .
+    (7) endofstmt -> NEWLINE .
+    (8) endofstmt -> NEWLINE . EOF
 
-    COMMENT         reduce using rule 5 (statement -> NEWLINE .)
-    NEWLINE         reduce using rule 5 (statement -> NEWLINE .)
-    PRINT           reduce using rule 5 (statement -> NEWLINE .)
-    NAME            reduce using rule 5 (statement -> NEWLINE .)
-    UNARYSUB        reduce using rule 5 (statement -> NEWLINE .)
-    LEFT_PAREN      reduce using rule 5 (statement -> NEWLINE .)
-    CONST           reduce using rule 5 (statement -> NEWLINE .)
-    INPUT           reduce using rule 5 (statement -> NEWLINE .)
-    $end            reduce using rule 5 (statement -> NEWLINE .)
+  ! shift/reduce conflict for EOF resolved as shift
+    NEWLINE         reduce using rule 7 (endofstmt -> NEWLINE .)
+    PRINT           reduce using rule 7 (endofstmt -> NEWLINE .)
+    NAME            reduce using rule 7 (endofstmt -> NEWLINE .)
+    CONST           reduce using rule 7 (endofstmt -> NEWLINE .)
+    MINUS           reduce using rule 7 (endofstmt -> NEWLINE .)
+    INPUT           reduce using rule 7 (endofstmt -> NEWLINE .)
+    LPAREN          reduce using rule 7 (endofstmt -> NEWLINE .)
+    $end            reduce using rule 7 (endofstmt -> NEWLINE .)
+    EOF             shift and go to state 18
+
+  ! EOF             [ reduce using rule 7 (endofstmt -> NEWLINE .) ]
 
 
 state 6
-
-    (10) expression -> LEFT_PAREN . expression RIGHT_PAREN
-    (8) expression -> . UNARYSUB expression
-    (9) expression -> . expression PLUS expression
-    (10) expression -> . LEFT_PAREN expression RIGHT_PAREN
-    (12) expression -> . NAME
-    (13) expression -> . CONST
-    (15) expression -> . INPUT LEFT_PAREN RIGHT_PAREN
-    (16) expression -> . expression COMMENT
-
-    UNARYSUB        shift and go to state 11
-    LEFT_PAREN      shift and go to state 6
-    NAME            shift and go to state 16
-    CONST           shift and go to state 4
-    INPUT           shift and go to state 9
-
-    expression                     shift and go to state 17
-
-state 7
 
     (0) S' -> module .
 
 
 
+state 7
+
+    (3) statements -> statement . endofstmt
+    (6) endofstmt -> . EOF
+    (7) endofstmt -> . NEWLINE
+    (8) endofstmt -> . NEWLINE EOF
+
+    EOF             shift and go to state 4
+    NEWLINE         shift and go to state 5
+
+    endofstmt                      shift and go to state 19
+
 state 8
 
-    (2) statements -> statement .
+    (16) expression -> INPUT . LPAREN RPAREN
 
-    COMMENT         reduce using rule 2 (statements -> statement .)
-    NEWLINE         reduce using rule 2 (statements -> statement .)
-    PRINT           reduce using rule 2 (statements -> statement .)
-    NAME            reduce using rule 2 (statements -> statement .)
-    UNARYSUB        reduce using rule 2 (statements -> statement .)
-    LEFT_PAREN      reduce using rule 2 (statements -> statement .)
-    CONST           reduce using rule 2 (statements -> statement .)
-    INPUT           reduce using rule 2 (statements -> statement .)
-    $end            reduce using rule 2 (statements -> statement .)
+    LPAREN          shift and go to state 20
 
 
 state 9
 
-    (15) expression -> INPUT . LEFT_PAREN RIGHT_PAREN
+    (9) statement -> PRINT . expression
+    (12) expression -> . CONST
+    (13) expression -> . NAME
+    (14) expression -> . expression PLUS expression
+    (15) expression -> . MINUS expression
+    (16) expression -> . INPUT LPAREN RPAREN
+    (17) expression -> . LPAREN expression RPAREN
 
-    LEFT_PAREN      shift and go to state 18
+    CONST           shift and go to state 10
+    NAME            shift and go to state 14
+    MINUS           shift and go to state 12
+    INPUT           shift and go to state 8
+    LPAREN          shift and go to state 1
 
+    expression                     shift and go to state 21
 
 state 10
 
-    (6) statement -> PRINT . expression NEWLINE
-    (7) statement -> PRINT . expression
-    (8) expression -> . UNARYSUB expression
-    (9) expression -> . expression PLUS expression
-    (10) expression -> . LEFT_PAREN expression RIGHT_PAREN
-    (12) expression -> . NAME
-    (13) expression -> . CONST
-    (15) expression -> . INPUT LEFT_PAREN RIGHT_PAREN
-    (16) expression -> . expression COMMENT
+    (12) expression -> CONST .
 
-    UNARYSUB        shift and go to state 11
-    LEFT_PAREN      shift and go to state 6
-    NAME            shift and go to state 16
-    CONST           shift and go to state 4
-    INPUT           shift and go to state 9
+    PLUS            reduce using rule 12 (expression -> CONST .)
+    EOF             reduce using rule 12 (expression -> CONST .)
+    NEWLINE         reduce using rule 12 (expression -> CONST .)
+    RPAREN          reduce using rule 12 (expression -> CONST .)
 
-    expression                     shift and go to state 19
 
 state 11
 
-    (8) expression -> UNARYSUB . expression
-    (8) expression -> . UNARYSUB expression
-    (9) expression -> . expression PLUS expression
-    (10) expression -> . LEFT_PAREN expression RIGHT_PAREN
-    (12) expression -> . NAME
-    (13) expression -> . CONST
-    (15) expression -> . INPUT LEFT_PAREN RIGHT_PAREN
-    (16) expression -> . expression COMMENT
+    (11) statement -> expression .
+    (14) expression -> expression . PLUS expression
 
-    UNARYSUB        shift and go to state 11
-    LEFT_PAREN      shift and go to state 6
-    NAME            shift and go to state 16
-    CONST           shift and go to state 4
-    INPUT           shift and go to state 9
+    EOF             reduce using rule 11 (statement -> expression .)
+    NEWLINE         reduce using rule 11 (statement -> expression .)
+    PLUS            shift and go to state 22
 
-    expression                     shift and go to state 20
 
 state 12
 
-    (14) statement -> expression . NEWLINE
-    (9) expression -> expression . PLUS expression
-    (16) expression -> expression . COMMENT
+    (15) expression -> MINUS . expression
+    (12) expression -> . CONST
+    (13) expression -> . NAME
+    (14) expression -> . expression PLUS expression
+    (15) expression -> . MINUS expression
+    (16) expression -> . INPUT LPAREN RPAREN
+    (17) expression -> . LPAREN expression RPAREN
 
-    NEWLINE         shift and go to state 23
-    PLUS            shift and go to state 22
-    COMMENT         shift and go to state 21
+    CONST           shift and go to state 10
+    NAME            shift and go to state 14
+    MINUS           shift and go to state 12
+    INPUT           shift and go to state 8
+    LPAREN          shift and go to state 1
 
+    expression                     shift and go to state 23
 
 state 13
 
-    (4) statement -> COMMENT NEWLINE .
+    (10) statement -> NAME . EQUALS expression
+    (13) expression -> NAME .
 
-    COMMENT         reduce using rule 4 (statement -> COMMENT NEWLINE .)
-    NEWLINE         reduce using rule 4 (statement -> COMMENT NEWLINE .)
-    PRINT           reduce using rule 4 (statement -> COMMENT NEWLINE .)
-    NAME            reduce using rule 4 (statement -> COMMENT NEWLINE .)
-    UNARYSUB        reduce using rule 4 (statement -> COMMENT NEWLINE .)
-    LEFT_PAREN      reduce using rule 4 (statement -> COMMENT NEWLINE .)
-    CONST           reduce using rule 4 (statement -> COMMENT NEWLINE .)
-    INPUT           reduce using rule 4 (statement -> COMMENT NEWLINE .)
-    $end            reduce using rule 4 (statement -> COMMENT NEWLINE .)
+    EQUALS          shift and go to state 24
+    PLUS            reduce using rule 13 (expression -> NAME .)
+    EOF             reduce using rule 13 (expression -> NAME .)
+    NEWLINE         reduce using rule 13 (expression -> NAME .)
 
 
 state 14
 
-    (3) statements -> statements statement .
+    (13) expression -> NAME .
 
-    COMMENT         reduce using rule 3 (statements -> statements statement .)
-    NEWLINE         reduce using rule 3 (statements -> statements statement .)
-    PRINT           reduce using rule 3 (statements -> statements statement .)
-    NAME            reduce using rule 3 (statements -> statements statement .)
-    UNARYSUB        reduce using rule 3 (statements -> statements statement .)
-    LEFT_PAREN      reduce using rule 3 (statements -> statements statement .)
-    CONST           reduce using rule 3 (statements -> statements statement .)
-    INPUT           reduce using rule 3 (statements -> statements statement .)
-    $end            reduce using rule 3 (statements -> statements statement .)
+    PLUS            reduce using rule 13 (expression -> NAME .)
+    EOF             reduce using rule 13 (expression -> NAME .)
+    NEWLINE         reduce using rule 13 (expression -> NAME .)
+    RPAREN          reduce using rule 13 (expression -> NAME .)
 
 
 state 15
 
-    (11) statement -> NAME EQUALS . expression NEWLINE
-    (8) expression -> . UNARYSUB expression
-    (9) expression -> . expression PLUS expression
-    (10) expression -> . LEFT_PAREN expression RIGHT_PAREN
-    (12) expression -> . NAME
-    (13) expression -> . CONST
-    (15) expression -> . INPUT LEFT_PAREN RIGHT_PAREN
-    (16) expression -> . expression COMMENT
+    (17) expression -> LPAREN expression . RPAREN
+    (14) expression -> expression . PLUS expression
 
-    UNARYSUB        shift and go to state 11
-    LEFT_PAREN      shift and go to state 6
-    NAME            shift and go to state 16
-    CONST           shift and go to state 4
-    INPUT           shift and go to state 9
+    RPAREN          shift and go to state 25
+    PLUS            shift and go to state 22
 
-    expression                     shift and go to state 24
 
 state 16
 
-    (12) expression -> NAME .
+    (4) statements -> statements endofstmt .
 
-    PLUS            reduce using rule 12 (expression -> NAME .)
-    COMMENT         reduce using rule 12 (expression -> NAME .)
-    NEWLINE         reduce using rule 12 (expression -> NAME .)
-    RIGHT_PAREN     reduce using rule 12 (expression -> NAME .)
-    PRINT           reduce using rule 12 (expression -> NAME .)
-    NAME            reduce using rule 12 (expression -> NAME .)
-    UNARYSUB        reduce using rule 12 (expression -> NAME .)
-    LEFT_PAREN      reduce using rule 12 (expression -> NAME .)
-    CONST           reduce using rule 12 (expression -> NAME .)
-    INPUT           reduce using rule 12 (expression -> NAME .)
-    $end            reduce using rule 12 (expression -> NAME .)
+    EOF             reduce using rule 4 (statements -> statements endofstmt .)
+    NEWLINE         reduce using rule 4 (statements -> statements endofstmt .)
+    PRINT           reduce using rule 4 (statements -> statements endofstmt .)
+    NAME            reduce using rule 4 (statements -> statements endofstmt .)
+    CONST           reduce using rule 4 (statements -> statements endofstmt .)
+    MINUS           reduce using rule 4 (statements -> statements endofstmt .)
+    INPUT           reduce using rule 4 (statements -> statements endofstmt .)
+    LPAREN          reduce using rule 4 (statements -> statements endofstmt .)
+    $end            reduce using rule 4 (statements -> statements endofstmt .)
 
 
 state 17
 
-    (10) expression -> LEFT_PAREN expression . RIGHT_PAREN
-    (9) expression -> expression . PLUS expression
-    (16) expression -> expression . COMMENT
+    (5) statements -> statements statement . endofstmt
+    (6) endofstmt -> . EOF
+    (7) endofstmt -> . NEWLINE
+    (8) endofstmt -> . NEWLINE EOF
 
-    RIGHT_PAREN     shift and go to state 25
-    PLUS            shift and go to state 22
-    COMMENT         shift and go to state 21
+    EOF             shift and go to state 4
+    NEWLINE         shift and go to state 5
 
+    endofstmt                      shift and go to state 26
 
 state 18
 
-    (15) expression -> INPUT LEFT_PAREN . RIGHT_PAREN
+    (8) endofstmt -> NEWLINE EOF .
 
-    RIGHT_PAREN     shift and go to state 26
+    EOF             reduce using rule 8 (endofstmt -> NEWLINE EOF .)
+    NEWLINE         reduce using rule 8 (endofstmt -> NEWLINE EOF .)
+    PRINT           reduce using rule 8 (endofstmt -> NEWLINE EOF .)
+    NAME            reduce using rule 8 (endofstmt -> NEWLINE EOF .)
+    CONST           reduce using rule 8 (endofstmt -> NEWLINE EOF .)
+    MINUS           reduce using rule 8 (endofstmt -> NEWLINE EOF .)
+    INPUT           reduce using rule 8 (endofstmt -> NEWLINE EOF .)
+    LPAREN          reduce using rule 8 (endofstmt -> NEWLINE EOF .)
+    $end            reduce using rule 8 (endofstmt -> NEWLINE EOF .)
 
 
 state 19
 
-    (6) statement -> PRINT expression . NEWLINE
-    (7) statement -> PRINT expression .
-    (9) expression -> expression . PLUS expression
-    (16) expression -> expression . COMMENT
+    (3) statements -> statement endofstmt .
 
-    NEWLINE         shift and go to state 27
-    COMMENT         reduce using rule 7 (statement -> PRINT expression .)
-    PRINT           reduce using rule 7 (statement -> PRINT expression .)
-    NAME            reduce using rule 7 (statement -> PRINT expression .)
-    UNARYSUB        reduce using rule 7 (statement -> PRINT expression .)
-    LEFT_PAREN      reduce using rule 7 (statement -> PRINT expression .)
-    CONST           reduce using rule 7 (statement -> PRINT expression .)
-    INPUT           reduce using rule 7 (statement -> PRINT expression .)
-    $end            reduce using rule 7 (statement -> PRINT expression .)
-    PLUS            shift and go to state 22
-
-  ! NEWLINE         [ reduce using rule 7 (statement -> PRINT expression .) ]
-  ! COMMENT         [ shift and go to state 21 ]
+    EOF             reduce using rule 3 (statements -> statement endofstmt .)
+    NEWLINE         reduce using rule 3 (statements -> statement endofstmt .)
+    PRINT           reduce using rule 3 (statements -> statement endofstmt .)
+    NAME            reduce using rule 3 (statements -> statement endofstmt .)
+    CONST           reduce using rule 3 (statements -> statement endofstmt .)
+    MINUS           reduce using rule 3 (statements -> statement endofstmt .)
+    INPUT           reduce using rule 3 (statements -> statement endofstmt .)
+    LPAREN          reduce using rule 3 (statements -> statement endofstmt .)
+    $end            reduce using rule 3 (statements -> statement endofstmt .)
 
 
 state 20
 
-    (8) expression -> UNARYSUB expression .
-    (9) expression -> expression . PLUS expression
-    (16) expression -> expression . COMMENT
+    (16) expression -> INPUT LPAREN . RPAREN
 
-    NEWLINE         reduce using rule 8 (expression -> UNARYSUB expression .)
-    PLUS            reduce using rule 8 (expression -> UNARYSUB expression .)
-    COMMENT         reduce using rule 8 (expression -> UNARYSUB expression .)
-    RIGHT_PAREN     reduce using rule 8 (expression -> UNARYSUB expression .)
-    PRINT           reduce using rule 8 (expression -> UNARYSUB expression .)
-    NAME            reduce using rule 8 (expression -> UNARYSUB expression .)
-    UNARYSUB        reduce using rule 8 (expression -> UNARYSUB expression .)
-    LEFT_PAREN      reduce using rule 8 (expression -> UNARYSUB expression .)
-    CONST           reduce using rule 8 (expression -> UNARYSUB expression .)
-    INPUT           reduce using rule 8 (expression -> UNARYSUB expression .)
-    $end            reduce using rule 8 (expression -> UNARYSUB expression .)
-
-  ! PLUS            [ shift and go to state 22 ]
-  ! COMMENT         [ shift and go to state 21 ]
+    RPAREN          shift and go to state 27
 
 
 state 21
 
-    (16) expression -> expression COMMENT .
+    (9) statement -> PRINT expression .
+    (14) expression -> expression . PLUS expression
 
-    NEWLINE         reduce using rule 16 (expression -> expression COMMENT .)
-    PLUS            reduce using rule 16 (expression -> expression COMMENT .)
-    COMMENT         reduce using rule 16 (expression -> expression COMMENT .)
-    RIGHT_PAREN     reduce using rule 16 (expression -> expression COMMENT .)
-    PRINT           reduce using rule 16 (expression -> expression COMMENT .)
-    NAME            reduce using rule 16 (expression -> expression COMMENT .)
-    UNARYSUB        reduce using rule 16 (expression -> expression COMMENT .)
-    LEFT_PAREN      reduce using rule 16 (expression -> expression COMMENT .)
-    CONST           reduce using rule 16 (expression -> expression COMMENT .)
-    INPUT           reduce using rule 16 (expression -> expression COMMENT .)
-    $end            reduce using rule 16 (expression -> expression COMMENT .)
+    EOF             reduce using rule 9 (statement -> PRINT expression .)
+    NEWLINE         reduce using rule 9 (statement -> PRINT expression .)
+    PLUS            shift and go to state 22
 
 
 state 22
 
-    (9) expression -> expression PLUS . expression
-    (8) expression -> . UNARYSUB expression
-    (9) expression -> . expression PLUS expression
-    (10) expression -> . LEFT_PAREN expression RIGHT_PAREN
-    (12) expression -> . NAME
-    (13) expression -> . CONST
-    (15) expression -> . INPUT LEFT_PAREN RIGHT_PAREN
-    (16) expression -> . expression COMMENT
+    (14) expression -> expression PLUS . expression
+    (12) expression -> . CONST
+    (13) expression -> . NAME
+    (14) expression -> . expression PLUS expression
+    (15) expression -> . MINUS expression
+    (16) expression -> . INPUT LPAREN RPAREN
+    (17) expression -> . LPAREN expression RPAREN
 
-    UNARYSUB        shift and go to state 11
-    LEFT_PAREN      shift and go to state 6
-    NAME            shift and go to state 16
-    CONST           shift and go to state 4
-    INPUT           shift and go to state 9
+    CONST           shift and go to state 10
+    NAME            shift and go to state 14
+    MINUS           shift and go to state 12
+    INPUT           shift and go to state 8
+    LPAREN          shift and go to state 1
 
     expression                     shift and go to state 28
 
 state 23
 
-    (14) statement -> expression NEWLINE .
+    (15) expression -> MINUS expression .
+    (14) expression -> expression . PLUS expression
 
-    COMMENT         reduce using rule 14 (statement -> expression NEWLINE .)
-    NEWLINE         reduce using rule 14 (statement -> expression NEWLINE .)
-    PRINT           reduce using rule 14 (statement -> expression NEWLINE .)
-    NAME            reduce using rule 14 (statement -> expression NEWLINE .)
-    UNARYSUB        reduce using rule 14 (statement -> expression NEWLINE .)
-    LEFT_PAREN      reduce using rule 14 (statement -> expression NEWLINE .)
-    CONST           reduce using rule 14 (statement -> expression NEWLINE .)
-    INPUT           reduce using rule 14 (statement -> expression NEWLINE .)
-    $end            reduce using rule 14 (statement -> expression NEWLINE .)
+    PLUS            reduce using rule 15 (expression -> MINUS expression .)
+    EOF             reduce using rule 15 (expression -> MINUS expression .)
+    NEWLINE         reduce using rule 15 (expression -> MINUS expression .)
+    RPAREN          reduce using rule 15 (expression -> MINUS expression .)
+
+  ! PLUS            [ shift and go to state 22 ]
 
 
 state 24
 
-    (11) statement -> NAME EQUALS expression . NEWLINE
-    (9) expression -> expression . PLUS expression
-    (16) expression -> expression . COMMENT
+    (10) statement -> NAME EQUALS . expression
+    (12) expression -> . CONST
+    (13) expression -> . NAME
+    (14) expression -> . expression PLUS expression
+    (15) expression -> . MINUS expression
+    (16) expression -> . INPUT LPAREN RPAREN
+    (17) expression -> . LPAREN expression RPAREN
 
-    NEWLINE         shift and go to state 29
-    PLUS            shift and go to state 22
-    COMMENT         shift and go to state 21
+    CONST           shift and go to state 10
+    NAME            shift and go to state 14
+    MINUS           shift and go to state 12
+    INPUT           shift and go to state 8
+    LPAREN          shift and go to state 1
 
+    expression                     shift and go to state 29
 
 state 25
 
-    (10) expression -> LEFT_PAREN expression RIGHT_PAREN .
+    (17) expression -> LPAREN expression RPAREN .
 
-    NEWLINE         reduce using rule 10 (expression -> LEFT_PAREN expression RIGHT_PAREN .)
-    PLUS            reduce using rule 10 (expression -> LEFT_PAREN expression RIGHT_PAREN .)
-    COMMENT         reduce using rule 10 (expression -> LEFT_PAREN expression RIGHT_PAREN .)
-    RIGHT_PAREN     reduce using rule 10 (expression -> LEFT_PAREN expression RIGHT_PAREN .)
-    PRINT           reduce using rule 10 (expression -> LEFT_PAREN expression RIGHT_PAREN .)
-    NAME            reduce using rule 10 (expression -> LEFT_PAREN expression RIGHT_PAREN .)
-    UNARYSUB        reduce using rule 10 (expression -> LEFT_PAREN expression RIGHT_PAREN .)
-    LEFT_PAREN      reduce using rule 10 (expression -> LEFT_PAREN expression RIGHT_PAREN .)
-    CONST           reduce using rule 10 (expression -> LEFT_PAREN expression RIGHT_PAREN .)
-    INPUT           reduce using rule 10 (expression -> LEFT_PAREN expression RIGHT_PAREN .)
-    $end            reduce using rule 10 (expression -> LEFT_PAREN expression RIGHT_PAREN .)
+    PLUS            reduce using rule 17 (expression -> LPAREN expression RPAREN .)
+    EOF             reduce using rule 17 (expression -> LPAREN expression RPAREN .)
+    NEWLINE         reduce using rule 17 (expression -> LPAREN expression RPAREN .)
+    RPAREN          reduce using rule 17 (expression -> LPAREN expression RPAREN .)
 
 
 state 26
 
-    (15) expression -> INPUT LEFT_PAREN RIGHT_PAREN .
+    (5) statements -> statements statement endofstmt .
 
-    NEWLINE         reduce using rule 15 (expression -> INPUT LEFT_PAREN RIGHT_PAREN .)
-    PLUS            reduce using rule 15 (expression -> INPUT LEFT_PAREN RIGHT_PAREN .)
-    COMMENT         reduce using rule 15 (expression -> INPUT LEFT_PAREN RIGHT_PAREN .)
-    RIGHT_PAREN     reduce using rule 15 (expression -> INPUT LEFT_PAREN RIGHT_PAREN .)
-    PRINT           reduce using rule 15 (expression -> INPUT LEFT_PAREN RIGHT_PAREN .)
-    NAME            reduce using rule 15 (expression -> INPUT LEFT_PAREN RIGHT_PAREN .)
-    UNARYSUB        reduce using rule 15 (expression -> INPUT LEFT_PAREN RIGHT_PAREN .)
-    LEFT_PAREN      reduce using rule 15 (expression -> INPUT LEFT_PAREN RIGHT_PAREN .)
-    CONST           reduce using rule 15 (expression -> INPUT LEFT_PAREN RIGHT_PAREN .)
-    INPUT           reduce using rule 15 (expression -> INPUT LEFT_PAREN RIGHT_PAREN .)
-    $end            reduce using rule 15 (expression -> INPUT LEFT_PAREN RIGHT_PAREN .)
+    EOF             reduce using rule 5 (statements -> statements statement endofstmt .)
+    NEWLINE         reduce using rule 5 (statements -> statements statement endofstmt .)
+    PRINT           reduce using rule 5 (statements -> statements statement endofstmt .)
+    NAME            reduce using rule 5 (statements -> statements statement endofstmt .)
+    CONST           reduce using rule 5 (statements -> statements statement endofstmt .)
+    MINUS           reduce using rule 5 (statements -> statements statement endofstmt .)
+    INPUT           reduce using rule 5 (statements -> statements statement endofstmt .)
+    LPAREN          reduce using rule 5 (statements -> statements statement endofstmt .)
+    $end            reduce using rule 5 (statements -> statements statement endofstmt .)
 
 
 state 27
 
-    (6) statement -> PRINT expression NEWLINE .
+    (16) expression -> INPUT LPAREN RPAREN .
 
-    COMMENT         reduce using rule 6 (statement -> PRINT expression NEWLINE .)
-    NEWLINE         reduce using rule 6 (statement -> PRINT expression NEWLINE .)
-    PRINT           reduce using rule 6 (statement -> PRINT expression NEWLINE .)
-    NAME            reduce using rule 6 (statement -> PRINT expression NEWLINE .)
-    UNARYSUB        reduce using rule 6 (statement -> PRINT expression NEWLINE .)
-    LEFT_PAREN      reduce using rule 6 (statement -> PRINT expression NEWLINE .)
-    CONST           reduce using rule 6 (statement -> PRINT expression NEWLINE .)
-    INPUT           reduce using rule 6 (statement -> PRINT expression NEWLINE .)
-    $end            reduce using rule 6 (statement -> PRINT expression NEWLINE .)
+    PLUS            reduce using rule 16 (expression -> INPUT LPAREN RPAREN .)
+    EOF             reduce using rule 16 (expression -> INPUT LPAREN RPAREN .)
+    NEWLINE         reduce using rule 16 (expression -> INPUT LPAREN RPAREN .)
+    RPAREN          reduce using rule 16 (expression -> INPUT LPAREN RPAREN .)
 
 
 state 28
 
-    (9) expression -> expression PLUS expression .
-    (9) expression -> expression . PLUS expression
-    (16) expression -> expression . COMMENT
+    (14) expression -> expression PLUS expression .
+    (14) expression -> expression . PLUS expression
 
-    NEWLINE         reduce using rule 9 (expression -> expression PLUS expression .)
-    PLUS            reduce using rule 9 (expression -> expression PLUS expression .)
-    COMMENT         reduce using rule 9 (expression -> expression PLUS expression .)
-    RIGHT_PAREN     reduce using rule 9 (expression -> expression PLUS expression .)
-    PRINT           reduce using rule 9 (expression -> expression PLUS expression .)
-    NAME            reduce using rule 9 (expression -> expression PLUS expression .)
-    UNARYSUB        reduce using rule 9 (expression -> expression PLUS expression .)
-    LEFT_PAREN      reduce using rule 9 (expression -> expression PLUS expression .)
-    CONST           reduce using rule 9 (expression -> expression PLUS expression .)
-    INPUT           reduce using rule 9 (expression -> expression PLUS expression .)
-    $end            reduce using rule 9 (expression -> expression PLUS expression .)
+    PLUS            reduce using rule 14 (expression -> expression PLUS expression .)
+    EOF             reduce using rule 14 (expression -> expression PLUS expression .)
+    NEWLINE         reduce using rule 14 (expression -> expression PLUS expression .)
+    RPAREN          reduce using rule 14 (expression -> expression PLUS expression .)
 
   ! PLUS            [ shift and go to state 22 ]
-  ! COMMENT         [ shift and go to state 21 ]
 
 
 state 29
 
-    (11) statement -> NAME EQUALS expression NEWLINE .
+    (10) statement -> NAME EQUALS expression .
+    (14) expression -> expression . PLUS expression
 
-    COMMENT         reduce using rule 11 (statement -> NAME EQUALS expression NEWLINE .)
-    NEWLINE         reduce using rule 11 (statement -> NAME EQUALS expression NEWLINE .)
-    PRINT           reduce using rule 11 (statement -> NAME EQUALS expression NEWLINE .)
-    NAME            reduce using rule 11 (statement -> NAME EQUALS expression NEWLINE .)
-    UNARYSUB        reduce using rule 11 (statement -> NAME EQUALS expression NEWLINE .)
-    LEFT_PAREN      reduce using rule 11 (statement -> NAME EQUALS expression NEWLINE .)
-    CONST           reduce using rule 11 (statement -> NAME EQUALS expression NEWLINE .)
-    INPUT           reduce using rule 11 (statement -> NAME EQUALS expression NEWLINE .)
-    $end            reduce using rule 11 (statement -> NAME EQUALS expression NEWLINE .)
+    EOF             reduce using rule 10 (statement -> NAME EQUALS expression .)
+    NEWLINE         reduce using rule 10 (statement -> NAME EQUALS expression .)
+    PLUS            shift and go to state 22
 
+WARNING: 
+WARNING: Conflicts:
+WARNING: 
+WARNING: shift/reduce conflict for EOF in state 5 resolved as shift

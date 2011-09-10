@@ -1,55 +1,72 @@
-
 import lex as us
+
 reserved = {
-   'print' : 'PRINT',
-   'input' : 'INPUT'
+    'print' : 'PRINT',
+    'input' : 'INPUT',
 }
 
-tokens = [ 'NEWLINE', 'PLUS', 'CONST', 'NAME', 'UNARYSUB',  'EQUALS', 'LEFT_PAREN', 'RIGHT_PAREN', 'COMMENT']+list(reserved.values())
-#'NAME',
-t_PLUS = r'\+'
+tokens = ('CONST',       # constant integer
+          'NAME',        # identifier (variable or function name)
+          'PLUS',        # addition operator (+)
+          'EQUALS',      # assignment operator (=)
+          'MINUS',       # negation operator (-)
+          'LPAREN',      # (
+          'RPAREN',      # )
+          'NEWLINE',     # a new line to separate statements.
+          'EOF',   # end of file
+         ) + tuple(reserved.values())
 
-def t_CONST(t):
-    r'\d+'
-    try:
-        t.value = int(t.value)
-    except ValueError:
-        print "integer overflow", t.value
-        t.value = 0
-    return t
+# whitespace
+t_ignore = ' \t\r'  # ignore space and horizontal tab
 
-#def t_CALL(t):
-#    r'[a-zA-Z][a-zA-Z0-9_]{0,}([ \t]+\([\t ,]*\))'
-#    return t
-
-def t_NAME(t):
-    r'[a-zA-Z_][a-zA-Z_0-9]*'
-    t.type = reserved.get(t.value,'NAME')    # Check for reserved words
-    return t
-
-t_UNARYSUB = r'-'
-
-t_EQUALS = r'='
-
-t_LEFT_PAREN = r'\('
-
-t_RIGHT_PAREN = r'\)'
-
-t_ignore = ' \t'
-
-t_COMMENT = r'\#.*'
-
-def t_NEWLINE(t):
-    r'\n+'
-    t.lexer.lineno += len(t.value)
+# newline handling
+def t_newline(t):
+    r'[\n\r]+'
+    t.lexer.lineno += t.value.count("\n")
     t.type = 'NEWLINE'
     return t
-    
+
+# error handling
 def t_error(t):
     print "Illegal character '%s'" % t.value[0]
     t.lexer.skip(1)
 
+# basic tokens
+t_PLUS    = r'\+'
+t_EQUALS  = r'='
+t_MINUS   = r'-'
+t_LPAREN  = r'\('
+t_RPAREN  = r'\)'
+t_ignore_COMMENT = r'\#.*'
+
+# advanced tokens (defined as functions)
+
+# identifiers (names)
+def t_NAME(t):
+    r'[a-zA-Z_][a-zA-Z_0-9]*'
+    # assign the type attribute the value 'ID', unless the identifier is
+    # in the list of reserved words, in which case we lookup the type in
+    # the dictionary.
+    t.type = reserved.get(t.value,'NAME')
+    return t
+
+# constants (numeric)
+def t_CONST(t):
+    r'\d+'
+    try:
+        t.value = int(t.value)
+    except:
+        print "Integer value too large: ", t.value
+        t.value = 0
+    return t
+
+
 def getLex():
     return us.lex()
 
+
+
+        
+        
+    
 
