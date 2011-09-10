@@ -13,4 +13,4 @@ libruntime.a: $(OBJS)
 	gcc -c $<
 
 clean:
-	rm -f $(OBJS) libruntime.a
+	rm -f $(OBJS) libruntime.a *.pyc parser.out parsetab.py tests/*.s

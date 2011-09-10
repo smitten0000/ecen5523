@@ -21,6 +21,7 @@ class P0Lexer:
               'LPAREN',      # (
               'RPAREN',      # )
               'NEWLINE',     # a new line to separate statements.
+              'ENDMARKER',   # end of file
              ) + tuple(reserved.values())
 
     # whitespace
@@ -71,8 +72,34 @@ class P0Lexer:
     def build(self,**kwargs):
         self.lexer = lex.lex(module=self, **kwargs)
 
-    def input(self, data):
+    # add an ENDMARKER at the very end of the token stream
+    # this marks the end of the file
+    def filter(self, add_endmarker=True):
+        tokens = iter(self.lexer.token,None)
+        for token in tokens:
+            yield token
+
+        if add_endmarker:
+            token = lex.LexToken()
+            token.type = 'ENDMARKER'
+            token.value = None
+            token.lineno = 0 
+            token.lexpos = 0 
+            yield token
+
+    def input(self, data, add_endmarker=True):
         self.lexer.input(data)
+        self.token_stream = self.filter(add_endmarker)
+
+    # implement the token interface
+    def token(self):
+        try:
+            return self.token_stream.next()
+        except StopIteration:
+            return None
+
+    def __iter__(self):
+        return self.token_stream
 
 # main function
 if __name__ == "__main__":
@@ -91,5 +118,5 @@ if __name__ == "__main__":
         data = f.read()
         f.close()
         lexer.input(data)
-        for token in lexer.lexer:
+        for token in lexer:
             print token

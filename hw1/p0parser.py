@@ -20,35 +20,37 @@ class P0Parser:
         r'module : statements'
         p[0] = Module(None,p[1])
 
-    def p_empty(self, p):
-        r'empty : '
-
     def p_statements(self, p):
-        r'''statements : empty
-                       | statement 
-                       | statements statement
-                       | statements NEWLINE'''
-        if len(p) > 2:
-            if p[2] == '\n':
+        r'''statements : endofstmt
+                       | statement endofstmt
+                       | statements endofstmt
+                       | statements statement endofstmt'''
+        if len(p) == 4:
+            p[0] = Stmt(p[1].nodes + [p[2]])
+        elif len(p) == 3:
+            if isinstance(p[1], Stmt):
                 p[0] = p[1]
             else:
-                p[0] = Stmt(p[1].nodes + [p[2]])
-        else:
-            if p[1] is None:
-                p[0] = Stmt([])
-            else:
                 p[0] = Stmt([p[1]])
+        else:
+            p[0] = Stmt([])
+
+    def p_endofstmt(self, p):
+        r'''endofstmt : ENDMARKER
+                      | NEWLINE
+                      | NEWLINE ENDMARKER'''
+        return None
 
     def p_statement_print(self, p):
-        r'statement : PRINT expression NEWLINE'
+        r'''statement : PRINT expression'''
         p[0] = Printnl([p[2]], None)
 
     def p_statement_assign(self, p):
-        r'statement : NAME EQUALS expression NEWLINE'
+        r'''statement : NAME EQUALS expression'''
         p[0] = Assign([AssName(p[1],'OP_ASSIGN')],p[3])
 
     def p_statement_expr(self, p):
-        r'statement : expression NEWLINE'
+        r'''statement : expression'''
         p[0] = Discard(p[1])
 
     def p_expression_const(self, p):
@@ -76,14 +78,14 @@ class P0Parser:
         p[0] = p[2]
 
     # Error rule for syntax errors
-#    def p_error(self, p):
-#        raise SyntaxError("Syntax error in input!")
+    def p_error(self, p):
+        raise SyntaxError(p)
 
     def build(self, **kwargs):
         self.parser = yacc.yacc(module=self, **kwargs)
 
     def parse(self, data):
-        return self.parser.parse(data)
+        return self.parser.parse(data, lexer=self.lexer, debug=0)
 
     def parseFile(self, filename):
         f = open(filename,'r')
@@ -114,16 +116,16 @@ if __name__ == "__main__":
         try:
             result1 = str(pars.parse(data))
         except:
+            raise
             result1 = 'failed parse'
         try:
             result2 = str(compiler.parse(data))
         except:
+            raise
             result2 = 'failed parse'
         if result1 == result2:
             print "%-30s [%s%s%s]" % (filename, green, 'OK', reset)
-            #print result1 
-            #print result2
         else:
             print "%-30s [%s%s%s]" % (filename, red, 'FAIL', reset)
-            #print result1 
-            #print result2
+            print result1 
+            print result2
