@@ -1,3 +1,4 @@
+# Cool, our Makefile!
 OBJS = \
 	runtime.o \
 	hashtable.o \
