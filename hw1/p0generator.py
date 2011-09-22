@@ -56,7 +56,6 @@ main:
         return ("\t# %s\n" %  node.source) + "\n".join([self.visit(x) for x in node.instructions]) + "\n"
 
     def visit_Movl(self, node, *args, **kwargs):
-        print node.dst
         if isinstance(node.dst, Var) and not self.is_allocated(node.dst.name):
             self.allocate_var(node.dst.name)
         return '\tmovl %s, %s' % (self.visit(node.src), self.visit(node.dst))

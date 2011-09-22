@@ -26,15 +26,11 @@ if __name__ == "__main__":
         stmtlist = p0flattener.flatten(ast)
         #code = '%s' % stmtlist
         #eval(compile(code,'test.txt','exec'))
-        print stmtlist
-        #visitor = Visitor(CompilerContext())
-        #output = visitor.visit(stmtlist)
         instruction_selector = P0InstructionSelector()
         program = instruction_selector.visit(stmtlist)
-        print program
         generator = P0Generator()
-        print generator.generate(program)
-        #outputfile = '%s.s' % testcase[:testcase.rfind('.')]
-        #f = open(outputfile, 'w')
-        #print >> f, output
-        #f.close()
+        output = generator.generate(program)
+        outputfile = '%s.s' % testcase[:testcase.rfind('.')]
+        f = open(outputfile, 'w')
+        print >> f, output
+        f.close()

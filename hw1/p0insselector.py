@@ -37,6 +37,10 @@ class P0InstructionSelector(object):
         if not self.is_allocated(assname.name):
             self.allocate_var(assname.name)
         loc, stmtlist = self.visit(node.expr)
+        # handle memory to memory moves
+        if isinstance(loc, Var):
+            stmtlist = stmtlist + [Movl(loc, Register('eax'))]
+            loc = Register('eax')
         return stmtlist + [Movl(loc, Var(assname.name))]
         
     def visit_Printnl(self, node, *args, **kwargs):

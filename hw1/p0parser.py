@@ -107,4 +107,7 @@ if __name__ == "__main__":
     pars.build()
 
     for filename in sys.argv[1:]:
+        f = open(filename, 'r')
+        data = f.read()
+        f.close()
         print str(pars.parse(data))
