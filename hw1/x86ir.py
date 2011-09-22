@@ -63,7 +63,7 @@ class Addl(Instruction):
         self.src = src 
         self.dst = dst 
     def __str__(self):
-        return "Add(%s,%s)" % (self.src, self.dst)
+        return "Addl(%s,%s)" % (self.src, self.dst)
     def __repr__(self):
         return self.__str__()
     def writes(self):

@@ -58,7 +58,13 @@ main:
     def visit_Movl(self, node, *args, **kwargs):
         if isinstance(node.dst, Var) and not self.is_allocated(node.dst.name):
             self.allocate_var(node.dst.name)
-        return '\tmovl %s, %s' % (self.visit(node.src), self.visit(node.dst))
+        stmtlist=[]
+        # handle memory to memory moves
+        if isinstance(node.src,Var) and isinstance(node.dst, Var):
+            stmtlist.append('\tmovl %s, %s' % (self.visit(node.src), self.visit(Register('eax'))))
+            node.src = Register('eax')
+        stmtlist.append('\tmovl %s, %s' % (self.visit(node.src), self.visit(node.dst)))
+        return "\n".join(stmtlist)
         
     def visit_Pushl(self, node, *args, **kwargs):
         return '\tpushl %s' % (self.visit(node.src))
@@ -86,6 +92,7 @@ main:
 
 if __name__ == "__main__":
     import sys
+    from comp_util import *
     from p0parser import P0Parser
     from p0flattener import P0Flattener
     from p0insselector import P0InstructionSelector
@@ -97,9 +104,10 @@ if __name__ == "__main__":
         parser.build()
         #ast = compiler.parseFile(testcase)
         ast = parser.parseFile(testcase)
-        p0flattener = P0Flattener()
+        varalloc = VariableAllocator()
+        p0flattener = P0Flattener(varalloc)
         stmtlist = p0flattener.flatten(ast)
-        instruction_selector = P0InstructionSelector()
+        instruction_selector = P0InstructionSelector(varalloc)
         program = instruction_selector.visit(stmtlist)
         generator = P0Generator()
         print generator.generate(program)

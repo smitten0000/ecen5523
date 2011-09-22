@@ -21,6 +21,7 @@ class P0RegAllocator:
 
 if __name__ == "__main__":
     import sys
+    from comp_util import *
     from p0parser import P0Parser
     from p0flattener import P0Flattener
     from p0insselector import P0InstructionSelector
@@ -32,9 +33,10 @@ if __name__ == "__main__":
         parser.build()
         #ast = compiler.parseFile(testcase)
         ast = parser.parseFile(testcase)
-        p0flattener = P0Flattener()
+        varalloc = VariableAllocator()
+        p0flattener = P0Flattener(varalloc)
         stmtlist = p0flattener.flatten(ast)
-        instruction_selector = P0InstructionSelector()
+        instruction_selector = P0InstructionSelector(varalloc)
         program = instruction_selector.visit(stmtlist)
         regallocator = P0RegAllocator()
         regallocator.liveness_analyze(program)

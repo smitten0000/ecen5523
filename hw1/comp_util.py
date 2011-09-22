@@ -2,6 +2,33 @@
 
 from compiler.ast import *
 
+class VariableAllocator:
+    """Provides context allocating variables by storing a set
+    of currently used variables and the next variable number"""
+    def __init__(self, varnum=0, varset=set()):
+        self.varnum = varnum
+        self.varset = varset
+
+    def add_var(self, varname):
+        self.varset.add(varname)
+
+    def get_next_var(self):
+        done = False
+        while not done:
+            varname = 'tmp%d' % self.varnum
+            self.varnum = self.varnum + 1
+            if varname not in self.varset:
+                done = True
+        self.add_var(varname)
+        return varname
+
+    def is_allocated(self, varname):
+        return varname in self.varset
+
+    def __str__(self):
+        return 'VariableAllocator(%s,%s)' % (self.varnum, self.varset)
+
+
 def pretty(node):
     """Given an AST node, print out a human readable form."""
     if isinstance(node, Printnl):

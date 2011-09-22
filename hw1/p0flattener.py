@@ -1,32 +1,12 @@
 # vim: set ts=4 sw=4 expandtab:
-import compiler, sys, os
 from compiler.ast import *
+from comp_util import *
 from p0parser import P0Parser
 
 class P0Flattener:
-    """Class to performing flattening of complex expressions.  
-    Provides context for the flattening operation by storing a list
-    of currently used variables and the next variable number"""
-    def __init__(self, varnum=0):
-        self.varnum = 0
-        self.vardict = {}
-
-    #def __repr__(self):
-    #    return "\n".join([str(x) for x in self])
-    #    return "\n".join([pretty(x) for x in self])
-
-    def add_var(self, varname):
-        self.vardict[varname] = True
-
-    def get_next_var(self):
-        done = False
-        while not done:
-            varname = 'tmp%d' % self.varnum
-            self.varnum = self.varnum + 1
-            if varname not in self.vardict or not self.vardict[varname]:
-                done = True
-        self.vardict[varname] = True
-        return varname
+    """Class to performing flattening of complex expressions."""
+    def __init__ (self, varalloc):
+        self.varalloc = varalloc
 
     def flatten (self, node):
         """Takes an AST as input, and then "flattens" the tree into a list of statements."""
@@ -44,7 +24,7 @@ class P0Flattener:
                 var, stmtlist = self.flatten(node.nodes[0])
                 return stmtlist + [Printnl([var], node.dest)]
         elif isinstance(node, Assign):
-            self.add_var(node.nodes[0].name)
+            self.varalloc.add_var(node.nodes[0].name)
             var, stmtlist = self.flatten(node.expr)
             return stmtlist + [Assign(node.nodes, var)]
         elif isinstance(node, Discard):
@@ -54,27 +34,28 @@ class P0Flattener:
         elif isinstance(node, Add):
             left, stmtleft = self.flatten(node.left)
             right, stmtright = self.flatten(node.right)
-            varname = self.get_next_var()
+            varname = self.varalloc.get_next_var()
             return (Name(varname), stmtleft + stmtright + [Assign([AssName(varname, 'OP_ASSIGN')], Add((left,right)))] )
         elif isinstance(node, UnarySub):
             f, stmtlist = self.flatten(node.expr)
-            varname = self.get_next_var()
+            varname = self.varalloc.get_next_var()
             return (Name(varname), stmtlist + [Assign([AssName(varname, 'OP_ASSIGN')], UnarySub(f))])
         elif isinstance(node, CallFunc):
-            varname = self.get_next_var()
+            varname = self.varalloc.get_next_var()
             return (Name(varname), [Assign([AssName(varname, 'OP_ASSIGN')], node)])
         elif isinstance(node, Const):
             return (node, [])
         elif isinstance(node, Name):
             return (node, [])
         elif isinstance(node, AssName):
-            stmtlist.add_var(node.assname)
+            stmtlist.varalloc.add_var(node.assname)
             return (node, [])
         else:
             raise Exception('Unknown node: %s' % node.__class__)
 
 
 if __name__ == "__main__":
+    import compiler, sys
     if len(sys.argv) < 2:
         sys.exit(1)
 
@@ -84,6 +65,6 @@ if __name__ == "__main__":
         parser.build()
         #ast = compiler.parseFile(testcase)
         ast = parser.parseFile(testcase)
-        p0flattener = P0Flattener()
+        p0flattener = P0Flattener(VariableAllocator())
         stmtlist = p0flattener.flatten(ast)
         print stmtlist
