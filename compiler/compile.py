@@ -7,6 +7,7 @@ import lexxer
 import yakker
 
 from comp_util import *
+from types import *
 
 class StatementList(list):
     """Class to encapsulate a list of statements and the next unused 
@@ -85,12 +86,15 @@ class Visitor(object):
     def visit_Assign(self, node, *args, **kwargs):
         assname = node.nodes[0]
         expr = node.expr
-        if not self.ctxt.is_allocated(assname.name):
-            self.ctxt.allocate_var(assname.name)
-        # here, we assume that the result of the expression is in %eax
         gen_code = []
-        gen_code.extend(self.visit(expr))
-        mvinst = Move(assname.name, unk)
+        #if not self.ctxt.is_allocated(assname.name):
+            #self.ctxt.allocate_var(assname.name)
+        if isinstance(expr, Const) or isinstance(expr, Name):
+            mvinst = Move(assname.name, expr)
+        else:  
+            mvinst = Move(assname.name, expr)
+            #self.visit(expr)
+            #mvinst = Move(assname.name, unk)
         gen_code.append(mvinst)
         return gen_code
         #return '%s\tmovl %%eax, %s(%%ebp)\n' % (, self.ctxt.get_location(assname.name))
@@ -107,9 +111,8 @@ class Visitor(object):
         return program
     
     def visit_Add(self, node, *args, **kwargs):
-        list = self.visit(node.left)
-        list.append(Add(node.left, node.right))
-        return list
+        print '*** %s '%node
+        return Add(node.left, node.right)
         #return '%s\taddl %s,%%eax\n' % (self.visit(node.left), imm32_or_mem(node.right, self.ctxt))
     def visit_UnarySub(self, node, *args, **kwargs):
         # result of negation is in %eax
@@ -121,13 +124,13 @@ class Visitor(object):
         return '\tcall input\n'
     def visit_Const(self, node, *args, **kwargs):
         # constant has been moved into %eax
-        return [LoadRegister(node.value)]
+        return LoadRegister(node.value)
         #return '\tmovl $%s, %%eax\n' % node.value
     def visit_Name(self, node, *args, **kwargs):
         if not self.ctxt.is_allocated(node.name):
             raise Exception("Attempt to access an undefined variable '%s' %s" % (node.name, node))
         # variable has been moved into %eax
-        return [LoadRegister(node.name)]
+        return LoadRegister(node.name)
         #return '\tmovl %s(%%ebp), %%eax\n' % (self.ctxt.get_location(node.name))
 
 # Concept borrowed from http://peter-hoffmann.com/2010/extrinsic-visitor-pattern-python-inheritance.html
@@ -146,7 +149,8 @@ class AssemblyVisitor(object):
 
     def generic_visit(self, node, *args, **kwargs):
         return ''
-    
+    def visit_Const(self, node, *args, **kwards):
+        return '$%s' % node.value
     def visit_Move(self, node, *args, **kwargs):
         assname = node.lhs
         if not self.ctxt.is_allocated(assname):
@@ -193,7 +197,7 @@ class UnarySub(object):
         self.expression = expr
     def get_expression(self):
         return self.expression          
-class Add(object):
+class Addl(object):
     def __init__(self, left, right):
         self.left = left
         self.right = right
@@ -213,17 +217,53 @@ class LoadRegister(object):
     def __init__(self, value):
         self.value = value
     def __str__(self):
-        return "movl %s reg ?" % (self.value)
+        return "loooooad %s reg ?" % (self.value)
     def __repr__(self):
         return self.__str__()
         
 def gen_live(statements):
+    print statements
     vars = []
+    live_vars = set([])
+    write_vars = set([])
+    lafter = set([])
     for stmt in reversed(statements):
+        read = set([])
+        write = set([])
         if isinstance(stmt, Move):
-            print "move"
+            write = set([stmt.lhs])
+            
+            #if not isinstance(stmt.rhs, Const): 
+            #read = read | set([stmt.rhs])
+            if isinstance(stmt.rhs, Add):
+                st = set([])
+                if isinstance(stmt.rhs.right, Name):
+                    st = st | set([stmt.rhs.right.name])
+                if isinstance(stmt.rhs.left, Name):
+                    st = st | set([stmt.rhs.left.name]) 
+                read = read | st
+            #else:
+            #    read = set([])
         elif isinstance(stmt, LoadRegister):
-            print "load" 
+            read = read | set([stmt.value])
+        #elif isinstance(stmt, Add):
+        #    if isinstance(stmt.right, Name):
+        #        read = read | set([stmt.right])
+        #    elif isinstance(stmt.left, Name):
+        #        read = read | set([stmt.left])
+        print 'statement %s read vars %s' %(stmt, read)
+        if len(vars)>0:
+            lafter = vars.pop()
+        else:
+            lafter = set([])
+        print 'lafter %s' % lafter
+        vars.append(lafter)
+        lbefore = []
+        lbefore = (lafter-write)|read
+        vars.append(lbefore)
+        
+    for tuple in reversed(zip(reversed(statements), vars)):
+        print tuple
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -238,7 +278,7 @@ if __name__ == "__main__":
         ast = compiler.parseFile(testcase)
         stmtlist = StatementList()
         flatten(ast, stmtlist)
-        
+        print stmtlist
         visitor = Visitor(CompilerContext())
         output = visitor.visit(stmtlist)
         gen_live(output)
