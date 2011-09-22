@@ -221,6 +221,23 @@ class LoadRegister(object):
     def __repr__(self):
         return self.__str__()
         
+        
+class LiveNode(object):
+    def __init__(self, node):
+        self.node = node
+        self.edges = []
+        self.register = None
+    def add_edge(self, other):
+        self.edges.append(other)
+    def assign_reg(self, reg):
+        self.register = reg
+    def __str__(self):
+        return "connected to %s" % (str([x for x in self.edges]))
+    def __repr__(self):
+        return self.__str__()
+                                  
+                
+        
 def gen_live(statements):
     print statements
     vars = []
@@ -231,38 +248,73 @@ def gen_live(statements):
         read = set([])
         write = set([])
         if isinstance(stmt, Move):
+            # write variable is the left hand side of a move statement
             write = set([stmt.lhs])
             
-            #if not isinstance(stmt.rhs, Const): 
-            #read = read | set([stmt.rhs])
+            # now decide if we have an add (to avoid inserting another temp var)
             if isinstance(stmt.rhs, Add):
                 st = set([])
+                # of any read variables
                 if isinstance(stmt.rhs.right, Name):
                     st = st | set([stmt.rhs.right.name])
                 if isinstance(stmt.rhs.left, Name):
                     st = st | set([stmt.rhs.left.name]) 
                 read = read | st
-            #else:
-            #    read = set([])
         elif isinstance(stmt, LoadRegister):
             read = read | set([stmt.value])
-        #elif isinstance(stmt, Add):
-        #    if isinstance(stmt.right, Name):
-        #        read = read | set([stmt.right])
-        #    elif isinstance(stmt.left, Name):
-        #        read = read | set([stmt.left])
-        print 'statement %s read vars %s' %(stmt, read)
+
         if len(vars)>0:
             lafter = vars.pop()
         else:
             lafter = set([])
-        print 'lafter %s' % lafter
         vars.append(lafter)
         lbefore = []
         lbefore = (lafter-write)|read
         vars.append(lbefore)
+    #vars.pop()
+    
+#1 If instruction Ik is a move: movl s, t (and t 2 Lafter(k)), then
+#  add the edge (t; v) for every v 2 Lafter(k) unless v = t or
+#  v = s.
+#2 If instruction Ik is not a move but some other arithmetic instruction such as addl s, t (and t 2 Lafter(k)), then add the
+#  edge (t; v) for every v 2 Lafter(k).
+#3 If instruction Ik is of the form call label, then add an edge
+#  (r; v) for every caller-save register r and every variable v 2
+#  Lafter(k). (The caller-save registers are eax, ecx, and edx.)
+    
+    nodes = {}
+    found_nodes = []
+    registers = set([eax,ebx,ecx, edx])
+    instr_ctr = 0
+    
+    print 'vars %d statements %d' % (len(vars), len(statements))
+    vars.pop()
+    vars.reverse()
+    
+    print vars
+    print statements
+    for varset in vars:
+        if isinstance(statements[instr_ctr], Move):
+            mv = statements[instr_ctr]
+            print 'checking %s with %s for statement %s' %(varset, mv.lhs, statements[instr_ctr])
+            if mv.lhs not in varset:
+                continue
+            for var in varset:
+                if mv.lhs != var:
+                    if mv.lhs in nodes:
+                        nodes[mv.lhs].add_edge(var)
+                    else:
+                        nodes[mv.lhs] = LiveNode(mv.lhs)
+                        nodes[mv.lhs].add_edge(var)
+                        
+                    print 'rule 1 applies statement %s variable %s statement %s' % (mv.lhs, var, statements[instr_ctr])
+        if isinstance(statements[instr_ctr], Addl):
+            print 'rule 2 applies %s' % statements[instr_ctr]
+
+        instr_ctr = instr_ctr+1
+    print nodes        
         
-    for tuple in reversed(zip(reversed(statements), vars)):
+    for tuple in zip(statements, vars):
         print tuple
 
 if __name__ == "__main__":

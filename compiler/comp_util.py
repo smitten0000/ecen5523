@@ -51,7 +51,6 @@ object, which is given as the 2nd argument."""
         if len(node.nodes) > 0:
             stmtlist.append(Printnl([flatten(node.nodes[0], stmtlist, discard)], node.dest))
     elif isinstance(node, Assign):
-        print 'ass %s: %s' %(node.nodes[0].name, flatten(node.expr, stmtlist, discard))
         stmtlist.add_var(node.nodes[0].name)
         stmtlist.append(Assign(node.nodes, flatten(node.expr, stmtlist, discard)))
         return node.nodes[0]
@@ -61,7 +60,6 @@ object, which is given as the 2nd argument."""
         flatten(node.expr, stmtlist, True)
         return None
     elif isinstance(node, Add):
-        print 'add %s %s' % (node.left, node.right)
         left = flatten (node.left, stmtlist, discard)
         right = flatten (node.right, stmtlist, discard)
         if discard:
