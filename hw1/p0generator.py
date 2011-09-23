@@ -4,27 +4,10 @@ from x86ir import *
 
 class P0Generator(object):
     def __init__(self):
-        self.numvars = 0
-        self.varmap = {}
-
-    def allocate_var(self, varname):
-        if self.is_allocated(varname):
-            raise Exception("Variable '%s' already allocated" % varname)
-        self.numvars = self.numvars + 1
-        self.varmap[varname] = -4 * self.numvars
-
-    def is_allocated(self, varname):
-        if varname in self.varmap:
-            return True
-        return False
-
-    def get_location(self, varname):
-        if not self.is_allocated(varname):
-            raise Exception("Variable '%s' is not allocated" % varname)
-        return self.varmap[varname]
+        self.maxslot = 0
 
     def get_stacksize(self):
-        return self.numvars*4
+        return self.maxslot * 4
 
     def generate(self, stmtlist):
         return self.visit(stmtlist)
@@ -56,11 +39,9 @@ main:
         return ("\t# %s\n" %  node.source) + "\n".join([self.visit(x) for x in node.instructions]) + "\n"
 
     def visit_Movl(self, node, *args, **kwargs):
-        if isinstance(node.dst, Var) and not self.is_allocated(node.dst.name):
-            self.allocate_var(node.dst.name)
         stmtlist=[]
         # handle memory to memory moves
-        if isinstance(node.src,Var) and isinstance(node.dst, Var):
+        if isinstance(node.src,StackSlot) and isinstance(node.dst, StackSlot):
             stmtlist.append('\tmovl %s, %s' % (self.visit(node.src), self.visit(Register('eax'))))
             node.src = Register('eax')
         stmtlist.append('\tmovl %s, %s' % (self.visit(node.src), self.visit(node.dst)))
@@ -70,7 +51,13 @@ main:
         return '\tpushl %s' % (self.visit(node.src))
     
     def visit_Addl(self, node, *args, **kwargs):
-        return '\taddl %s, %s' % (self.visit(node.src), self.visit(node.dst))
+        stmtlist=[]
+        # handle memory to memory moves
+        if isinstance(node.src,StackSlot) and isinstance(node.dst, StackSlot):
+            stmtlist.append('\tmovl %s, %s' % (self.visit(node.src), self.visit(Register('eax'))))
+            node.src = Register('eax')
+        stmtlist.append('\taddl %s, %s' % (self.visit(node.src), self.visit(node.dst)))
+        return "\n".join(stmtlist)
 
     def visit_Negl(self, node, *args, **kwargs):
         return '\tnegl %s' % (self.visit(node.operand))
@@ -85,9 +72,12 @@ main:
         return '%%%s' % node.name
 
     def visit_Var(self, node, *args, **kwargs):
-        if not self.is_allocated(node.name):
-            raise Exception("Attempt to access an undefined variable '%s'" % node.name)
-        return '%s(%%ebp)' % (self.get_location(node.name))
+        raise Exception('Var must be converted to StackSlot prior to assembly generation')
+
+    def visit_StackSlot(self, node, *args, **kwargs):
+        if node.slot > self.maxslot:
+            self.maxslot = node.slot
+        return '%s(%%ebp)' % (node.slot * -4)
 
 
 if __name__ == "__main__":
@@ -97,6 +87,7 @@ if __name__ == "__main__":
     from p0flattener import P0Flattener
     from p0insselector import P0InstructionSelector
     from p0regallocator import P0RegAllocator
+    from p0stackallocator import P0StackAllocator
     if len(sys.argv) < 2:
         sys.exit(1)
     testcases = sys.argv[1:]
@@ -110,8 +101,10 @@ if __name__ == "__main__":
         stmtlist = p0flattener.flatten(ast)
         instruction_selector = P0InstructionSelector(varalloc)
         program = instruction_selector.visit(stmtlist)
-        regallocator = P0RegAllocator(program)
-        program = regallocator.substitute()
+        #regallocator = P0RegAllocator(program)
+        #program = regallocator.substitute()
+        stackallocator = P0StackAllocator(program)
+        program = stackallocator.substitute()
         generator = P0Generator()
         print generator.generate(program)
         

@@ -9,6 +9,8 @@ import sys
 from p0parser import P0Parser
 from p0flattener import P0Flattener
 from p0insselector import P0InstructionSelector
+from p0regallocator import P0RegAllocator
+from p0stackallocator import P0StackAllocator
 from p0generator import P0Generator
 from comp_util import *
 
@@ -29,6 +31,10 @@ if __name__ == "__main__":
         #eval(compile(code,'test.txt','exec'))
         instruction_selector = P0InstructionSelector(varalloc)
         program = instruction_selector.visit(stmtlist)
+        #regallocator = P0RegAllocator(program)
+        #program = regallocator.substitute()
+        stackallocator = P0StackAllocator(program)
+        program = stackallocator.substitute()
         generator = P0Generator()
         output = generator.generate(program)
         outputfile = '%s.s' % testcase[:testcase.rfind('.')]

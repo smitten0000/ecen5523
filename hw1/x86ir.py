@@ -146,3 +146,17 @@ class Imm32(object):
         return not self.__eq__(other)
     def __hash__(self):
         return self.value.__hash__()
+
+class StackSlot(object):
+    def __init__(self, slot):
+        self.slot = slot
+    def __str__(self):
+        return "StackSlot(%s)" % (self.slot)
+    def __repr__(self):
+        return self.__str__()
+    def __eq__(self, other):
+        return self.slot == other.slot
+    def __ne__(self, other):
+        return not self.__eq__(other)
+    def __hash__(self):
+        return self.value.__hash__()

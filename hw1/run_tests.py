@@ -40,12 +40,13 @@ else:
 
 (homedir,progname) = os.path.split(prog)
 
-gcc_params = ['-g', '-lm','-I' + homedir, '-I' + homedir + '/test', '-I' + homedir + '/tests',gc_inc]
+gcc_params = ['-g', '-m32', '-lm','-I' + homedir, '-I' + homedir + '/test', '-I' + homedir + '/tests',gc_inc]
 
 runtime_files = filter(lambda f: splitext(f)[1] == '.c', os.listdir(homedir))
 for f in runtime_files:
-    gcc_cmd = ["gcc", homedir + '/' + f, "-c", "-g", gc_inc]
+    gcc_cmd = ["gcc", '-m32', homedir + '/' + f, "-c", "-g", gc_inc]
     gcc_cmd = [arg for arg in gcc_cmd if arg]
+    print gcc_cmd
     compile_proc = subprocess.Popen(gcc_cmd)
     warn = compile_proc.communicate()[1]
     retcode = compile_proc.poll()
@@ -107,14 +108,16 @@ for t in tests:
     test_name = t
     base = splitext(t)[0]
     cfilename = base+'.c'
+    sfilename = base+'.s'
     cfile = open(cfilename, 'w')
     wfile = open(base+'.warn', 'w')
 #    print 'compiling Python to C'
     retcode = subprocess.call([python_prog,prog,t], stdout=cfile)
 #    print 'about to indent'
 #    retcode = subprocess.call(['indent',cfilename])
-    gcc_cmd = ["gcc", cfilename] + object_files + [gc_lib] + ["-o", base] + gcc_params
+    gcc_cmd = ["gcc", sfilename] + object_files + [gc_lib] + ["-o", base] + gcc_params
     gcc_cmd = [arg for arg in gcc_cmd if arg]
+    print gcc_cmd
 #    print 'invoking gcc'
 #    print ' '.join(gcc_cmd)
 #    compile_proc = subprocess.Popen(gcc_cmd, stderr=subprocess.PIPE)

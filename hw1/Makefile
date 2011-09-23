@@ -14,4 +14,5 @@ libruntime.a: $(OBJS)
 	gcc -c $<
 
 clean:
-	rm -f $(OBJS) libruntime.a *.pyc parser.out parsetab.py tests/*.s
+	rm -f $(OBJS) libruntime.a *.pyc parser.out parsetab.py test/*.s test/*.c test/*.warn test/*.expected test/*.out
+	find test -type f -perm 0755 -exec rm -f {} \;
