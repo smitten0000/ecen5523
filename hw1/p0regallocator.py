@@ -38,9 +38,9 @@ class P0RegAllocator:
         for instr in reversed(instructions):
             k = k - 1
             self.liveness_after_k_dict[k] = alive
-            # get reads/writes performed by instruction
-            writes = set(instr.writes())
-            reads = set(instr.reads())
+            # get reads/writes performed by instruction, but only for variables
+            writes = set(filter(lambda x: isinstance(x,Var), instr.writes()))
+            reads = set(filter(lambda x: isinstance(x,Var), instr.reads()))
             # compute the live variables
             alive = (alive - writes) | reads
             # add all variables to the graph
@@ -65,9 +65,9 @@ class P0RegAllocator:
             # rule #2
             elif isinstance(instr,(Addl,Negl)):
                 for live in live_after_k:
-                    if isinstance(instr, Addl):
+                    if isinstance(instr, Addl) and isinstance(instr.dst, Var):
                         self._add_edge(instr.dst, live)
-                    elif isinstance(instr, Negl):   
+                    elif isinstance(instr, Negl) and isinstance(instr.operand, Var):   
                         self._add_edge(instr.operand, live)
             # rule #3
             elif isinstance(instr,Call):
@@ -121,8 +121,8 @@ class P0RegAllocator:
             raise Exception("Unable to find assignment for variable '%s'" % varname)
         assignment = self.register_assgnmnt[varname]
         if assignment > len(P0RegAllocator.ALL_REGS)-1:
-            stack_location = (assignment - len(P0RegAllocator.ALL_REGS)) * -4
-            return Var(varname,stack_location)
+            slot = (assignment - len(P0RegAllocator.ALL_REGS))
+            return StackSlot(slot)
         else:
             return P0RegAllocator.ALL_REGS[assignment]
 
@@ -147,7 +147,10 @@ class P0RegAllocator:
         return Program([self.visit(x) for x in node.statements])
 
     def visit_Statement(self, node, *args, **kwargs):
-        return Statement([self.visit(x) for x in node.instructions],node.source)
+        instructions = [self.visit(x) for x in node.instructions]
+        # filter out any no-ops
+        instructions = filter(lambda x: x is not None, instructions)
+        return Statement(instructions,node.source)
 
     def visit_Movl(self, node, *args, **kwargs):
         src = node.src
@@ -156,6 +159,10 @@ class P0RegAllocator:
             src = self.get_assignment(src)
         if isinstance(dst,Var):
             dst = self.get_assignment(dst)
+        # if the source and destination are the same, then return None,
+        # indicating a no-operation
+        if src.__class__ == dst.__class__ and src == dst:
+            return None
         return Movl(src,dst)
         
     def visit_Pushl(self, node, *args, **kwargs):

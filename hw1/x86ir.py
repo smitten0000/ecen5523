@@ -38,12 +38,9 @@ class Movl(Instruction):
     def __repr__(self):
         return self.__str__()
     def writes(self):
-        if isinstance(self.dst, Var):
-            return [self.dst]
-        return []
+        return [self.dst]
     def reads(self):
-        if isinstance(self.src, Var): return [self.src]
-        return []
+        return [self.src]
 
 class Pushl(Instruction):
     def __init__(self, src):
@@ -55,8 +52,7 @@ class Pushl(Instruction):
     def writes(self):
         return []
     def reads(self):
-        if isinstance(self.src, Var): return [self.src]
-        return []
+        return [self.src]
 
 class Addl(Instruction):
     def __init__(self, src, dst):
@@ -67,13 +63,9 @@ class Addl(Instruction):
     def __repr__(self):
         return self.__str__()
     def writes(self):
-        if isinstance(self.dst, Var): return [self.dst]
-        return []
+        return [self.dst]
     def reads(self):
-        varreads = []
-        if isinstance(self.src, Var): varreads.append(self.src)
-        if isinstance(self.dst, Var): varreads.append(self.dst)
-        return varreads
+        return [self.src, self.dst]
 
 class Call(Instruction):
     def __init__(self, func):
@@ -95,11 +87,9 @@ class Negl(Instruction):
     def __repr__(self):
         return self.__str__()
     def writes(self):
-        if isinstance(self.operand, Var): return [self.operand]
-        return []
+        return [self.operand]
     def reads(self):
-        if isinstance(self.operand, Var): return [self.operand]
-        return []
+        return [self.operand]
 
 class Register(object):
     def __init__(self, name):
@@ -116,14 +106,10 @@ class Register(object):
         return self.name.__hash__()
 
 class Var(object):
-    def __init__(self, name, stackloc=None):
+    def __init__(self, name):
         self.name = name
-        self.stackloc = stackloc
     def __str__(self):
-        if self.stackloc is not None:
-            return "Var('%s',%s)" % (self.name, self.stackloc)
-        else:
-            return "Var('%s')" % (self.name)
+        return "Var('%s')" % (self.name)
     def __repr__(self):
         return self.__str__()
     def __eq__(self, other):

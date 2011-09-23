@@ -46,14 +46,14 @@ runtime_files = filter(lambda f: splitext(f)[1] == '.c', os.listdir(homedir))
 for f in runtime_files:
     gcc_cmd = ["gcc", '-m32', homedir + '/' + f, "-c", "-g", gc_inc]
     gcc_cmd = [arg for arg in gcc_cmd if arg]
-    print gcc_cmd
+    #print gcc_cmd
     compile_proc = subprocess.Popen(gcc_cmd)
     warn = compile_proc.communicate()[1]
     retcode = compile_proc.poll()
     if retcode != 0:
         print 'failed to compile ' + f
     args = ["mv", splitext(f)[0] + '.o', homedir + '/' + splitext(f)[0] + '.o']
-    print args
+    #print args
     mvproc = subprocess.Popen(args)
     retcode = mvproc.poll()    
 
@@ -104,7 +104,7 @@ def show_test_result(test_name, compile, run):
 
 print 'Test Name                              [Comp] [Run!]'
 
-for t in tests:
+for t in sorted(tests):
     test_name = t
     base = splitext(t)[0]
     cfilename = base+'.c'
@@ -117,7 +117,7 @@ for t in tests:
 #    retcode = subprocess.call(['indent',cfilename])
     gcc_cmd = ["gcc", sfilename] + object_files + [gc_lib] + ["-o", base] + gcc_params
     gcc_cmd = [arg for arg in gcc_cmd if arg]
-    print gcc_cmd
+    #print gcc_cmd
 #    print 'invoking gcc'
 #    print ' '.join(gcc_cmd)
 #    compile_proc = subprocess.Popen(gcc_cmd, stderr=subprocess.PIPE)

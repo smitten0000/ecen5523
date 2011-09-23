@@ -40,6 +40,9 @@ main:
 
     def visit_Movl(self, node, *args, **kwargs):
         stmtlist=[]
+        # if the source and destination are the same, then this is a no-op, return nothing
+        #if node.src.__class__ == node.dst.__class__ and node.src == node.dst:
+        #    return ""
         # handle memory to memory moves
         if isinstance(node.src,StackSlot) and isinstance(node.dst, StackSlot):
             stmtlist.append('\tmovl %s, %s' % (self.visit(node.src), self.visit(Register('eax'))))
@@ -101,10 +104,10 @@ if __name__ == "__main__":
         stmtlist = p0flattener.flatten(ast)
         instruction_selector = P0InstructionSelector(varalloc)
         program = instruction_selector.visit(stmtlist)
-        #regallocator = P0RegAllocator(program)
-        #program = regallocator.substitute()
-        stackallocator = P0StackAllocator(program)
-        program = stackallocator.substitute()
+        regallocator = P0RegAllocator(program)
+        program = regallocator.substitute()
+        #stackallocator = P0StackAllocator(program)
+        #program = stackallocator.substitute()
         generator = P0Generator()
         print generator.generate(program)
         
