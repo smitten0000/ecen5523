@@ -4,30 +4,38 @@ from x86ir import *
 
 class P0RegAllocator:
     ALL_REGS = [Register('eax'), Register('ebx'), Register('ecx'), Register('edx'), Register('edi'), Register('esi')]
+    #ALL_REGS = [Register('ebx'), Register('ecx'), Register('edx'), Register('edi'), Register('esi')]
+    #ALL_REGS = [Register('ebx'), Register('edi'), Register('esi')]
     CALLER_SAVE = [Register('eax'), Register('ecx'), Register('edx')]
+    MAX_SLOTS = 2000
     def __init__(self, program):
         self.program = program
         self.liveness_after_k_dict={}
         self.interf_graph = {}
         self.register_assgnmnt = {}
+        # all registers should start out with an assignment for their corresponding "index"
+        for reg in P0RegAllocator.ALL_REGS:
+            self.register_assgnmnt[reg] = P0RegAllocator.ALL_REGS.index(reg)
 
     def _add_vertex(self,a):
         self.interf_graph[a] = set()
+
+    def _add_directed_edge(self, a, b):
+        # add node to adjacency list if it doesn't exist
+        if a not in self.interf_graph:
+            self._add_vertex(a)
+        # create the edge
+        self.interf_graph[a].add(b)
 
     def _add_edge(self,a,b):
         # if a == b, then this is a loop and we don't allow loops in an
         # undirected graph, so simply return
         if a == b:
             return 
-        # add nodes to adjacency list if they don't exist
-        if a not in self.interf_graph:
-            self._add_vertex(a)
-        if b not in self.interf_graph:
-            self._add_vertex(b)
         # create the edges ; graph is undirected, so have to create edges 
         # for a -> b and b -> a since adjacency lists are directed by nature
-        self.interf_graph[a].add(b)
-        self.interf_graph[b].add(a)
+        self._add_directed_edge(a,b)
+        self._add_directed_edge(b,a)
 
     def liveness_analyze(self):
         instructions = self.program.instructions()
@@ -85,22 +93,21 @@ class P0RegAllocator:
         return len(registerset)
 
     def color_graph(self):
-        vertices = set(self.interf_graph.keys())
+        # get the list of vertices that need assignments
+        # only include vertices of type 'Var' (ignore Registers)
+        vertices = set(filter(lambda x: isinstance(x,Var), self.interf_graph.keys()))
         while len(vertices) > 0:
             # don't you love python?
             nodesat = map(lambda x:(x,self.saturation(x)), vertices)
-            node, sat = reduce(lambda x,y: max(x,y,key=lambda x:x[0]), nodesat)
+            print nodesat
+            node, sat = reduce(lambda x,y: max(x,y,key=lambda x:x[1]), nodesat)
             print "Node with highest saturation = %s (%s)" % (node, sat)
             registerset = set()
             for neighbor in self.interf_graph[node]:
                 if neighbor in self.register_assgnmnt:
                     registerset.add(self.register_assgnmnt[neighbor])
             print "Register set for node = %s" % (registerset)
-            lowest_unused = min(set(range(0,100))-registerset)
-            #if len(registerset) > 0:
-            #    lowest_unused = max(registerset)+1
-            #else:
-            #    lowest_unused = 0
+            lowest_unused = min(set(range(0,P0RegAllocator.MAX_SLOTS))-registerset)
             print "Lowest unused register = %s" % (lowest_unused)
             self.register_assgnmnt[node] = lowest_unused
             self.print_register_alloc()
@@ -121,7 +128,7 @@ class P0RegAllocator:
             raise Exception("Unable to find assignment for variable '%s'" % varname)
         assignment = self.register_assgnmnt[varname]
         if assignment > len(P0RegAllocator.ALL_REGS)-1:
-            slot = (assignment - len(P0RegAllocator.ALL_REGS))
+            slot = (assignment - (len(P0RegAllocator.ALL_REGS)-1))
             return StackSlot(slot)
         else:
             return P0RegAllocator.ALL_REGS[assignment]
