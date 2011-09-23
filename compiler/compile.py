@@ -129,6 +129,7 @@ class Visitor(object):
     def visit_Name(self, node, *args, **kwargs):
         if not self.ctxt.is_allocated(node.name):
             raise Exception("Attempt to access an undefined variable '%s' %s" % (node.name, node))
+        
         # variable has been moved into %eax
         return LoadRegister(node.name)
         #return '\tmovl %s(%%ebp), %%eax\n' % (self.ctxt.get_location(node.name))
@@ -239,7 +240,6 @@ class LiveNode(object):
                 
         
 def gen_live(statements):
-    print statements
     vars = []
     live_vars = set([])
     write_vars = set([])
@@ -291,8 +291,10 @@ def gen_live(statements):
     vars.pop()
     vars.reverse()
     
-    print vars
-    print statements
+    for varset in vars:
+        for var in varset:
+            nodes[var] = LiveNode(var)
+    print nodes
     for varset in vars:
         if isinstance(statements[instr_ctr], Move):
             mv = statements[instr_ctr]
@@ -303,20 +305,24 @@ def gen_live(statements):
                 if mv.lhs != var:
                     if mv.lhs in nodes:
                         nodes[mv.lhs].add_edge(var)
+                        nodes[var].add_edge(mv.lhs)
                     else:
                         nodes[mv.lhs] = LiveNode(mv.lhs)
                         nodes[mv.lhs].add_edge(var)
-                        
+                        nodes[var].add_edge(mv.lhs)
+                                                
                     print 'rule 1 applies statement %s variable %s statement %s' % (mv.lhs, var, statements[instr_ctr])
         if isinstance(statements[instr_ctr], Addl):
             print 'rule 2 applies %s' % statements[instr_ctr]
 
         instr_ctr = instr_ctr+1
     print nodes        
-        
+       
     for tuple in zip(statements, vars):
         print tuple
-
+        
+    
+#http://www.cs.ucla.edu/~palsberg/paper/aplas05.pdf
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         sys.exit(1)
@@ -330,18 +336,18 @@ if __name__ == "__main__":
         ast = compiler.parseFile(testcase)
         stmtlist = StatementList()
         flatten(ast, stmtlist)
-        print stmtlist
+
         visitor = Visitor(CompilerContext())
         output = visitor.visit(stmtlist)
         gen_live(output)
         
-        assvis = AssemblyVisitor(visitor.ctxt)
-        for stmt in output:
-            print(assvis.visit(stmt))
+ #       assvis = AssemblyVisitor(visitor.ctxt)
+ #       for stmt in output:
+ #           print(assvis.visit(stmt))
         #outputfile = '%s.s' % testcase[:testcase.rfind('.')]
         #f = open(outputfile, 'w')
-        for stmt in output:
-            print stmt
+#        for stmt in output:
+#            print stmt
         
 
 #"""
