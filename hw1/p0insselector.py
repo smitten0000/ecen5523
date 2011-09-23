@@ -52,7 +52,7 @@ class P0InstructionSelector(object):
     def visit_CallFunc(self, node, *args, **kwargs):
         # need to create a temporary variable here to store the result.
         varname = self.varalloc.get_next_var()
-        return (Var(varname), [Call('print_int_nl'), Movl(Register('eax'),Var(varname))])
+        return (Var(varname), [Call('input'), Movl(Register('eax'),Var(varname))])
 
     def visit_Const(self, node, *args, **kwargs):
         return (Imm32(node.value), [])
