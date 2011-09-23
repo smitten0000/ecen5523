@@ -70,7 +70,7 @@ main:
         return '\tpushl %s' % (self.visit(node.src))
     
     def visit_Addl(self, node, *args, **kwargs):
-        return '\taddl %s,%s' % (self.visit(node.src), self.visit(node.dst))
+        return '\taddl %s, %s' % (self.visit(node.src), self.visit(node.dst))
 
     def visit_Negl(self, node, *args, **kwargs):
         return '\tnegl %s' % (self.visit(node.operand))
@@ -96,6 +96,7 @@ if __name__ == "__main__":
     from p0parser import P0Parser
     from p0flattener import P0Flattener
     from p0insselector import P0InstructionSelector
+    from p0regallocator import P0RegAllocator
     if len(sys.argv) < 2:
         sys.exit(1)
     testcases = sys.argv[1:]
@@ -109,6 +110,8 @@ if __name__ == "__main__":
         stmtlist = p0flattener.flatten(ast)
         instruction_selector = P0InstructionSelector(varalloc)
         program = instruction_selector.visit(stmtlist)
+        regallocator = P0RegAllocator(program)
+        program = regallocator.substitute()
         generator = P0Generator()
         print generator.generate(program)
         

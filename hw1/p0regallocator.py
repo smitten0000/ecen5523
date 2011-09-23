@@ -6,10 +6,13 @@ class P0RegAllocator:
     ALL_REGS = [Register('eax'), Register('ebx'), Register('ecx'), Register('edx'), Register('edi'), Register('esi')]
     CALLER_SAVE = [Register('eax'), Register('ecx'), Register('edx')]
     def __init__(self, program):
-        self.liveness_after_k_dict={}
         self.program = program
+        self.liveness_after_k_dict={}
         self.interf_graph = {}
         self.register_assgnmnt = {}
+
+    def _add_vertex(self,a):
+        self.interf_graph[a] = set()
 
     def _add_edge(self,a,b):
         # if a == b, then this is a loop and we don't allow loops in an
@@ -18,9 +21,9 @@ class P0RegAllocator:
             return 
         # add nodes to adjacency list if they don't exist
         if a not in self.interf_graph:
-            self.interf_graph[a] = set()
+            self._add_vertex(a)
         if b not in self.interf_graph:
-            self.interf_graph[b] = set()
+            self._add_vertex(b)
         # create the edges ; graph is undirected, so have to create edges 
         # for a -> b and b -> a since adjacency lists are directed by nature
         self.interf_graph[a].add(b)
@@ -35,7 +38,14 @@ class P0RegAllocator:
         for instr in reversed(instructions):
             k = k - 1
             self.liveness_after_k_dict[k] = alive
-            alive = (alive - set(instr.writes())) | set(instr.reads())
+            # get reads/writes performed by instruction
+            writes = set(instr.writes())
+            reads = set(instr.reads())
+            # compute the live variables
+            alive = (alive - writes) | reads
+            # add all variables to the graph
+            for x in writes: self._add_vertex(x)
+            for x in reads: self._add_vertex(x)
         for k in range(0,len(instructions)):
             instr = instructions[k]
             print "%5s. %-40s : %s" % (k, instr, self.liveness_after_k_dict[k])
@@ -80,28 +90,98 @@ class P0RegAllocator:
             # don't you love python?
             nodesat = map(lambda x:(x,self.saturation(x)), vertices)
             node, sat = reduce(lambda x,y: max(x,y,key=lambda x:x[0]), nodesat)
-            #print "Node with highest saturation = %s (%s)" % (node, sat)
+            print "Node with highest saturation = %s (%s)" % (node, sat)
             registerset = set()
             for neighbor in self.interf_graph[node]:
                 if neighbor in self.register_assgnmnt:
                     registerset.add(self.register_assgnmnt[neighbor])
-            #registerset = map(lamdba x: self.register_assgnmnt(x), self.interf_graph[node]))
-            #print "Register set for node = %s" % (registerset)
-            lowest_unused = min(set(P0RegAllocator.ALL_REGS) - registerset, key=lambda x:x.name)
-            #print "Lowest unused register = %s" % (lowest_unused)
+            print "Register set for node = %s" % (registerset)
+            lowest_unused = min(set(range(0,100))-registerset)
+            #if len(registerset) > 0:
+            #    lowest_unused = max(registerset)+1
+            #else:
+            #    lowest_unused = 0
+            print "Lowest unused register = %s" % (lowest_unused)
             self.register_assgnmnt[node] = lowest_unused
-            #self.print_register_alloc()
+            self.print_register_alloc()
             vertices = vertices - set([node])
 
     def print_graph(self):
         print "\nGraph:"
-        for k,v in self.interf_graph.iteritems():
-            print "%-20s : %s" % (k,v)
+        for k in sorted(self.interf_graph.iterkeys(),key=lambda x:x.name):
+            print "%-20s : %s" % (k,self.interf_graph[k])
 
     def print_register_alloc(self):
         print "\nRegister allocation:"
-        for k,v in self.register_assgnmnt.iteritems():
-            print "%-20s : %s" % (k,v)
+        for k in sorted(self.register_assgnmnt.iterkeys(),key=lambda x:x.name):
+            print "%-20s : %s" % (k,self.register_assgnmnt[k])
+
+    def get_assignment(self,varname):
+        if varname not in self.register_assgnmnt:
+            raise Exception("Unable to find assignment for variable '%s'" % varname)
+        assignment = self.register_assgnmnt[varname]
+        if assignment > len(P0RegAllocator.ALL_REGS)-1:
+            stack_location = (assignment - len(P0RegAllocator.ALL_REGS)) * -4
+            return Var(varname,stack_location)
+        else:
+            return P0RegAllocator.ALL_REGS[assignment]
+
+    def substitute(self):
+        """ Substitutes the register assignments in for the corresponding variables"""
+        self.liveness_analyze()
+        self.build_interference_graph()
+        self.print_graph()
+        self.color_graph()
+        self.print_register_alloc()
+        return self.visit(self.program)
+
+    def visit(self, node, *args, **kwargs):
+        meth = None
+        meth_name = 'visit_'+node.__class__.__name__
+        meth = getattr(self, meth_name, None)
+        if not meth:
+            raise Exception('Unknown node: %s method: %s' % (node.__class__, meth))
+        return meth(node, *args, **kwargs)
+
+    def visit_Program(self, node, *args, **kwargs):
+        return Program([self.visit(x) for x in node.statements])
+
+    def visit_Statement(self, node, *args, **kwargs):
+        return Statement([self.visit(x) for x in node.instructions],node.source)
+
+    def visit_Movl(self, node, *args, **kwargs):
+        src = node.src
+        dst = node.dst
+        if isinstance(src,Var):
+            src = self.get_assignment(src)
+        if isinstance(dst,Var):
+            dst = self.get_assignment(dst)
+        return Movl(src,dst)
+        
+    def visit_Pushl(self, node, *args, **kwargs):
+        src = node.src
+        if isinstance(src,Var):
+            src = self.get_assignment(src)
+        return Pushl(src)
+    
+    def visit_Addl(self, node, *args, **kwargs):
+        src = node.src
+        dst = node.dst
+        if isinstance(src,Var):
+            src = self.get_assignment(src)
+        if isinstance(dst,Var):
+            dst = self.get_assignment(dst)
+        return Addl(src,dst)
+
+    def visit_Negl(self, node, *args, **kwargs):
+        operand = node.operand
+        if isinstance(operand,Var):
+            operand = self.get_assignment(operand)
+        return Negl(operand)
+
+    def visit_Call(self, node, *args, **kwargs):
+        return Call(node.func)
+
 
 
 if __name__ == "__main__":
@@ -124,8 +204,4 @@ if __name__ == "__main__":
         instruction_selector = P0InstructionSelector(varalloc)
         program = instruction_selector.visit(stmtlist)
         regallocator = P0RegAllocator(program)
-        regallocator.liveness_analyze()
-        regallocator.build_interference_graph()
-        regallocator.print_graph()
-        regallocator.color_graph()
-        regallocator.print_register_alloc()
+        print regallocator.substitute()

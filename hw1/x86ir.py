@@ -116,10 +116,14 @@ class Register(object):
         return self.name.__hash__()
 
 class Var(object):
-    def __init__(self, name):
+    def __init__(self, name, stackloc=None):
         self.name = name
+        self.stackloc = stackloc
     def __str__(self):
-        return "Var('%s')" % (self.name)
+        if self.stackloc is not None:
+            return "Var('%s',%s)" % (self.name, self.stackloc)
+        else:
+            return "Var('%s')" % (self.name)
     def __repr__(self):
         return self.__str__()
     def __eq__(self, other):
