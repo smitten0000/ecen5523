@@ -6,7 +6,7 @@
 import lexxer
 import yakker
 
-debug = True
+debug = False
 
 from Assembler import AssemblyVisitor
 
@@ -21,7 +21,7 @@ unk = Register('unk')
 esp = Register('esp')
 edi = Register('edi')
 esi = Register('esi')
-ALL_REGS = [eax, ebx, ecx, edx, edi, esi]
+ALL_REGS = [eax, ebx, ecx, edx, edi, esi, esp]
 CALLER_SAVE = [eax, ecx, edx]
 
 class StatementList(list):
@@ -50,7 +50,7 @@ class CompilerContext:
         self.numvars = 0
         self.varmap = {}
     def next_var(self):
-        var = 'tmp%d' % self.numvars
+        var = 'zzick%d' % self.numvars
         self.numvars = self.numvars+1
         self.varmap[var] = -4 * self.numvars        
         return var
@@ -61,8 +61,8 @@ class CompilerContext:
             raise Exception("Variable '%s' already allocated" % varname)
         self.numvars = self.numvars + 1
         self.varmap[varname] = -4 * self.numvars
-        if debug:
-            print 'Stored vars: %s'%self.varmap
+
+
     def is_allocated(self, varname):
         if varname in self.varmap:
             return True
@@ -96,15 +96,13 @@ class Visitor(object):
         return []
     def visit_Assign(self, node, *args, **kwargs):
         assname = node.nodes[0].name
-        expr = node.expr
-        loc, stmt = self.visit(expr)
+        loc, stmt = self.visit(node.expr)
         return stmt + [Move(loc,Var(assname))]
         #return '%s\tmovl %%eax, %s(%%ebp)\n' % (, self.ctxt.get_location(assname.name))
-        
     def visit_Printnl(self, node, *args, **kwargs):
         arg = node.nodes[0]
         var, stmt = self.visit(arg)
-        return stmt + [Pushl(var), Call('print_int_nl'), Addl(Const(4), esp)]
+        return stmt + [Pushl(var), Callf('print_int_nl'), Addl(Constant(4), esp)]
         #return '%s\tpushl %%eax\n\tcall print_int_nl\n\taddl $4, %%esp\n' % (self.visit(arg))
     
     def visit_StatementList(self, node, *args, **kwargs):
@@ -121,17 +119,14 @@ class Visitor(object):
         return (Var(varname), leftstmt + rightstmt + [Move(right,Var(varname)), Addl(left,Var(varname))])
         #return '%s\taddl %s,%%eax\n' % (self.visit(node.left), imm32_or_mem(node.right, self.ctxt))
     def visit_UnarySub(self, node, *args, **kwargs):
-        print ':: %s' % node.expr
-        if isinstance(node.expr, Const):
-            var = self.ctxt.next_var()
-            return (loc, stmtlist + [Movl(node.expr, var), Negl(var)])
         loc, stmtlist = self.visit(node.expr)
-        return (loc, stmtlist + [ Negl(loc)])
+        var = Var(self.ctxt.next_var())
+        return (var, stmtlist + [Move(loc, var), Negl(var)])
     def visit_CallFunc(self, node, *args, **kwargs):
         varname = self.ctxt.next_var()
-        return (Var(varname), [Call('input'), Move(eax,Var(varname))])
+        return (Var(varname), [Callf('input'), Move(eax,Var(varname))])
     def visit_Const(self, node, *args, **kwargs):
-        return (Const(node.value), [])
+        return (Constant(node.value), [])
     def visit_Name(self, node, *args, **kwargs):
         if not self.ctxt.is_allocated(node.name):
             self.ctxt.allocate_var(node.name)
@@ -170,13 +165,13 @@ def gen_live(statements):
         write = set([])
         if isinstance(stmt, Move):
             # write variable is the left hand side of a move statement
-            if isinstance(stmt.src, Register):
+            if isinstance(stmt.dest, Register):
                 write = set([stmt.dest])
             else:
                 write = set([stmt.dest.name])
             st = set([])
             # of any read variables
-            if not isinstance(stmt.dest, Const):
+            if not isinstance(stmt.src, Constant):
                 if isinstance(stmt.src, Var):
                     st = st | set([stmt.src.name])
                     read = read | st
@@ -188,8 +183,10 @@ def gen_live(statements):
             if isinstance(stmt.dest, Var):
                 read = read | set([stmt.dest.name])
         elif isinstance(stmt, Pushl):
-            read = read | set([stmt.src.name])
-  
+            if not isinstance(stmt.src, Constant):
+                read = read | set([stmt.src.name])
+        elif isinstance(stmt, Callf):
+            read = read | set([eax,ecx, edx]) 
         if len(vars)>0:
             lafter = vars.pop()
         else:
@@ -197,6 +194,8 @@ def gen_live(statements):
         vars.append(lafter)
         lbefore = []
         lbefore = (lafter-write)|read
+        if debug:
+            print 'stmt %s lbefore %s' % (stmt, lbefore)
         vars.append(lbefore)
     
 #1 If instruction Ik is a move: movl s, t (and t 2 Lafter(k)), then
@@ -212,29 +211,21 @@ def gen_live(statements):
     found_nodes = []
 
     instr_ctr = 0
-    if debug:
-        print 'vars %d statements %d' % (len(vars), len(statements))
+
     vars.pop()
     vars.reverse()
-    if debug:
-        print vars
+
     for varset in vars:
         for var in varset:
             nodes[var] = LiveNode(var)
             
     for reg in ALL_REGS:
-        nodes[reg] = LiveNode(reg)
-    nodes[esp] = LiveNode(esp)    
+        nodes[reg] = LiveNode(reg)   
     
     for varset in vars:
-        if debug:
-            print varset
         if isinstance(statements[instr_ctr], Move):
             mv = statements[instr_ctr]
-            varname = None
-            if isinstance(mv.dest, Var):
-                varname = mv.dest.name
-            if varname not in varset:
+            if not mv.dest.name in nodes.keys():
                 continue
             for var in varset:
                 nodes[mv.dest.name].add_edge(nodes[var])
@@ -242,15 +233,13 @@ def gen_live(statements):
         if isinstance(statements[instr_ctr], (Addl, Negl)):
             mv = statements[instr_ctr]
             for var in varset:
-#                print "--- addl or negl: mv.right: %s, var: %s" %(mv.right, var)
-#                print "+++ stmt %s" % statements[instr_ctr]
                 if isinstance(mv.dest, Var):
                     nodes[mv.dest.name].add_edge(nodes[var])
                     nodes[var].add_edge(nodes[mv.dest.name])                
-                elif not isinstance(mv.dest, Const):
+                elif not isinstance(mv.dest, (Constant)):
                     nodes[mv.dest].add_edge(nodes[var])
                     nodes[var].add_edge(nodes[mv.dest])
-        if isinstance(statements[instr_ctr], Call):
+        if isinstance(statements[instr_ctr], Callf):
             for var in varset:
                 for reg in CALLER_SAVE:
                     nodes[var].add_edge(nodes[reg])
@@ -278,7 +267,8 @@ def assign_registers(nodes, ctxt):
         maxsat_node = max_sat(copy)
         if len(registers) > 0:
             if not isinstance(maxsat_node.node, Register):
-                maxsat_node.register = registers.pop()
+                tv = registers.pop()
+                maxsat_node.register = tv
         copy.pop(maxsat_node.node)
     for val in nodes.values():
         if val.register is None:
@@ -305,7 +295,7 @@ def saturation(node):
     for onode in node.edges:
         if isinstance(onode, Register):
             sat = sat | set([onode])
-        elif onode.register is not None: # this node is "colored" or assigned a register
+        if onode.register is not None: # this node is "colored" or assigned a register
             sat = sat | set([onode])
     return len(sat)
     
@@ -328,8 +318,7 @@ if __name__ == "__main__":
         output = visitor.visit(stmtlist)
         nodes = gen_live(output)
         assign_registers(nodes, ctxt)
-        if debug:
-            print nodes
+
         assemblyVis = AssemblyVisitor(nodes, ctxt)
         outputfile = '%s.s' % testcase[:testcase.rfind('.')]
         f = open(outputfile, 'w')

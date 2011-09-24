@@ -25,7 +25,7 @@ class Move(object):
     def __repr__(self):
         return self.__str__()
     
-class Call(object):
+class Callf(object):
     def __init__(self, func):
         self.function = func
     def __str__(self):
@@ -63,7 +63,7 @@ class Var(object):
         return "Var(%s)" % (self.name)
     def __repr__(self):
         return self.__str__()
-class Const(object):
+class Constant(object):
     def __init__(self, value):
         self.value = value
     def __str__(self):

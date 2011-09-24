@@ -28,7 +28,7 @@ class AssemblyVisitor(object):
                 return '%s(%%ebp)'%self.ctxt.get_location(node.name)
             else:
                 return self.nodes[node.name].register.x86name()
-        elif isinstance(node, Const):
+        elif isinstance(node, Constant):
             return '$%d' % node.value
         elif isinstance(node, Pushl):
             return self.nodes[node.src.name].register.x86name()
@@ -39,12 +39,15 @@ class AssemblyVisitor(object):
         return '$%s' % type(node) 
     def generic_visit(self, node, *args, **kwargs):
         return []
-    def visit_Const(self, node, *args, **kwards):
+    def visit_Constant(self, node, *args, **kwards):
         return '$%s' % node.value
     def visit_Move(self, node, *args, **kwargs):
         dest = self.get_reg_name(node.dest)
         src = self.get_reg_name(node.src)
-        return '\tmovl %s, %s\n' % ( src, dest ) #self.ctxt.get_location(assname))
+        if dest == src:
+            return ''
+        else:
+            return '\tmovl %s, %s\n' % ( src, dest ) #self.ctxt.get_location(assname))
     
     def visit_Addl(self, node, *args, **kwargs):
         src = self.get_reg_name(node.src) 
@@ -52,7 +55,12 @@ class AssemblyVisitor(object):
             #imm32_or_mem(node.right, self.ctxt))
         return '\taddl %s, %s\n' % (src, dest)
     def visit_Pushl(self, node, *args, **kwargs):
-        return '\tpushl %s\n' % self.get_reg_name(node)
+        if isinstance(node.src,Constant):
+            return '\tpushl %s\n'% node.src.value
+        elif self.nodes[node.src.name].register is None:
+            return ''
+        else:
+            return '\tpushl %s\n' % self.get_reg_name(node)
     def visit_Negl(self, node, *args, **kwargs):
         return '\tnegl %s\n' % self.get_reg_name(node)        
     #def visit_UnarySub(self, node, *args, **kwargs):
@@ -60,7 +68,7 @@ class AssemblyVisitor(object):
     #    return self.visit(node.expr).append(UnarySub(eax))
         
         #return '%s\tnegl %%eax\n' % (self.visit(node.expr))
-    def visit_Call(self, node, *args, **kwargs):
+    def visit_Callf(self, node, *args, **kwargs):
         # result of function call is in %eax
         return '\tcall %s\n' % node.function
     #def visit_LoadRegister(self, node, *args, **kwargs):

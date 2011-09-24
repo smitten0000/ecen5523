@@ -54,7 +54,7 @@ object, which is given as the 2nd argument."""
         stmtlist.add_var(node.nodes[0].name)
         exp = flatten(node.expr, stmtlist, discard)
         stmtlist.append(Assign(node.nodes, exp))
-        return node.nodes[0]
+        return None
     elif isinstance(node, Discard):
         # discard nodes should be ignored; except for function calls with side effects.
         # call flatten() with discard=True
@@ -63,11 +63,11 @@ object, which is given as the 2nd argument."""
     elif isinstance(node, Add):
         left = flatten (node.left, stmtlist, discard)
         right = flatten (node.right, stmtlist, discard)
-        #varname = stmtlist.get_next_var()
-        #stmtlist.append(Assign([AssName(varname, 'OP_ASSIGN')], Add((left,right))))
+        varname = stmtlist.get_next_var()
+        stmtlist.append(Assign([AssName(varname, 'OP_ASSIGN')], Add((left,right))))
         #stmtlist.append(Add((left, right)))
-        return Add([left, right])
-        #return Name(varname)
+        #return Add([left, right])
+        return Name(varname)
     elif isinstance(node, UnarySub):
         f = flatten(node.expr,stmtlist, discard)
         varname = stmtlist.get_next_var()
