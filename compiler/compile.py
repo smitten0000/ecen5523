@@ -21,7 +21,7 @@ unk = Register('unk')
 esp = Register('esp')
 edi = Register('edi')
 esi = Register('esi')
-ALL_REGS = [eax, ebx, ecx, edx, edi, esi, esp]
+ALL_REGS = [eax, ebx, ecx, edx, edi, esi]
 CALLER_SAVE = [eax, ecx, edx]
 
 class StatementList(list):
@@ -221,7 +221,7 @@ def gen_live(statements):
             
     for reg in ALL_REGS:
         nodes[reg] = LiveNode(reg)   
-    
+    nodes[esp] = LiveNode(esp)
     for varset in vars:
         if isinstance(statements[instr_ctr], Move):
             mv = statements[instr_ctr]
