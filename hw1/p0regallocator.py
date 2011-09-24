@@ -4,8 +4,6 @@ from x86ir import *
 
 class P0RegAllocator:
     ALL_REGS = [Register('eax'), Register('ebx'), Register('ecx'), Register('edx'), Register('edi'), Register('esi')]
-    #ALL_REGS = [Register('ebx'), Register('ecx'), Register('edx'), Register('edi'), Register('esi')]
-    #ALL_REGS = [Register('ebx'), Register('edi'), Register('esi')]
     CALLER_SAVE = [Register('eax'), Register('ecx'), Register('edx')]
     MAX_SLOTS = 2000
     def __init__(self, program):
@@ -40,7 +38,6 @@ class P0RegAllocator:
     def liveness_analyze(self):
         instructions = self.program.instructions()
         num_instr = len(instructions)
-        print "num_instr = ", num_instr
         alive = set()
         k = num_instr
         for instr in reversed(instructions):
@@ -54,10 +51,6 @@ class P0RegAllocator:
             # add all variables to the graph
             for x in writes: self._add_vertex(x)
             for x in reads: self._add_vertex(x)
-        for k in range(0,len(instructions)):
-            instr = instructions[k]
-            print "%5s. %-40s : %s" % (k, instr, self.liveness_after_k_dict[k])
-            k = k + 1
 
     def build_interference_graph(self):
         instructions = self.program.instructions()
@@ -98,20 +91,29 @@ class P0RegAllocator:
         vertices = set(filter(lambda x: isinstance(x,Var), self.interf_graph.keys()))
         while len(vertices) > 0:
             # don't you love python?
+            # This gets a list of tuples of the form (x,sat(x))
             nodesat = map(lambda x:(x,self.saturation(x)), vertices)
-            print nodesat
+            # find the entry in the list with the highest saturation
+            # this corresponds to the "most-constrained" node; we tackle this first 
             node, sat = reduce(lambda x,y: max(x,y,key=lambda x:x[1]), nodesat)
-            print "Node with highest saturation = %s (%s)" % (node, sat)
+            #print "Node with highest saturation = %s (%s)" % (node, sat)
             registerset = set()
             for neighbor in self.interf_graph[node]:
                 if neighbor in self.register_assgnmnt:
                     registerset.add(self.register_assgnmnt[neighbor])
-            print "Register set for node = %s" % (registerset)
+            #print "Register set for node = %s" % (registerset)
             lowest_unused = min(set(range(0,P0RegAllocator.MAX_SLOTS))-registerset)
-            print "Lowest unused register = %s" % (lowest_unused)
+            #print "Lowest unused register = %s" % (lowest_unused)
             self.register_assgnmnt[node] = lowest_unused
-            self.print_register_alloc()
+            #self.print_register_alloc()
             vertices = vertices - set([node])
+
+    def print_liveness(self):
+        instructions = self.program.instructions()
+        for k in range(0,len(instructions)):
+            instr = instructions[k]
+            print "%5s. %-40s : %s" % (k, instr, self.liveness_after_k_dict[k])
+            k = k + 1
 
     def print_graph(self):
         print "\nGraph:"
@@ -121,7 +123,8 @@ class P0RegAllocator:
     def print_register_alloc(self):
         print "\nRegister allocation:"
         for k in sorted(self.register_assgnmnt.iterkeys(),key=lambda x:x.name):
-            print "%-20s : %s" % (k,self.register_assgnmnt[k])
+#            print "%-20s : %s" % (k,self.register_assgnmnt[k])
+            print "%-20s : %s" % (k,self.get_assignment(k))
 
     def get_assignment(self,varname):
         if varname not in self.register_assgnmnt:
@@ -136,10 +139,11 @@ class P0RegAllocator:
     def substitute(self):
         """ Substitutes the register assignments in for the corresponding variables"""
         self.liveness_analyze()
+        #self.print_liveness()
         self.build_interference_graph()
-        self.print_graph()
+        #self.print_graph()
         self.color_graph()
-        self.print_register_alloc()
+        #self.print_register_alloc()
         return self.visit(self.program)
 
     def visit(self, node, *args, **kwargs):
