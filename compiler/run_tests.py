@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#! /usr/bin/python
 
 import sys
 import os
@@ -14,47 +14,45 @@ python_prog = "/usr/bin/python"
 
 # we'll need a garbage collection library later
 if False:
-    gc_inc = "-I/Users/siek/gc6.8/include"
-    gc_lib = "/Users/siek/gc6.8/.libs/libgc.a"
+  gc_inc = "-I/Users/siek/gc6.8/include"
+  gc_lib = "/Users/siek/gc6.8/.libs/libgc.a"
 else:
-    gc_inc = ""
-    gc_lib = ""
+  gc_inc = ""
+  gc_lib = ""
 
 default_prog = "./compile.py"
 default_tests_dir = "./test"
 
 # default to using compiler.py and tests dir
 if len(sys.argv) < 2:
-    prog = default_prog
+  prog = default_prog
 else:
-    prog = sys.argv[1]
+  prog = sys.argv[1]
 
 if not os.path.exists(prog):
     print "Compiler not found: " + prog
     sys.exit(1)
 
 if len(sys.argv) < 3:
-    testsdir = default_tests_dir
+  testsdir = default_tests_dir
 else:
-    testsdir = sys.argv[2]
+  testsdir = sys.argv[2]
 
 (homedir,progname) = os.path.split(prog)
 
-gcc_params = ['-g', '-m32', '-lm','-I' + homedir, '-I' + homedir + '/test', '-I' + homedir + '/tests',gc_inc]
+gcc_params = ['-g', '-lm', '-m32','-I' + homedir, '-I' + homedir + '/test', '-I' + homedir + '/tests',gc_inc]
+
 
 runtime_files = filter(lambda f: splitext(f)[1] == '.c', os.listdir(homedir))
 for f in runtime_files:
-    gcc_cmd = ["gcc", '-m32', homedir + '/' + f, "-c", "-g", gc_inc]
+    gcc_cmd = ["gcc", homedir + '/' + f, "-c", "-g", "-m32", gc_inc, "-lm"]
     gcc_cmd = [arg for arg in gcc_cmd if arg]
-    #print gcc_cmd
     compile_proc = subprocess.Popen(gcc_cmd)
     warn = compile_proc.communicate()[1]
     retcode = compile_proc.poll()
     if retcode != 0:
-        print 'failed to compile ' + f
-    args = ["mv", splitext(f)[0] + '.o', homedir + '/' + splitext(f)[0] + '.o']
-    #print args
-    mvproc = subprocess.Popen(args)
+      print 'failed to compile ' + f
+    mvproc = subprocess.Popen(["mv", splitext(f)[0] + '.o', homedir + '/' + splitext(f)[0] + '.o'])
     retcode = mvproc.poll()    
 
 object_files = map(lambda f: homedir + '/' + splitext(f)[0] + '.o', runtime_files)
@@ -104,20 +102,19 @@ def show_test_result(test_name, compile, run):
 
 print 'Test Name                              [Comp] [Run!]'
 
-for t in sorted(tests):
+for t in tests:
     test_name = t
     base = splitext(t)[0]
-    cfilename = base+'.c'
-    sfilename = base+'.s'
+    cfilename = base+'.s'
     cfile = open(cfilename, 'w')
     wfile = open(base+'.warn', 'w')
 #    print 'compiling Python to C'
     retcode = subprocess.call([python_prog,prog,t], stdout=cfile)
 #    print 'about to indent'
 #    retcode = subprocess.call(['indent',cfilename])
-    gcc_cmd = ["gcc", sfilename] + object_files + [gc_lib] + ["-o", base] + gcc_params
+    gcc_cmd = ["gcc", cfilename] + object_files + [gc_lib] + ["-o", base] + gcc_params
     gcc_cmd = [arg for arg in gcc_cmd if arg]
-    #print gcc_cmd
+    
 #    print 'invoking gcc'
 #    print ' '.join(gcc_cmd)
 #    compile_proc = subprocess.Popen(gcc_cmd, stderr=subprocess.PIPE)
