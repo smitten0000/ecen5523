@@ -6,7 +6,7 @@
 import lexxer
 import yakker
 
-debug = True    
+debug = True
 
 from Assembler import AssemblyVisitor
 
@@ -97,12 +97,8 @@ class Visitor(object):
     def visit_Assign(self, node, *args, **kwargs):
         assname = node.nodes[0].name
         expr = node.expr
-        gen_code = []
-        #if not self.ctxt.is_allocated(assname.name):
-            #self.ctxt.allocate_var(assname.name)
         loc, stmt = self.visit(expr)
-        gen_code.append(stmt)
-        return stmt + [Move(Var(assname), loc)]
+        return stmt + [Move(loc,Var(assname))]
         #return '%s\tmovl %%eax, %s(%%ebp)\n' % (, self.ctxt.get_location(assname.name))
         
     def visit_Printnl(self, node, *args, **kwargs):
@@ -119,17 +115,18 @@ class Visitor(object):
         return program
     
     def visit_Add(self, node, *args, **kwargs):
-        varname = self.ctxt.next_var()
         left, leftstmt = self.visit(node.left)
         right, rightstmt = self.visit(node.right)
-        return (Var(varname), leftstmt + rightstmt + [Move(Var(varname), right), Addl(left, Var(varname))])
+        varname = self.ctxt.next_var()
+        return (Var(varname), leftstmt + rightstmt + [Move(right,Var(varname)), Addl(left,Var(varname))])
         #return '%s\taddl %s,%%eax\n' % (self.visit(node.left), imm32_or_mem(node.right, self.ctxt))
     def visit_UnarySub(self, node, *args, **kwargs):
+        print ':: %s' % node.expr
+        if isinstance(node.expr, Const):
+            var = self.ctxt.next_var()
+            return (loc, stmtlist + [Movl(node.expr, var), Negl(var)])
         loc, stmtlist = self.visit(node.expr)
-        # need to create a temporary variable here to store the result.
-        varname = self.ctxt.next_var()
-        tmpvar = Var(varname)
-        return (tmpvar, stmtlist + [Move(loc, tmpvar), Negl(tmpvar)])
+        return (loc, stmtlist + [ Negl(loc)])
     def visit_CallFunc(self, node, *args, **kwargs):
         varname = self.ctxt.next_var()
         return (Var(varname), [Call('input'), Move(eax,Var(varname))])
@@ -172,25 +169,24 @@ def gen_live(statements):
         read = set([])
         write = set([])
         if isinstance(stmt, Move):
-            if not isinstance(stmt.left, Const):
-                # write variable is the left hand side of a move statement
-                if isinstance(stmt.left, Register):
-                    write = set([stmt.left])
-                else:
-                    write = set([stmt.left.name])
+            # write variable is the left hand side of a move statement
+            if isinstance(stmt.src, Register):
+                write = set([stmt.dest])
+            else:
+                write = set([stmt.dest.name])
             st = set([])
             # of any read variables
-            if not isinstance(stmt.left, Const):
-                if isinstance(stmt.right, Var):
-                    st = st | set([stmt.right.name])
+            if not isinstance(stmt.dest, Const):
+                if isinstance(stmt.src, Var):
+                    st = st | set([stmt.src.name])
                     read = read | st
         elif isinstance(stmt, Var):
-            read = read | set([stmt.value])
+            read = read | set([stmt.name])
         elif isinstance(stmt, Addl):
-            if isinstance(stmt.left, Var):
-                read = read | set([stmt.left.name])
-            if isinstance(stmt.right, Var):
-                read = read | set([stmt.right.name])
+            if isinstance(stmt.src, Var):
+                read = read | set([stmt.src.name])
+            if isinstance(stmt.dest, Var):
+                read = read | set([stmt.dest.name])
         elif isinstance(stmt, Pushl):
             read = read | set([stmt.src.name])
   
@@ -214,7 +210,7 @@ def gen_live(statements):
     
     nodes = {}
     found_nodes = []
-    registers = set([eax,ebx,ecx, edx])
+
     instr_ctr = 0
     if debug:
         print 'vars %d statements %d' % (len(vars), len(statements))
@@ -228,7 +224,7 @@ def gen_live(statements):
             
     for reg in ALL_REGS:
         nodes[reg] = LiveNode(reg)
-        
+    nodes[esp] = LiveNode(esp)    
     
     for varset in vars:
         if debug:
@@ -236,18 +232,24 @@ def gen_live(statements):
         if isinstance(statements[instr_ctr], Move):
             mv = statements[instr_ctr]
             varname = None
-            if isinstance(mv.left, Var):
-                varname = mv.left.name
+            if isinstance(mv.dest, Var):
+                varname = mv.dest.name
             if varname not in varset:
                 continue
             for var in varset:
-                nodes[mv.left.name].add_edge(nodes[var])
-                nodes[var].add_edge(nodes[mv.left.name])
+                nodes[mv.dest.name].add_edge(nodes[var])
+                nodes[var].add_edge(nodes[mv.dest.name])
         if isinstance(statements[instr_ctr], (Addl, Negl)):
             mv = statements[instr_ctr]
             for var in varset:
-                nodes[mv.left.name].add_edge(nodes[var])
-                nodes[var].add_edge(nodes[mv.left.name])
+#                print "--- addl or negl: mv.right: %s, var: %s" %(mv.right, var)
+#                print "+++ stmt %s" % statements[instr_ctr]
+                if isinstance(mv.dest, Var):
+                    nodes[mv.dest.name].add_edge(nodes[var])
+                    nodes[var].add_edge(nodes[mv.dest.name])                
+                elif not isinstance(mv.dest, Const):
+                    nodes[mv.dest].add_edge(nodes[var])
+                    nodes[var].add_edge(nodes[mv.dest])
         if isinstance(statements[instr_ctr], Call):
             for var in varset:
                 for reg in CALLER_SAVE:

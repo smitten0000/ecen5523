@@ -52,7 +52,8 @@ object, which is given as the 2nd argument."""
             stmtlist.append(Printnl([flatten(node.nodes[0], stmtlist, discard)], node.dest))
     elif isinstance(node, Assign):
         stmtlist.add_var(node.nodes[0].name)
-        stmtlist.append(Assign(node.nodes, flatten(node.expr, stmtlist, discard)))
+        exp = flatten(node.expr, stmtlist, discard)
+        stmtlist.append(Assign(node.nodes, exp))
         return node.nodes[0]
     elif isinstance(node, Discard):
         # discard nodes should be ignored; except for function calls with side effects.
@@ -62,8 +63,6 @@ object, which is given as the 2nd argument."""
     elif isinstance(node, Add):
         left = flatten (node.left, stmtlist, discard)
         right = flatten (node.right, stmtlist, discard)
-        if discard:
-            return None
         #varname = stmtlist.get_next_var()
         #stmtlist.append(Assign([AssName(varname, 'OP_ASSIGN')], Add((left,right))))
         #stmtlist.append(Add((left, right)))
@@ -71,15 +70,10 @@ object, which is given as the 2nd argument."""
         #return Name(varname)
     elif isinstance(node, UnarySub):
         f = flatten(node.expr,stmtlist, discard)
-        if discard:
-            return None
         varname = stmtlist.get_next_var()
         stmtlist.append(Assign([AssName(varname, 'OP_ASSIGN')], UnarySub(f)))
         return Name(varname)
     elif isinstance(node, CallFunc):
-        if discard:
-            stmtlist.append(node)
-            return None
         varname = stmtlist.get_next_var()
         stmtlist.append(Assign([AssName(varname, 'OP_ASSIGN')], node))
         return Name(varname)

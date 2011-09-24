@@ -17,36 +17,43 @@ class Pushl(object):
         return self.__str__()    
                
 class Move(object):
-    def __init__(self, lhs, rhs):
-        self.left = lhs
-        self.right = rhs
+    def __init__(self, src, dest):
+        self.dest = dest
+        self.src = src
     def __str__(self):
-        return "movl %s %s" % (self.right, self.left)
+        return "movl %s, %s" % (self.src, self.dest)
     def __repr__(self):
         return self.__str__()
     
 class Call(object):
     def __init__(self, func):
         self.function = func
-    
+    def __str__(self):
+        return "call %s" % self.function
+    def __repr__(self):
+        return self.__str__()
 class UnarySub(object):
     def __init__(self, expr):
         self.expression = expr
     def get_expression(self):
         return self.expression
-class Negl(object):
-    def __init__(self, left):
-        self.left = left
     def __str__(self):
-        return "Negl(%s)" % (self.left)
+        return "negl %s" % self.expression
+    def __repr__(self):
+        return self.__str__()
+class Negl(object):
+    def __init__(self, dest):
+        self.dest = dest
+    def __str__(self):
+        return "Negl(%s)" % (self.dest)
     def __repr__(self):
         return self.__str__()          
 class Addl(object):
-    def __init__(self, left, right):
-        self.left = left
-        self.right = right
+    def __init__(self, src, dest):
+        self.src = src
+        self.dest = dest
     def __str__(self):
-        return "Add(%s,%s)" % (self.left, self.right)
+        return "Add(%s,%s)" % (self.src, self.dest)
     def __repr__(self):
         return self.__str__()
 class Var(object):

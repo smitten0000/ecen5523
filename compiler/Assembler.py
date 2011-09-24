@@ -19,7 +19,12 @@ class AssemblyVisitor(object):
         return meth(node, *args, **kwargs)
     def get_reg_name(self, node):
         if isinstance(node, Var):
-            if self.nodes[node.name].register is None:
+            if not self.ctxt.is_allocated(node.name):
+                self.ctxt.allocate_var(node.name)
+                return '%s(%%ebp)'%self.ctxt.get_location(node.name)
+            elif node.name not in self.nodes:
+                return '%s(%%ebp)'%self.ctxt.get_location(node.name)
+            elif self.nodes[node.name].register is None:
                 return '%s(%%ebp)'%self.ctxt.get_location(node.name)
             else:
                 return self.nodes[node.name].register.x86name()
@@ -30,29 +35,26 @@ class AssemblyVisitor(object):
         elif isinstance(node, Register):
             return node.x86name()
         elif isinstance(node, Negl):
-            return self.get_reg_name(node.left)
-        return '$%s' % type(node)
-         
+            return self.get_reg_name(node.dest)
+        return '$%s' % type(node) 
     def generic_visit(self, node, *args, **kwargs):
-        return node
+        return []
     def visit_Const(self, node, *args, **kwards):
         return '$%s' % node.value
     def visit_Move(self, node, *args, **kwargs):
-        left = self.get_reg_name(node.left)
-        right = self.get_reg_name(node.right)
-        return '\tmovl %s, %s\n' % ( right, left ) #self.ctxt.get_location(assname))
+        dest = self.get_reg_name(node.dest)
+        src = self.get_reg_name(node.src)
+        return '\tmovl %s, %s\n' % ( src, dest ) #self.ctxt.get_location(assname))
     
     def visit_Addl(self, node, *args, **kwargs):
-        left = ""
-        right = ""
-        left = self.get_reg_name(node.left) 
-        right = self.get_reg_name(node.right)
+        src = self.get_reg_name(node.src) 
+        dest = self.get_reg_name(node.dest)
             #imm32_or_mem(node.right, self.ctxt))
-        return '\taddl %s, %s\n' % (left, right)
+        return '\taddl %s, %s\n' % (src, dest)
     def visit_Pushl(self, node, *args, **kwargs):
-        return '\tpushl %s' % self.get_reg_name(node)
+        return '\tpushl %s\n' % self.get_reg_name(node)
     def visit_Negl(self, node, *args, **kwargs):
-        return '\tnegl %s' % self.get_reg_name(node)        
+        return '\tnegl %s\n' % self.get_reg_name(node)        
     #def visit_UnarySub(self, node, *args, **kwargs):
         # result of negation is in %eax
     #    return self.visit(node.expr).append(UnarySub(eax))
