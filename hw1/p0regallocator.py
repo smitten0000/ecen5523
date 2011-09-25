@@ -1,11 +1,12 @@
 # vim: set ts=4 sw=4 expandtab:
 
+from comp_util import *
 from x86ir import *
 
 class P0RegAllocator:
     ALL_REGS = [Register('eax'), Register('ebx'), Register('ecx'), Register('edx'), Register('edi'), Register('esi')]
     CALLER_SAVE = [Register('eax'), Register('ecx'), Register('edx')]
-    MAX_SLOTS = 2000
+    ALL_SLOTS = set(range(0,5000))
     def __init__(self, program):
         self.program = program
         self.liveness_after_k_dict={}
@@ -89,24 +90,45 @@ class P0RegAllocator:
         # get the list of vertices that need assignments
         # only include vertices of type 'Var' (ignore Registers)
         vertices = set(filter(lambda x: isinstance(x,Var), self.interf_graph.keys()))
+        # compute the saturation for all the vertices up front
+        # This gets a list of tuples of the form (sat(x),x)
+        nodesat = map(lambda x:(x,self.saturation(x)), vertices)
+        # create a priority queue (see comp_util module) and add all nodes
+        # with their corresponding priority
+        UNSPILLABLE=1
+        SPILLABLE=2
+        saturation_q = priorityq()
+        for node, sat in nodesat:
+            # we negate the saturation to produce the same effect as a max-heap
+            saturation_q.add_task(-sat, node, SPILLABLE)
         while len(vertices) > 0:
-            # don't you love python?
-            # This gets a list of tuples of the form (x,sat(x))
-            nodesat = map(lambda x:(x,self.saturation(x)), vertices)
             # find the entry in the list with the highest saturation
             # this corresponds to the "most-constrained" node; we tackle this first 
-            node, sat = reduce(lambda x,y: max(x,y,key=lambda x:x[1]), nodesat)
+            sat, node = saturation_q.get_top_priority()
             #print "Node with highest saturation = %s (%s)" % (node, sat)
             registerset = set()
             for neighbor in self.interf_graph[node]:
                 if neighbor in self.register_assgnmnt:
                     registerset.add(self.register_assgnmnt[neighbor])
             #print "Register set for node = %s" % (registerset)
-            lowest_unused = min(set(range(0,P0RegAllocator.MAX_SLOTS))-registerset)
+            lowest_unused = min(P0RegAllocator.ALL_SLOTS-registerset)
             #print "Lowest unused register = %s" % (lowest_unused)
             self.register_assgnmnt[node] = lowest_unused
             #self.print_register_alloc()
+            # finally, remove the node from the set of vertices that need colored
             vertices = vertices - set([node])
+            # We have to re-compute the saturation for all the neighbors of the node, 
+            # and update the priority queue.
+            for neighbor in self.interf_graph[node]:
+                # we should never need to know the saturation for a register, so don't
+                # update registers' saturation value
+                if isinstance(neighbor, Var):
+                    # only update saturations for nodes that are still in our list
+                    # of vertices, since the nodes that have already been colored have
+                    # have been removed from the priority queue
+                    if neighbor in vertices:
+                        newsat = self.saturation(neighbor)
+                        saturation_q.reprioritize(-newsat, neighbor)
 
     def print_liveness(self):
         instructions = self.program.instructions()
@@ -123,8 +145,8 @@ class P0RegAllocator:
     def print_register_alloc(self):
         print "\nRegister allocation:"
         for k in sorted(self.register_assgnmnt.iterkeys(),key=lambda x:x.name):
-#            print "%-20s : %s" % (k,self.register_assgnmnt[k])
-            print "%-20s : %s" % (k,self.get_assignment(k))
+            if isinstance(k,Var):
+                print "%-20s : %s" % (k,self.get_assignment(k))
 
     def get_assignment(self,varname):
         if varname not in self.register_assgnmnt:
