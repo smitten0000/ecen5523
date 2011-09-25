@@ -64,6 +64,10 @@ class priorityq:
         self.add_task(priority, task, entry[1])
         entry[1] = priorityq.INVALID
 
+    def incr_priority(self, task, inc=1):
+        entry = self.task_finder[task]
+        self.reprioritize(entry[0]-inc, task)
+
 
 def pretty(node):
     """Given an AST node, print out a human readable form."""

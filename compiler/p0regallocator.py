@@ -6,7 +6,7 @@ from x86ir import *
 class P0RegAllocator:
     ALL_REGS = [Register('eax'), Register('ebx'), Register('ecx'), Register('edx'), Register('edi'), Register('esi')]
     CALLER_SAVE = [Register('eax'), Register('ecx'), Register('edx')]
-    ALL_SLOTS = set(range(0,5000))
+    ALL_SLOTS = set(range(0,200))
     def __init__(self, program):
         self.program = program
         self.liveness_after_k_dict={}
@@ -127,8 +127,7 @@ class P0RegAllocator:
                     # of vertices, since the nodes that have already been colored have
                     # have been removed from the priority queue
                     if neighbor in vertices:
-                        newsat = self.saturation(neighbor)
-                        saturation_q.reprioritize(-newsat, neighbor)
+                        saturation_q.incr_priority(neighbor,inc=-1)
 
     def print_liveness(self):
         instructions = self.program.instructions()
@@ -245,3 +244,14 @@ if __name__ == "__main__":
         program = instruction_selector.visit(stmtlist)
         regallocator = P0RegAllocator(program)
         print regallocator.substitute()
+        #import cProfile as profile
+        #import pstats
+        #output_file = 'profile.out'
+        #profile.run('regallocator.substitute()', output_file)
+        #p = pstats.Stats(output_file)
+        #print "name: "
+        #print p.sort_stats('name')
+        #print "all stats: "
+        #p.print_stats()
+        #print "cumulative (top 10): "
+        #p.sort_stats('cumulative').print_stats(10)
