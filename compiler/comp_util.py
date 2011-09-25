@@ -1,6 +1,7 @@
 # vim: set ts=4 sw=4 expandtab:
 
 from compiler.ast import *
+import itertools,heapq
 
 class VariableAllocator:
     """Provides context allocating variables by storing a set
@@ -27,6 +28,41 @@ class VariableAllocator:
 
     def __str__(self):
         return 'VariableAllocator(%s,%s)' % (self.varnum, self.varset)
+
+
+class priorityq:
+    """ Priority queue abstraction, with the ability to reprioritize
+    a given task and invalidate a task.  Taken from the python
+    documentation here: http://docs.python.org/library/heapq.html
+    Modified slightly."""
+    INVALID = -1            # special const to mark an entry as deleted
+    def __init__(self):
+        self.pq = []                      # the priority queue list
+        self.counter = itertools.count(1) # unique sequence count
+        self.task_finder = {}             # mapping of tasks to entries
+
+    def add_task(self, priority, task, count=None):
+        if count is None:
+            count = next(counter)
+        entry = [priority, count, task]
+        self.task_finder[task] = entry
+        heapq.heappush(self.pq, entry)
+
+    def get_top_priority(self):
+        while True:
+            priority, count, task = heapq.heappop(self.pq)
+            if count is not priorityq.INVALID:
+                del self.task_finder[task]
+                return priority, task
+
+    def delete_task(self, task):
+        entry = self.task_finder[task]
+        entry[1] = priorityq.INVALID
+
+    def reprioritize(self, priority, task):
+        entry = self.task_finder[task]
+        self.add_task(priority, task, entry[1])
+        entry[1] = priorityq.INVALID
 
 
 def pretty(node):

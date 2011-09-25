@@ -5,7 +5,7 @@
 # CSCI5525, Fall 2011
 # HW1
 
-import sys
+import sys, logging
 from p0parser import P0Parser
 from p0flattener import P0Flattener
 from p0insselector import P0InstructionSelector
@@ -13,10 +13,15 @@ from p0regallocator import P0RegAllocator
 from p0stackallocator import P0StackAllocator
 from p0generator import P0Generator
 from comp_util import *
+import time
+
+logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         sys.exit(1)
+
+    logging.basicConfig(level=logging.DEBUG)
 
     testcases = sys.argv[1:]
     for testcase in testcases:
@@ -32,7 +37,10 @@ if __name__ == "__main__":
         instruction_selector = P0InstructionSelector(varalloc)
         program = instruction_selector.visit(stmtlist)
         regallocator = P0RegAllocator(program)
+        start = time.time()
         program = regallocator.substitute()
+        end = time.time()
+        logger.debug("P0RegAllocator.substitute() took %.02fs" % (end - start))
         #stackallocator = P0StackAllocator(program)
         #program = stackallocator.substitute()
         generator = P0Generator()
