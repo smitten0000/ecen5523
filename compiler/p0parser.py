@@ -20,7 +20,10 @@ class P0Parser:
     def p_module(self, p):
         r'module : statements'
         p[0] = Module(None,p[1])
-
+    
+    def p_empty(self, p):
+        r'''empty : '''
+    
     def p_statements(self, p):
         r'''statements : endofstmt
                        | statement endofstmt
@@ -35,12 +38,77 @@ class P0Parser:
                 p[0] = Stmt([p[1]])
         else:
             p[0] = Stmt([])
-
+    
+#    def p_subscription(self, p):
+#        r'''subscription : expression LBRACE expression RBRACE'''
+#        
+#    def p_expression_subscription(self, p):
+#        r'''expression : subscription'''
+#        
+    
+    
+            
+    def p_dict(self, p):
+        r'''expression : LBRACE key_datum_list RBRACE'''
+        p[0] = Dict(p[2])
+        
+    def p_keydatum(self, p):
+        r'''key_datum : expression COLON expression'''
+        p[0] = (p[1], p[3]) 
+    def p_keydatum_list(self, p):
+        r'''key_datum_list : empty
+                           | key_datum
+                           | key_datum key_datum_list'''
+        if len(p) == 2:
+            p[0] = Dict([p[1]])
+        else:
+            p[0] = Dict([p[1]]+p[2].items)
+        
     def p_endofstmt(self, p):
         r'''endofstmt : ENDMARKER
                       | NEWLINE
                       | NEWLINE ENDMARKER'''
         return None
+
+    def p_expression_notequals(self, p):
+        r'''expression : expression NOTEQUALS expression'''
+        p[0] = Compare('!=', [p[1],p[3]])
+        
+    def p_expression_equality(self, p):
+        r'''expression : expression EQUALITY expression'''
+        p[0] = Compare('==', [p[1],p[3]])
+
+    def p_expression_or(self, p):
+        r'''expression : expression OR expression'''
+        p[0] = Or(p[1], p[3])
+    def p_expression_and(self, p):
+        r'''expression : expression AND expression'''
+        p[0] = And(p[1], p[3])
+
+    def p_expression_if(self, p):
+        r'''expression : expression IF expression ELSE expression'''
+        p[0] = IfExp(p[3], p[1], p[5])
+
+    def p_expression_is(self, p):
+        r'''expression : expression IS expression'''
+        p[0] = Compare('is', p[1], p[3])
+
+    def p_expression_list(self, p):
+        r'''expression : LBRACKET expr_list RBRACKET'''
+        p[0] = List(p[2])
+        
+    def p_expr_list(self,p):
+        r'''expr_list : empty
+                      | expression
+                      | expression COMMA expression'''
+        if len(p) == 2:
+            p[0] = [p[1]]
+        elif len(p) == 4:
+            p[0] = [p[1],p[3]].flatten()
+            
+    def p_expression_not(self, p):
+        r'''expression : NOT expression'''
+        p[0] = Not(p[2])
 
     def p_statement_print(self, p):
         r'''statement : PRINT expression'''
@@ -77,7 +145,24 @@ class P0Parser:
     def p_expression_paren(self, p):
         r'expression : LPAREN expression RPAREN'
         p[0] = p[2]
-
+    
+    def p_expression_boolean_true(self, p):
+        r'''expression : TRUE'''
+        p[0] = Const(1)
+        
+    def p_expression_boolean_false(self, p):
+        r'''expression : FALSE'''
+        p[0] = Const(0)    
+        
+    def p_target(self,p):
+        r'''target : NAME
+                   | subscription'''
+        p[0] = p[1]
+        
+    def p_target_statement(self, p):
+        r'''statement : target EQUALS expression'''
+        Assign([AssName(p[1],'OP_ASSIGN')],p[3])
+        
     # Error rule for syntax errors
     def p_error(self, p):
         raise SyntaxError(p)

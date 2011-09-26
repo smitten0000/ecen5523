@@ -11,9 +11,26 @@ class P0Lexer:
     reserved = {
         'print' : 'PRINT',
         'input' : 'INPUT',
+        'True' : 'TRUE',
+        'False' : 'FALSE',
+        'and' : 'AND',
+        'or' : 'OR',
+        'is' : 'IS',
+        'if' : 'IF',        
+        'else':'ELSE'
     }
 
-    tokens = ('CONST',       # constant integer
+    tokens = (
+              'NOT',
+              'LBRACKET',
+              'RBRACKET',
+              'LBRACE',
+              'RBRACE',
+              'EQUALITY',
+              'NOTEQUALS',
+              'COMMA',
+              'COLON',
+              'CONST',       # constant integer
               'NAME',        # identifier (variable or function name)
               'PLUS',        # addition operator (+)
               'EQUALS',      # assignment operator (=)
@@ -45,8 +62,22 @@ class P0Lexer:
     t_MINUS   = r'-'
     t_LPAREN  = r'\('
     t_RPAREN  = r'\)'
+    t_LBRACKET = r'\['
+    t_RBRACKET = r'\]'
+    t_LBRACE = r'{'
+    t_RBRACE = r'}'
+    t_COLON = r':'
+    t_EQUALITY = r'=='
+    t_AND = r'and'
+    t_OR = r'or'
+    t_NOTEQUALS = r'!='
+    t_IF = r'if'
+    t_ELSE = r'else'
+    t_COMMA = r','
     t_ignore_COMMENT = r'\#.*'
-
+    t_TRUE = r'True'
+    t_FALSE = r'False'
+    t_NOT = r'not'
     # advanced tokens (defined as functions)
 
     # identifiers (names)
