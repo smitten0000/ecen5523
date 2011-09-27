@@ -47,6 +47,10 @@ class P1Flattener(P0Flattener):
         elif isinstance(node, Not):
             var, stmtlist = self.flatten(node.expr)
             return (node, stmtlist)
+        elif isinstance(node, Compare):
+            (oper, rhs) = node.ops[0]
+            var, stmtlist = self.flatten(rhs)
+            return (var, stmtlist+[Compare(node.expr, [(oper, var)])])
         else:
             return P0Flattener.flatten(self, node)
 
