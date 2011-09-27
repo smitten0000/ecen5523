@@ -6,11 +6,13 @@
 # HW1
 
 import sys, logging
+import compiler
+
 from p0parser import P0Parser
-from p0flattener import P0Flattener
-from p0insselector import P0InstructionSelector
-from p0regallocator import P0RegAllocator
 from p0stackallocator import P0StackAllocator
+from p1flattener import P1Flattener
+from p1insselector import P1InstructionSelector
+from p1regallocator import P1RegAllocator
 from p0generator import P0Generator
 from comp_util import *
 import time
@@ -25,18 +27,20 @@ if __name__ == "__main__":
 
     testcases = sys.argv[1:]
     for testcase in testcases:
-        parser = P0Parser()
-        parser.build()
-        #ast = compiler.parseFile(testcase)
-        ast = parser.parseFile(testcase)
+        #parser = P0Parser()
+        #parser.build()
+        #ast = parser.parseFile(testcase)
+        
+        ast = compiler.parseFile(testcase)
+        
         varalloc = VariableAllocator()
-        p0flattener = P0Flattener(varalloc)
-        stmtlist = p0flattener.flatten(ast)
+        flattener = P1Flattener(varalloc)
+        stmtlist = flattener.flatten(ast)
         #code = '%s' % stmtlist
         #eval(compile(code,'test.txt','exec'))
-        instruction_selector = P0InstructionSelector(varalloc)
+        instruction_selector = P1InstructionSelector(varalloc)
         program = instruction_selector.visit(stmtlist)
-        regallocator = P0RegAllocator(program)
+        regallocator = P1RegAllocator(program)
         start = time.time()
         program = regallocator.substitute()
         end = time.time()
