@@ -51,7 +51,7 @@ class P0Flattener:
             stmtlist.varalloc.add_var(node.assname)
             return (node, [])
         else:
-            raise Exception('Unknown node: %s' % node.__class__)
+            raise Exception('Unknown node: %s: %s' % (node.__class__, node))
 
 
 if __name__ == "__main__":
