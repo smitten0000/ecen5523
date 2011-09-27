@@ -19,26 +19,31 @@ class P1Flattener(P0Flattener):
             other = [y for (x,y) in stmts if y != []]
             other = reduce(lambda x,y: x+y, [x for x in other], [])
             return (Or(simple),[])
+        elif isinstance(node, Or):
+            stmts = [self.flatten(x) for x in node.nodes]
+            simple = [x for (x,y) in stmts]
+            other = [y for (x,y) in stmts if y != []]
+            other = reduce(lambda x,y: x+y, [x for x in other], [])
+            return (And(simple),[])
         elif isinstance(node, List):
             stmts = [self.flatten(x) for x in node.nodes]
             simple = [x for (x,y) in stmts]
             other = [y for (x,y) in stmts if y != []]
             other = reduce(lambda x,y: x+y, [x for x in other])
-            return (List(simple),[other])
-        
+            return (List(simple),other)        
         elif isinstance(node, Dict):
             stmts = [self.flatten(x) for x in node.items]
             simple = [x for (x,y) in stmts]
             other = [y for (x,y) in stmts if y != []]
             other = reduce(lambda x,y: x+y, [x for x in other], [])
-            return (Dict(simple),[other])
+            return (Dict(simple),other)
         elif isinstance(node, tuple):
             return (node,[])
         elif isinstance(node, IfExp):
             vart, then = self.flatten(node.then)
             vare, else_ = self.flatten(node.else_)
             vartes, test = self.flatten(node.test)
-            return (IfExp(vart, vare, vartes),then+else_+test)
+            return (IfExp(vartes, vart, vare),then+else_+test)
         elif isinstance(node, Not):
             var, stmtlist = self.flatten(node.expr)
             return (node, stmtlist)
