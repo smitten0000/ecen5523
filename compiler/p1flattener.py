@@ -19,7 +19,7 @@ class P1Flattener(P0Flattener):
             other = [y for (x,y) in stmts if y != []]
             other = reduce(lambda x,y: x+y, [x for x in other], [])
             return (Or(simple),[])
-        elif isinstance(node, Or):
+        elif isinstance(node, And):
             stmts = [self.flatten(x) for x in node.nodes]
             simple = [x for (x,y) in stmts]
             other = [y for (x,y) in stmts if y != []]
@@ -29,7 +29,7 @@ class P1Flattener(P0Flattener):
             stmts = [self.flatten(x) for x in node.nodes]
             simple = [x for (x,y) in stmts]
             other = [y for (x,y) in stmts if y != []]
-            other = reduce(lambda x,y: x+y, [x for x in other])
+            other = reduce(lambda x,y: x+y, [x for x in other], [])
             return (List(simple),other)        
         elif isinstance(node, Dict):
             stmts = [self.flatten(x) for x in node.items]
@@ -46,11 +46,18 @@ class P1Flattener(P0Flattener):
             return (IfExp(vartes, vart, vare),then+else_+test)
         elif isinstance(node, Not):
             var, stmtlist = self.flatten(node.expr)
-            return (node, stmtlist)
+            return (Not(var), stmtlist)
         elif isinstance(node, Compare):
+            (lhsvar, lhsstmt) = self.flatten(node.expr)
             (oper, rhs) = node.ops[0]
             var, stmtlist = self.flatten(rhs)
-            return (var, stmtlist+[Compare(node.expr, [(oper, var)])])
+            return (var, stmtlist+[Compare(lhsvar, [(oper, var)])])
+        elif isinstance(node, Subscript):
+            stmts = [self.flatten(x) for x in node.subs]
+            simple = [x for (x,y) in stmts]
+            other = [y for (x,y) in stmts if y != []]
+            other = reduce(lambda x,y: x+y, [x for x in other], [])
+            return (node.expr, other+[Subscript(node.expr, node.flags, simple)])
         else:
             return P0Flattener.flatten(self, node)
 

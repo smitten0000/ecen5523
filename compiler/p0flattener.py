@@ -24,7 +24,10 @@ class P0Flattener:
                 var, stmtlist = self.flatten(node.nodes[0])
                 return stmtlist + [Printnl([var], node.dest)]
         elif isinstance(node, Assign):
-            self.varalloc.add_var(node.nodes[0].name)
+            if isinstance(node.nodes[0],Subscript):
+                self.varalloc.add_var(node.nodes[0].expr.name)
+            else:
+                self.varalloc.add_var(node.nodes[0].name)
             var, stmtlist = self.flatten(node.expr)
             return stmtlist + [Assign(node.nodes, var)]
         elif isinstance(node, Discard):

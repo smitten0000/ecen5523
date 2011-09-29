@@ -38,16 +38,7 @@ class P0Parser:
                 p[0] = Stmt([p[1]])
         else:
             p[0] = Stmt([])
-    
-#    def p_subscription(self, p):
-#        r'''subscription : expression LBRACE expression RBRACE'''
-#        
-#    def p_expression_subscription(self, p):
-#        r'''expression : subscription'''
-#        
-    
-    
-            
+           
     def p_dict(self, p):
         r'''expression : LBRACE key_datum_list RBRACE'''
         p[0] = Dict(p[2])
