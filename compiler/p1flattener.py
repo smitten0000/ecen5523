@@ -80,7 +80,7 @@ class P1Flattener(P0Flattener):
             exprvar, exprstmtlist = self.flatten(node.expr)
             subvar, substmtlist = self.flatten(node.subs[0])
             varname = self.varalloc.get_next_var()
-            return (Name(varname), stmtlist + [Assign([AssName(varname,'OP_ASSIGN')], Subscript(exprvar, node.flags, subvar))])
+            return (Name(varname), exprstmtlist + substmtlist + [Assign([AssName(varname,'OP_ASSIGN')], Subscript(exprvar, node.flags, subvar))])
         else:
             return P0Flattener.flatten(self, node)
 
