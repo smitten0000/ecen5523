@@ -47,15 +47,28 @@ class P1Flattener(P0Flattener):
         #elif isinstance(node, tuple):
         #    return (node,[])
         elif isinstance(node, IfExp):
-            # XXX: B.S., need to look at this more.  I think that the flattened statements/expressions
-            # should be encapsulated in the IfExp node, so that the statements are not unconditionally
-            # executed.  This may require a new node type to store the statements...
+            # Go ahead and flatten all expressions, including the test expression, as well as the 
+            # "then" and "else" expressions.
+            vartes, test = self.flatten(node.test)
             vart, then = self.flatten(node.then)
             vare, else_ = self.flatten(node.else_)
-            vartes, test = self.flatten(node.test)
-            # The return value should be the new If node itself?  I think...
+            # Allocate a variable name, which will hold the result of the IfExp
             varname = self.varalloc.get_next_var()
-            return (Name(varname), NewIfExp(vartes, vart, vare, then, else_, test))
+            # update the "then" and "else_" set of statements to include an 
+            # assignment to the allocated variable
+            then  = then  + [Assign([AssName(varname, 'OP_ASSIGN')], vart)]
+            else_ = else_ + [Assign([AssName(varname, 'OP_ASSIGN')], vare)]
+            # We don't want to blindly execute both branches of the if, so instead we
+            # encapsulate the flattened statements for the "then" and "else_" clauses in an If node.
+            # The If node is then returned as a statement.  This is expanded later into labels and
+            # jumps.  The test expression is always evaluated, so we have to include the corresponding
+            # flattened statements.
+            # NOTE: The If node has two attributes: "tests" and "else_".  The tests attribute is
+            # a list of tuples, where the first element in the tuple is the test expression and the
+            # second element in the tuple is a Stmt object.  Each tuple in the list corresponds to
+            # an "if" or "elif" clause.  The else_ attribute is a Stmt object corresponding to the 
+            # "else" clause.
+            return (Name(varname), test + [If([(vartes, Stmt(then))], else_)])
         elif isinstance(node, Not):
             var, stmtlist = self.flatten(node.expr)
             varname = self.varalloc.get_next_var()
