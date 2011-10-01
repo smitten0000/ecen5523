@@ -84,7 +84,7 @@ class P1Flattener(P0Flattener):
             oper, rhs = node.ops[0]
             rhsvar, rhsstmtlist = self.flatten(rhs)
             varname = self.varalloc.get_next_var()
-            return (Name(varname), lhsstmtlist + rhtstmtlist + [Assign([AssName(varname,'OP_ASSIGN')], Compare(lhsvar, [(oper, rhsvar)]))])
+            return (Name(varname), lhsstmtlist + rhsstmtlist + [Assign([AssName(varname,'OP_ASSIGN')], Compare(lhsvar, [(oper, rhsvar)]))])
         elif isinstance(node, Subscript):
             # We only need to handle one subscript per the grammar, e.g, a[1,2] is invalid P1
             # (a[1,2] is the only case where you get len(node.subs) > 1)
