@@ -6,46 +6,31 @@ Created on Oct 1, 2011
 import compiler
 from p0generator import P0Generator 
 
-
-class LabelAllocator(object):
-    def __init__(self):
-        self.count = 0
-        
-    def get_next_label(self):
-        label= '_label_%s' % self.count
-        self.count= self.count+1
-        return label
         
 
 class P1Generator(P0Generator):
     '''
     Adds the necessary assembly instructions for type checking, if expressions, etc
     '''
-
-
     def __init__(self,params):
         '''
         Constructor
         '''
         P0Generator.__init__(self)
-        self.labelalloc = LabelAllocator()
+
         
     def visit_GetTag(self, node, *args, **kwargs):
         return '\tand %s, $3' %  self.visit(node.arg)    
     
-    def visit_If(self, node, *args, **kwargs):
-        '''Generate a cmp/je/jmp set with 0 for the else case (true is anything not 0) of an if statement'''
-        label = self.labelalloc.get_next_label()
-        stmts = []
-        # If([(vartes, Stmt(then))], else_
-        stmts.append('\tcmpl %s, $0' % self.visit(node.tests[0]))
-        stmts.append('\tje else%s' % label)
-        stmts.append(self.visit(node.tests[1]))
-        stmts.append('\tjmp end%s' % label)
-        stmts.append('else%s' % label)
-        stmts.append(self.visit(node.else_))
-        stmts.append('end%s' % label)
-        return '\n'.join(stmts)
+    
+    def visit_Or(self, node, *args, **kwargs):
+        return '\tOR %s, %s' % (self.visit(node.nodes[0]), self.visit(node.nodes[1]))
+    def visit_And(self, node, *args, **kwargs):
+        return '\tAND %s, %s' % (self.visit(node.nodes[0]), self.visit(node.nodes[1]))
+    def visit_Not(self, node, *args, **kwargs):
+        return '\tNOT %s' % self.visit(node.expr)
+    def visit_InjectFrom(self, node, *args, **kwargs):
+        
     
 if __name__ == "__main__":
     import sys

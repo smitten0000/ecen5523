@@ -146,3 +146,50 @@ class StackSlot(object):
         return not self.__eq__(other)
     def __hash__(self):
         return self.value.__hash__()
+
+class Cmp(object):
+    def __init__(self, lhs, rhs):
+        self.lhs = lhs
+        self.rhs = rhs
+    def __str__(self):
+        return "Cmp(%s, %s)" % (self.lhs, self.rhs)
+    def __repr__(self):
+        return self.__str__()
+    def __eq__(self, other):
+        return self.lhs == other.lhs and self.rhs == other.rhs
+    def __ne__(self, other):
+        return not self.__eq__(other)
+    def __hash__(self):
+        return self.lhs.__hash__()+self.rhs.__hash__()
+
+class Label(object):
+    def __init__(self, label):
+        self.label = label
+    def __str__(self):
+        return "Label(%s)" % self.label
+    def __repr__(self):
+        return self.__str__()
+    def __eq__(self, other):
+        return self.label == other.label
+    def __ne__(self, other):
+        return not self.__eq__(other)
+    def __hash__(self):
+        return self.label.__hash__()
+class Jump(object):
+    def __init__(self, label):
+        self.label = label
+    def __str__(self):
+        return "Jump(%s)" % self.label
+    def __repr__(self):
+        return self.__str__()
+    def __eq__(self, other):
+        return self.label == other.label
+    def __ne__(self, other):
+        return not self.__eq__(other)
+    def __hash__(self):
+        return self.label.__hash__()
+class JumpEquals(Jump):
+    def __init__(self, label):
+        Jump.__init__(label)
+    def __str__(self):
+        return "JumpEquals(%s)" % label
