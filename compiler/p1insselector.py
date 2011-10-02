@@ -4,11 +4,12 @@ from comp_util import *
 from x86ir import *
 from p0insselector import P0InstructionSelector
 
+
 # Concept borrowed from http://peter-hoffmann.com/2010/extrinsic-visitor-pattern-python-inheritance.html
 class P1InstructionSelector(P0InstructionSelector):
     def __init__(self, varalloc):
         P0InstructionSelector.__init__(self, varalloc)
-
+        
 
 if __name__ == "__main__":
     import sys

@@ -6,3 +6,4 @@ y = {1:3}
 print y
 x=False if not True else True
 print x
+print 3 if input() else [1, input(), y, c]
