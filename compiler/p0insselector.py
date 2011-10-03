@@ -58,6 +58,10 @@ class P0InstructionSelector(object):
         return (Imm32(node.value), [])
 
     def visit_Name(self, node, *args, **kwargs):
+        if node.name == "False":
+            return (Const(0), [])
+        elif node.name == "True":
+            return (Const(1), [])
         if not self.varalloc.is_allocated(node.name):
             raise Exception("Attempt to access an undefined variable '%s'" % node.name)
         return (Var(node.name), [])

@@ -21,12 +21,16 @@ class P1InstructionSelector(P0InstructionSelector):
     def __init__(self, varalloc):
         P0InstructionSelector.__init__(self, varalloc)
         self.labelalloc = LabelAllocator()
-        
+    def visit_Not(self, node, *args, **kwargs):
+        return (node,[])        
     def visit_If(self, node, *args, **kwargs):
         '''Generate a cmp/je/jmp set with 0 for the else case (true is anything not 0) of an if statement'''
         label = self.labelalloc.get_next_label()
-        stmts = [Cmp(node.tests[0]), JumpEquals('else%s'%label)]
-        tstvar, tststmt = self.visit(node.tests[1])
+        
+        stmts = [Cmp(node.tests[0][0], 0), JumpEquals('else%s'%label)]
+        print "*****"
+        print node.tests[0][1]
+        tstvar, tststmt = self.visit(node.tests[0][1])
         stmts.extend(tststmt)
         stmts.append(Jump('end%s'%label))
         stmts.append(Label('else%s'%label))
@@ -47,7 +51,7 @@ if __name__ == "__main__":
         #parser = P0Parser()
         #parser.build()
         #ast = parser.parseFile(testcase)
-        ast = compile.parseFile(testcase)
+        ast = compiler.parseFile(testcase)
         
         varalloc = VariableAllocator()
         p0flattener = P1Flattener(varalloc)
