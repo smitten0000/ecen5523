@@ -161,6 +161,28 @@ class Cmp(object):
         return not self.__eq__(other)
     def __hash__(self):
         return self.lhs.__hash__()+self.rhs.__hash__()
+    def writes(self):
+        return []
+    def reads(self):
+        return [self.lhs, self.rhs]
+    
+class BitwiseNot(object):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return "Not(%s)" % (self.value)
+    def __repr__(self):
+        return self.__str__()
+    def __eq__(self, other):
+        return self.value == other.value
+    def __ne__(self, other):
+        return not self.__eq__(other)
+    def __hash__(self):
+        return self.value.__hash__()
+    def writes(self):
+        return [self.value]
+    def reads(self):
+        return [self.value]
 
 class Label(object):
     def __init__(self, label):
@@ -175,6 +197,7 @@ class Label(object):
         return not self.__eq__(other)
     def __hash__(self):
         return self.label.__hash__()
+    
 class Jump(object):
     def __init__(self, label):
         self.label = label
@@ -188,6 +211,7 @@ class Jump(object):
         return not self.__eq__(other)
     def __hash__(self):
         return self.label.__hash__()
+    
 class JumpEquals(Jump):
     def __init__(self, label):
         Jump.__init__(self, label)

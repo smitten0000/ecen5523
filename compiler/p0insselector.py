@@ -63,7 +63,7 @@ class P0InstructionSelector(object):
         elif node.name == "True":
             return (Const(1), [])
         if not self.varalloc.is_allocated(node.name):
-            raise Exception("Attempt to access an undefined variable '%s'" % node.name)
+            raise Exception("Attempt to access an undefined variable '%s' node '%s'" % (node.name, node))
         return (Var(node.name), [])
 
 

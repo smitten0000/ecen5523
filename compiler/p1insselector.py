@@ -22,17 +22,29 @@ class P1InstructionSelector(P0InstructionSelector):
         P0InstructionSelector.__init__(self, varalloc)
         self.labelalloc = LabelAllocator()
     def visit_Not(self, node, *args, **kwargs):
-        return (node,[])        
+        (var, stmt) = self.visit(node.expr)
+        print var
+        
+        return stmt+[BitwiseNot(var)]        
     def visit_If(self, node, *args, **kwargs):
         '''Generate a cmp/je/jmp set with 0 for the else case (true is anything not 0) of an if statement'''
         label = self.labelalloc.get_next_label()
         (test, then) = node.tests[0]
-        
-        stmts = [Cmp(test, 0), JumpEquals('else%s' % label )]
+        #then = [self.visit(x) for x in then]
+        t2 = []
+        for thenexpr in then:
+            t2 = [x for x in self.visit(thenexpr)]
+        then = t2
+        cmpvarname = self.varalloc.get_next_var()  
+        stmts = [Movl(Imm32(0), Var(cmpvarname)), Cmp(Var(test.name), Var(cmpvarname)), JumpEquals('else%s' % label )]
         stmts.extend(then)
         stmts.append(Jump('end%s'%label))
         stmts.append(Label('else%s'%label))
-        stmts.extend(node.else_)
+        e2 = []
+        for ex in node.else_:
+            e2 = [x for x in self.visit(ex)]
+        else_ = e2
+        stmts.extend(else_)
         stmts.append(Label('end%s' % label ))
         return stmts
         
@@ -53,8 +65,6 @@ if __name__ == "__main__":
         varalloc = VariableAllocator()
         flattener = P1Flattener(varalloc)
         stmtlist = flattener.flatten(ast)
-        
+        print stmtlist
         instruction_selector = P1InstructionSelector(varalloc)
         program = instruction_selector.visit(stmtlist)
-        for x in program.statements:
-            print x

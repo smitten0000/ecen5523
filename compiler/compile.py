@@ -13,7 +13,7 @@ from p0stackallocator import P0StackAllocator
 from p1flattener import P1Flattener
 from p1insselector import P1InstructionSelector
 from p1regallocator import P1RegAllocator
-from p0generator import P0Generator
+from p1generator import P1Generator
 from comp_util import *
 import time
 
@@ -47,7 +47,7 @@ if __name__ == "__main__":
         logger.debug("P0RegAllocator.substitute() took %.02fs" % (end - start))
         #stackallocator = P0StackAllocator(program)
         #program = stackallocator.substitute()
-        generator = P0Generator()
+        generator = P1Generator()
         output = generator.generate(program)
         outputfile = '%s.s' % testcase[:testcase.rfind('.')]
         f = open(outputfile, 'w')

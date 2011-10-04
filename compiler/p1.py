@@ -1,2 +1,3 @@
 x = 6
-2 if not True else x
+print 2 if not True else x
+
