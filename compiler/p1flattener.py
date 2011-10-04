@@ -113,4 +113,3 @@ if __name__ == "__main__":
         
         p1flattener = P1Flattener(VariableAllocator(),True)
         stmtlist = p1flattener.flatten(ast)
-        print stmtlist

@@ -23,7 +23,6 @@ class P1InstructionSelector(P0InstructionSelector):
         self.labelalloc = LabelAllocator()
     def visit_Not(self, node, *args, **kwargs):
         (var, stmt) = self.visit(node.expr)
-        print var
         
         return stmt+[BitwiseNot(var)]        
     def visit_If(self, node, *args, **kwargs):
@@ -65,6 +64,5 @@ if __name__ == "__main__":
         varalloc = VariableAllocator()
         flattener = P1Flattener(varalloc)
         stmtlist = flattener.flatten(ast)
-        print stmtlist
         instruction_selector = P1InstructionSelector(varalloc)
         program = instruction_selector.visit(stmtlist)

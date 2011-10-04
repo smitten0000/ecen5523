@@ -41,13 +41,12 @@ class P0RegAllocator:
         num_instr = len(instructions)
         alive = set()
         k = num_instr
-        print instructions
+       
         for instr in reversed(instructions):
             k = k - 1
             self.liveness_after_k_dict[k] = alive
             if isinstance(instr, (Label,Jump, JumpEquals)):
                 continue
-            print instr
             # get reads/writes performed by instruction, but only for variables
             writes = set(filter(lambda x: isinstance(x,Var), instr.writes()))
             reads = set(filter(lambda x: isinstance(x,Var), instr.reads()))

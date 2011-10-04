@@ -56,7 +56,7 @@ if __name__ == "__main__":
         instruction_selector = P1InstructionSelector(varalloc)
         program = instruction_selector.visit(stmtlist)
         regallocator = P0RegAllocator(program)
-        print regallocator.substitute()
+        regallocator.substitute()
         #import cProfile as profile
         #import pstats
         #output_file = 'profile.out'
