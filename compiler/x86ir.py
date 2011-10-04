@@ -192,4 +192,4 @@ class JumpEquals(Jump):
     def __init__(self, label):
         Jump.__init__(self, label)
     def __str__(self):
-        return "JumpEquals(%s)" % label
+        return "JumpEquals(%s)" % self.label

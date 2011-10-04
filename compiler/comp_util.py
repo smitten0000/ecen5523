@@ -97,6 +97,8 @@ def pretty(node):
         return node.name
     elif isinstance(node, Not):
         return 'Not(%s)' % node.expr
+    elif isinstance(node, If):
+        return 'If(%s) then %s else %s' % (node.tests[0][0], node.tests[0][1].nodes[0:-1], node.else_)
     else:
         print node
         raise Exception('Unknown node: %s' % node.__class__)

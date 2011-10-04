@@ -26,18 +26,15 @@ class P1InstructionSelector(P0InstructionSelector):
     def visit_If(self, node, *args, **kwargs):
         '''Generate a cmp/je/jmp set with 0 for the else case (true is anything not 0) of an if statement'''
         label = self.labelalloc.get_next_label()
-        
-        stmts = [Cmp(node.tests[0][0], 0), JumpEquals('else%s'%label)]
-        print "*****"
-        print node.tests[0][1]
-        tstvar, tststmt = self.visit(node.tests[0][1])
-        stmts.extend(tststmt)
+        (test, then) = node.tests[0]
+        stmts = [Cmp(test, 0), JumpEquals('else%s' % label )]
+        stmts.append(then)
         stmts.append(Jump('end%s'%label))
         stmts.append(Label('else%s'%label))
-        elsvar, elsstmt = self.visit(node.else_)
-        stmts.extend(elsstmt)
-        stmts.append(Label('end%s'%label))
-        return ([], stmts)
+
+        stmts.extend(node.else_)
+        stmts.append(Label('end%s' % label ))
+        return stmts
         
 
 if __name__ == "__main__":
