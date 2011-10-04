@@ -49,11 +49,13 @@ class P1Flattener(P0Flattener):
         elif isinstance(node, IfExp):
             # Go ahead and flatten all expressions, including the test expression, as well as the 
             # "then" and "else" expressions.
-            vartes, test = self.flatten(node.test)
+            vartes, test1 = self.flatten(node.test)
             vart, then = self.flatten(node.then)
             vare, else_ = self.flatten(node.else_)
+            
             # Allocate a variable name, which will hold the result of the IfExp
             varname = self.varalloc.get_next_var()
+            test = test1 #[Assign([AssName(vartes, 'OP_ASSIGN')], varname)]+test1
             # update the "then" and "else_" set of statements to include an 
             # assignment to the allocated variable
             then  = then  + [Assign([AssName(varname, 'OP_ASSIGN')], vart)]
@@ -68,11 +70,10 @@ class P1Flattener(P0Flattener):
             # second element in the tuple is a Stmt object.  Each tuple in the list corresponds to
             # an "if" or "elif" clause.  The else_ attribute is a Stmt object corresponding to the 
             # "else" clause.
-            return (Name(varname), test + [If([(vartes, Stmt(then))], else_)])
+            return (Name(vartes), test + [If([(vartes, Stmt(then))], else_)])
         elif isinstance(node, Not):
             var, stmtlist = self.flatten(node.expr)
-            varname = self.varalloc.get_next_var()
-            return (Name(varname), stmtlist + [Assign([AssName(varname,'OP_ASSIGN')], Not(varname))])
+            return (var, stmtlist + [Not(var)])
         elif isinstance(node, Compare):
             # Only need to handle binary comparison operators.  So if len(node.ops) > 1, its a syntax error.
             # For example, a == b == c is valid python, but invalid P1

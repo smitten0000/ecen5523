@@ -27,11 +27,11 @@ class P1InstructionSelector(P0InstructionSelector):
         '''Generate a cmp/je/jmp set with 0 for the else case (true is anything not 0) of an if statement'''
         label = self.labelalloc.get_next_label()
         (test, then) = node.tests[0]
+        
         stmts = [Cmp(test, 0), JumpEquals('else%s' % label )]
-        stmts.append(then)
+        stmts.extend(then)
         stmts.append(Jump('end%s'%label))
         stmts.append(Label('else%s'%label))
-
         stmts.extend(node.else_)
         stmts.append(Label('end%s' % label ))
         return stmts
@@ -51,8 +51,10 @@ if __name__ == "__main__":
         ast = compiler.parseFile(testcase)
         
         varalloc = VariableAllocator()
-        p0flattener = P1Flattener(varalloc)
-        stmtlist = p0flattener.flatten(ast)
+        flattener = P1Flattener(varalloc)
+        stmtlist = flattener.flatten(ast)
+        
         instruction_selector = P1InstructionSelector(varalloc)
         program = instruction_selector.visit(stmtlist)
-        print program
+        for x in program.statements:
+            print x

@@ -49,6 +49,12 @@ class P0Flattener:
         elif isinstance(node, Const):
             return (node, [])
         elif isinstance(node, Name):
+            if node.name == 'True':
+                varname = self.varalloc.get_next_var()
+                return (Name(varname), [Assign([AssName(varname, 'OP_ASSIGN')],Const('True'))])
+            elif node.name == 'False':
+                varname = self.varalloc.get_next_var()
+                return (Name(varname), [Assign([AssName(varname, 'OP_ASSIGN')],Const('False'))])
             return (node, [])
         elif isinstance(node, AssName):
             stmtlist.varalloc.add_var(node.assname)
