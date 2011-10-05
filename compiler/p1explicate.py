@@ -1,5 +1,7 @@
 # vim: set ts=4 sw=4 expandtab:
 
+debug = False # set to True when module is this
+
 from compiler.ast import *
 from comp_util import *
 from x86ir import *
@@ -91,8 +93,9 @@ class P1Explicate(object):
         print node
         expr1 = self.explicate(node.left)
         expr2 = self.explicate(node.right)
-        print expr1
-        print expr2
+        if debug:
+            print expr1
+            print expr2
         # allocate new temporaries to hold the result of the subexpression
         leftvar = Name(self.varalloc.get_next_var())
         rightvar = Name(self.varalloc.get_next_var())
@@ -132,6 +135,7 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         sys.exit(1)
     testcases = sys.argv[1:]
+    debug = True
     for testcase in testcases:
         #parser = P0Parser()
         #parser.build()

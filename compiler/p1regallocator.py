@@ -2,6 +2,8 @@
 
 import compiler
 
+debug = False
+
 from comp_util import *
 from x86ir import *
 from p0regallocator import P0RegAllocator
@@ -45,6 +47,7 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         sys.exit(1)
     testcases = sys.argv[1:]
+    debug = True
     for testcase in testcases:
         #parser = P0Parser()
         #parser.build()
@@ -56,7 +59,7 @@ if __name__ == "__main__":
         instruction_selector = P1InstructionSelector(varalloc)
         program = instruction_selector.visit(stmtlist)
         regallocator = P0RegAllocator(program)
-        regallocator.substitute()
+        print regallocator.substitute()
         #import cProfile as profile
         #import pstats
         #output_file = 'profile.out'

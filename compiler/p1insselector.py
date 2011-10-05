@@ -23,7 +23,6 @@ class P1InstructionSelector(P0InstructionSelector):
         self.labelalloc = LabelAllocator()
     def visit_Not(self, node, *args, **kwargs):
         (var, stmt) = self.visit(node.expr)
-        
         return stmt+[BitwiseNot(var)]        
     def visit_If(self, node, *args, **kwargs):
         '''Generate a cmp/je/jmp set with 0 for the else case (true is anything not 0) of an if statement'''
@@ -66,3 +65,4 @@ if __name__ == "__main__":
         stmtlist = flattener.flatten(ast)
         instruction_selector = P1InstructionSelector(varalloc)
         program = instruction_selector.visit(stmtlist)
+        print program
