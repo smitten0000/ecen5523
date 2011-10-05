@@ -101,7 +101,19 @@ def pretty(node,depth=0,indent='  '):
     elif isinstance(node, Not):
         ret = ret + 'Not(%s)' % node.expr
     elif isinstance(node, If):
-        return 'If(%s) then %s else %s' % (node.tests[0][0], node.tests[0][1], node.else_)
+        ret = ret +         'If(%s):\n%s\n' % (node.tests[0][0], 
+                                               '\n'.join([pretty(x,depth+1) for x in node.tests[0][1]]))
+        ret = ret + space + 'Else:\n%s'     % ('\n'.join([pretty(x,depth+1) for x in node.else_]))
+    elif isinstance(node, ProjectTo):
+        ret = ret + 'ProjectTo(%s,%s)' % (node.typ, pretty(node.arg))
+    elif isinstance(node, InjectFrom):
+        ret = ret + 'InjectFrom(%s,%s)' % (node.typ, pretty(node.arg))
+    elif isinstance(node, GetTag):
+        ret = ret + 'GetTag(%s)' % (pretty(node.arg))
+    elif isinstance(node, Or):
+        ret = ret + 'Or(%s,%s)' % (pretty(node.nodes[0]), pretty(node.nodes[1]))
+    elif isinstance(node, And):
+        ret = ret + 'And(%s,%s)' % (pretty(node.nodes[0]), pretty(node.nodes[1]))
     elif isinstance(node, Compare):
         return 'Compare(%s, %s, %s)' % (node.expr, node.ops[0][0], node.ops[0][1])
     else:
