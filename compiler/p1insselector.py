@@ -4,6 +4,10 @@ from comp_util import *
 from x86ir import *
 from p0insselector import P0InstructionSelector
 
+TAG_SIZE = 2
+INT_TAG = 0
+BOOL_TAG = 1
+BIG_TAG = 3
 
 class LabelAllocator(object):
     def __init__(self):
@@ -70,7 +74,18 @@ class P1InstructionSelector(P0InstructionSelector):
         stmts.extend(else_)
         stmts.append(Label('end%s' % label ))
         return stmts
-        
+    def visit_ProjectTo(self, node, *args, **kwargs):
+        # convert a simple value to a pyobj
+        # pyobj inject_int(int i) { return (i << SHIFT) | INT_TAG; }
+        # pyobj inject_bool(int b) { return (b << SHIFT) | BOOL_TAG; }
+        tag = BIG_TAG
+        if node.typ == 'int':
+            tag = INT_TAG
+        elif node.typ == 'bool':
+            tag = BOOL_TAG
+        return [BitShift(node.arg, TAG_SIZE, 'left'), Or(node.arg, tag)]
+    def visit_InjectFrom(self, node, *args, **kwargs):
+        return [BitShift(node.arg, TAG_SIZE, 'right')]
 
 if __name__ == "__main__":
     import sys

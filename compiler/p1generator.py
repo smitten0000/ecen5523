@@ -3,10 +3,9 @@ Created on Oct 1, 2011
 
 @author: relsner
 '''
-import compiler
+from compiler import parseFile
+from x86ir import *
 from p0generator import P0Generator 
-
-        
 
 class P1Generator(P0Generator):
     '''
@@ -42,7 +41,11 @@ class P1Generator(P0Generator):
         return '\tJMP %s' % node.label
     def visit_Label(self, node, *args, **kwargs):
         return '%s:' % node.label
-        
+    def visit_BitShift(self, node, *args, **kwargs ):
+        if node.dir == 'left':
+            return '\tSHL %s, %s' % (node.places, node.value)
+        else:
+            return '\tSHR %s, %s' % (node.places, node.value)
     
 if __name__ == "__main__":
     import sys
@@ -58,7 +61,7 @@ if __name__ == "__main__":
     for testcase in testcases:
 #        parser = P1parser()
 #        parser.build()
-        ast = compiler.parseFile(testcase)
+        ast = parseFile(testcase)
 #        ast = parser.parseFile(testcase)
         varalloc = VariableAllocator()
         p1flattener = P1Flattener(varalloc)
