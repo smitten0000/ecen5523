@@ -165,6 +165,10 @@ class Cmp(object):
         return []
     def reads(self):
         return [self.lhs, self.rhs]
+
+class CmpNe(Cmp):
+    def __init__(self, lhs, rhs):
+        Cmp.__init__(lhs,rhs)
     
 class BitwiseNot(object):
     def __init__(self, value):

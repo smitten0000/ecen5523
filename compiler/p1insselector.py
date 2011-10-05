@@ -23,7 +23,32 @@ class P1InstructionSelector(P0InstructionSelector):
         self.labelalloc = LabelAllocator()
     def visit_Not(self, node, *args, **kwargs):
         (var, stmt) = self.visit(node.expr)
-        return stmt+[BitwiseNot(var)]        
+        return stmt+[BitwiseNot(var)]
+    def visit_Compare(self, node, *args, **kwargs):
+        stmts = []
+        lhsvar, lhs = self.visit(node.expr)
+        rhsvar, rhs = self.visit(node.ops[0][1])
+        result = Var(self.varalloc.get_next_var())
+        # take care of any necessary flattening for the statements
+        # but there should be none at this point
+        stmts = stmts + lhs + rhs
+        label = self.labelalloc.get_next_label()
+        # we have decided that explicate will convert a comparison between
+        # a bool and an integer to a cast of the int to a bool (using an If
+        # statement to check if the int value == 0 -> false, else true)
+        # so we can blindly do a cmp
+        # default case gets 2 out of 3 operations
+        thenval = Imm32(0)
+        elseval = Imm32(1)
+        if node.ops[0][0] == '==':            
+            None
+        elif node.ops[0][0]== '!=':
+            thenval = Imm32(1)
+            elseval = Imm32(0)
+        else: #is
+            None
+        stmts = stmts + [Cmp(lhsvar, rhsvar),JumpEquals('else%s'%label),Movl(thenval, result),Jump('end%s'%label),Label('else%s'%label), Movl(elseval,result),Label('end%s'%label)]
+        return (result, stmts)
     def visit_If(self, node, *args, **kwargs):
         '''Generate a cmp/je/jmp set with 0 for the else case (true is anything not 0) of an if statement'''
         label = self.labelalloc.get_next_label()
@@ -64,5 +89,7 @@ if __name__ == "__main__":
         flattener = P1Flattener(varalloc)
         stmtlist = flattener.flatten(ast)
         instruction_selector = P1InstructionSelector(varalloc)
+        print stmtlist
         program = instruction_selector.visit(stmtlist)
-        print program
+        for stmt in program.statements:
+            print stmt

@@ -26,6 +26,7 @@ class P0InstructionSelector(object):
         assname = node.nodes[0]
         if not self.varalloc.is_allocated(assname.name):
             raise Exception('Attempt to assign to previously unseen variable: %s' % assname.name)
+        print node.expr
         loc, stmtlist = self.visit(node.expr)
         return stmtlist + [Movl(loc, Var(assname.name))]
         
@@ -83,5 +84,6 @@ if __name__ == "__main__":
         p0flattener = P0Flattener(varalloc)
         stmtlist = p0flattener.flatten(ast)
         instruction_selector = P0InstructionSelector(varalloc)
+        print stmtlist
         program = instruction_selector.visit(stmtlist)
         print program

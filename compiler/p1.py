@@ -1,3 +1,4 @@
 x = 6
-print 2 if not True else x
+y = 4
+print 2 if x is y else 7
 
