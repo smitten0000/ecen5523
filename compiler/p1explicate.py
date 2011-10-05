@@ -1,5 +1,7 @@
 # vim: set ts=4 sw=4 expandtab:
 
+debug = False # set to True when module is this
+
 from compiler.ast import *
 from comp_util import *
 from x86ir import *
@@ -82,17 +84,56 @@ class P1Explicate(object):
         return InjectFrom('int', node)
 
     def visit_And(self, node):
-        raise NotImplementedError('TODO: Implement me!')
+        if debug:
+            print node
+        expr1 = self.explicate(node.left)
+        expr2 = self.explicate(node.right)
+        if debug:
+            print expr1
+            print expr2
+        # allocate new temporaries to hold the result of the subexpression
+        leftvar = Name(self.varalloc.get_next_var())
+        rightvar = Name(self.varalloc.get_next_var())
+        # Below, we create an AST tree that represents the logic executed at run-time 
+        # to describe the behavior of the Add operation (e.g., check the type
+        # of a variable and either perform an integer Add, or call the runtime
+        # to perform list concatenation, or error...)
+        # some variables to help make the code more readable when referring to tags
+        intTag = Const(0)
+        boolTag = Const(1)
+        bigTag = Const(3)
+        # helper functions to help generate the AST
+        compareTag = lambda x,y: Compare(GetTag(x),[('==',y)])
+        isIntOrBoolExp = lambda x: Or([compareTag(x,intTag),compareTag(x,boolTag)])
+        # Here is the "runtime" logic for doing an Add in P1.
+        ifexp = IfExp(
+                  # no need to explicate this And, because the operands should always booleans
+                  And([isIntOrBoolExp(leftvar),isIntOrBoolExp(rightvar)]),
+                  InjectFrom('int',Add((ProjectTo('int',leftvar),ProjectTo('int',rightvar)))),
+                  IfExp(
+                    # ditto for this And
+                    And([compareTag(leftvar,bigTag),compareTag(rightvar,bigTag)]),
+                    InjectFrom('big',Add((ProjectTo('big',leftvar),ProjectTo('big',rightvar)))),
+                    CallFunc('exit',[])
+                  )
+                )
+        # Return a "Let" expression, which tells the flattener to flatten and
+        # evaluate the RHS (2nd arg), assign it to the given variable (1st arg),
+        # and then flatten and evaluate the body
+        return Let(leftvar, expr1,
+                   Let(rightvar, expr2, ifexp))
 
     def visit_Or(self, node):
         raise NotImplementedError('TODO: Implement me!')
 
     def visit_Add(self, node):
-        print node
+        if debug:
+            print node
         expr1 = self.explicate(node.left)
         expr2 = self.explicate(node.right)
-        print expr1
-        print expr2
+        if debug:
+            print expr1
+            print expr2
         # allocate new temporaries to hold the result of the subexpression
         leftvar = Name(self.varalloc.get_next_var())
         rightvar = Name(self.varalloc.get_next_var())
@@ -132,6 +173,7 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         sys.exit(1)
     testcases = sys.argv[1:]
+    debug = True
     for testcase in testcases:
         #parser = P0Parser()
         #parser.build()

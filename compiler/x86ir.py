@@ -165,6 +165,10 @@ class Cmp(object):
         return []
     def reads(self):
         return [self.lhs, self.rhs]
+
+class CmpNe(Cmp):
+    def __init__(self, lhs, rhs):
+        Cmp.__init__(lhs,rhs)
     
 class BitwiseNot(object):
     def __init__(self, value):
@@ -183,7 +187,46 @@ class BitwiseNot(object):
         return [self.value]
     def reads(self):
         return [self.value]
-
+    
+class BitwiseAnd(object):
+    def __init__(self, value, mask):
+        self.value = value
+        self.mask = mask
+    def __str__(self):
+        return "BitAnd(%s,%s)" % (self.value, self.mask)
+    def __repr__(self):
+        return self.__str__()
+    def __eq__(self, other):
+        return self.value == other.value and self.mask == other.mask
+    def __ne__(self, other):
+        return not self.__eq__(other)
+    def __hash__(self):
+        return self.value.__hash__()
+    def writes(self):
+        return [self.value]
+    def reads(self):
+        return [self.value]
+    
+class BitShift(object):
+    def __init__(self, value, places, direction):
+        self.value = value
+        self.places = places
+        self.dir = direction
+    def __str__(self):
+        return "BitShift%s(%s,%s)" % (self.dir, self.value, self.places)
+    def __repr__(self):
+        return self.__str__()
+    def __eq__(self, other):
+        return self.value == other.value and self.places == other.places and self.dir == other.dir
+    def __ne__(self, other):
+        return not self.__eq__(other)
+    def __hash__(self):
+        return self.value.__hash__()
+    def writes(self):
+        return [self.value]
+    def reads(self):
+        return [self.value]
+        
 class Label(object):
     def __init__(self, label):
         self.label = label
