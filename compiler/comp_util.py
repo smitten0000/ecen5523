@@ -2,6 +2,7 @@
 
 from compiler.ast import *
 import itertools,heapq
+from p1explicate import *
 
 class VariableAllocator:
     """Provides context allocating variables by storing a set
@@ -69,38 +70,55 @@ class priorityq:
         self.reprioritize(entry[0]-inc, task)
 
 
-def pretty(node):
+def pretty(node,depth=0,indent='  '):
     """Given an AST node, print out a human readable form."""
+    space=indent*depth
+    ret = space
     if isinstance(node, Printnl):
         if node.dest is not None:
-            return 'print >> %s, %s' % (node.dest, pretty(node.nodes[0]))
+            ret = ret + 'print >> %s, %s' % (node.dest, pretty(node.nodes[0]))
         else:
-            return 'print %s' % (pretty(node.nodes[0]))
+            ret = ret + 'print %s' % (pretty(node.nodes[0]))
     elif isinstance(node, Assign):
-        return '%s = %s' % (pretty(node.nodes[0]), pretty(node.expr))
+        ret = ret + '%s = %s' % (pretty(node.nodes[0]), pretty(node.expr))
     elif isinstance(node, Discard):
         pass
     elif isinstance(node, CallFunc):
         if node.args is not None and len(node.args) > 0:
-            return '%s(%s)' % (pretty(node.node), node.args)
+            ret = ret + '%s(%s)' % (pretty(node.node), node.args)
         else:
-            return '%s()' % (pretty(node.node))
+            ret = ret + '%s()' % (node.node)
     elif isinstance(node, Add):
-        return '%s + %s' % (pretty(node.left), pretty(node.right))
+        ret = ret + '%s + %s' % (pretty(node.left), pretty(node.right))
     elif isinstance(node, UnarySub):
-        return '- %s' % (pretty(node.expr))
+        ret = ret + '- %s' % (pretty(node.expr))
     elif isinstance(node, Const):
-        return node.value
+        ret = ret + str(node.value)
     elif isinstance(node, Name):
-        return node.name
+        ret = ret + node.name
     elif isinstance(node, AssName):
-        return node.name
+        ret = ret + str(node.name)
     elif isinstance(node, Not):
-        return 'Not(%s)' % node.expr
+        ret = ret + 'Not(%s)' % node.expr
     elif isinstance(node, If):
-        return 'If(%s) then %s else %s' % (node.tests[0][0], node.tests[0][1], node.else_)
+        ret = ret +         'If(%s):\n%s\n' % (node.tests[0][0], 
+                                               '\n'.join([pretty(x,depth+1) for x in node.tests[0][1]]))
+        ret = ret + space + 'Else:\n%s'     % ('\n'.join([pretty(x,depth+1) for x in node.else_]))
+    elif isinstance(node, Compare):
+        ret = ret + '%s %s %s' % (pretty(node.expr), node.ops[0][0], node.ops[0][1])
+    elif isinstance(node, ProjectTo):
+        ret = ret + 'ProjectTo(%s,%s)' % (node.typ, pretty(node.arg))
+    elif isinstance(node, InjectFrom):
+        ret = ret + 'InjectFrom(%s,%s)' % (node.typ, pretty(node.arg))
+    elif isinstance(node, GetTag):
+        ret = ret + 'GetTag(%s)' % (pretty(node.arg))
+    elif isinstance(node, Or):
+        ret = ret + 'Or(%s,%s)' % (pretty(node.nodes[0]), pretty(node.nodes[1]))
+    elif isinstance(node, And):
+        ret = ret + 'And(%s,%s)' % (pretty(node.nodes[0]), pretty(node.nodes[1]))
     else:
         raise Exception('Unknown node: %s' % node.__class__)
+    return ret
 
 def prettyAST(node, depth=0, indent='  '):
     if node is None:
@@ -113,8 +131,8 @@ def prettyAST(node, depth=0, indent='  '):
     # each language definition and extend it.  But this works for now.
     elif node.__class__.__name__ in ('GetTag','ProjectTo'):
         ret = '%s%s' % (indent*depth, node)
-    elif isinstance(node,(str,int)):
-        ret = "%s'%s'" % (indent*depth, node)
+    elif isinstance(node,(str,int,list)):
+        ret = "%s%s" % (indent*depth, node)
     elif isinstance(node, Node):
         ret = '%s%s(\n' % (indent*depth, node.__class__.__name__)
         children = node.getChildren()

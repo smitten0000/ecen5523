@@ -1,8 +1,8 @@
 # vim: set ts=4 sw=4 expandtab:
 from compiler.ast import *
 from comp_util import *
-from p0parser import P0Parser
 from p0flattener import P0Flattener
+from p1explicate import *
 import operator
 
 class P1Flattener(P0Flattener):
@@ -23,6 +23,24 @@ class P1Flattener(P0Flattener):
             varname = self.varalloc.get_next_var()
             result = Or([lhsvar,rhsvar]) if isinstance(node,Or) else And([lhsvar,rhsvar])
             return (Name(varname), lhsstmtlist + rhsstmtlist + [Assign([AssName(varname, 'OP_ASSIGN')], result)])
+        elif isinstance(node, Let):
+            # first, flatten rhs
+            (rhsvar, rhsstmtlist) = self.flatten(node.rhs)
+            # now make sure that the variable specified by Let is assigned the result
+            letassignstmt = [Assign([AssName(node.var, 'OP_ASSIGN')], rhsvar)]
+            # now flatten the body and return
+            # NOTE: there should not be ANY Let nodes after a flatten
+            (bodyvar, bodystmtlist) = self.flatten(node.body)
+            return (bodyvar, rhsstmtlist + letassignstmt + bodystmtlist)
+        elif isinstance(node, (ProjectTo,InjectFrom)):
+            (var, stmtlist) = self.flatten(node.arg)
+            varname = self.varalloc.get_next_var()
+            result = ProjectTo(node.typ, var) if isinstance(node,ProjectTo) else InjectFrom(node.typ, var)
+            return (Name(varname), stmtlist + [Assign([AssName(varname,'OP_ASSIGN')], result)])
+        elif isinstance(node, GetTag):
+            (var, stmtlist) = self.flatten(node.arg)
+            varname = self.varalloc.get_next_var()
+            return (Name(varname), stmtlist + [Assign([AssName(varname,'OP_ASSIGN')], GetTag(var))])
         elif isinstance(node, List):
             stmts = [self.flatten(x) for x in node.nodes]
             varlist = [x for x,y in stmts]
@@ -70,7 +88,7 @@ class P1Flattener(P0Flattener):
             # second element in the tuple is a Stmt object.  Each tuple in the list corresponds to
             # an "if" or "elif" clause.  The else_ attribute is a Stmt object corresponding to the 
             # "else" clause.
-            return (Name(varname), test + [If([(vartes, then)], else_)])
+            return (Name(varname), test + [If([(vartes, Stmt([then]))], Stmt([else_]))])
         elif isinstance(node, Not):
             var, stmtlist = self.flatten(node.expr)
             return (var, stmtlist + [Not(var)])
@@ -101,6 +119,8 @@ class P1Flattener(P0Flattener):
 
 if __name__ == "__main__":
     import compiler, sys
+    from p0parser import P0Parser
+    from p1explicate import P1Explicate
     if len(sys.argv) < 2:
         sys.exit(1)
 
@@ -110,7 +130,11 @@ if __name__ == "__main__":
         #parser.build()
         #ast = parser.parseFile(testcase)
         ast = compiler.parseFile(testcase)
-        
-        p1flattener = P1Flattener(VariableAllocator(),True)
+        varalloc = VariableAllocator()
+        p1explicator = P1Explicate(varalloc)
+        ast = p1explicator.explicate(ast)
+        p1flattener = P1Flattener(varalloc,True)
         stmtlist = p1flattener.flatten(ast)
-        print stmtlist
+        #print stmtlist
+        print prettyAST(stmtlist)
+        print '\n'.join([pretty(x) for x in stmtlist.node.nodes])
