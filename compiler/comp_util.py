@@ -101,3 +101,26 @@ def pretty(node):
         return 'If(%s) then %s else %s' % (node.tests[0][0], node.tests[0][1], node.else_)
     else:
         raise Exception('Unknown node: %s' % node.__class__)
+
+def prettyAST(node, depth=0, indent='  '):
+    if node is None:
+        ret = '%sNone' % (indent*depth)
+    # handle the "leaf" nodes as special cases to make the output easier to read
+    elif isinstance(node, (Const,Name)):
+        ret = '%s%s' % (indent*depth, node)
+    # somewhat hackish; ideally these nodes would be defined in a p1ast.py file
+    # and we could include that at the top...  Better yet, define a visitor for
+    # each language definition and extend it.  But this works for now.
+    elif node.__class__.__name__ in ('GetTag','ProjectTo'):
+        ret = '%s%s' % (indent*depth, node)
+    elif isinstance(node,(str,int)):
+        ret = "%s'%s'" % (indent*depth, node)
+    elif isinstance(node, Node):
+        ret = '%s%s(\n' % (indent*depth, node.__class__.__name__)
+        children = node.getChildren()
+        if children is not None:
+            ret = ret + ',\n'.join([prettyAST(x,depth+1) for x in children])
+        ret = ret + '\n%s)' % (indent*depth)
+    else:
+        raise Exception('Encountered unhandled AST Node (%s)', node.__class__.__name__)
+    return ret
