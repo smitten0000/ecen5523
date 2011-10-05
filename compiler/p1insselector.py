@@ -75,6 +75,7 @@ class P1InstructionSelector(P0InstructionSelector):
         stmts.append(Label('end%s' % label ))
         return stmts
     def visit_ProjectTo(self, node, *args, **kwargs):
+        loc, stmtlist = self.visit(node.arg)
         # convert a simple value to a pyobj
         # pyobj inject_int(int i) { return (i << SHIFT) | INT_TAG; }
         # pyobj inject_bool(int b) { return (b << SHIFT) | BOOL_TAG; }
@@ -83,9 +84,20 @@ class P1InstructionSelector(P0InstructionSelector):
             tag = INT_TAG
         elif node.typ == 'bool':
             tag = BOOL_TAG
-        return [BitShift(node.arg, TAG_SIZE, 'left'), Or(node.arg, tag)]
+        # need to create a temporary variable to store the result of the shift
+        varname = self.varalloc.get_next_var()
+        return (Var(varname), stmtlist + [BitShift(node.arg, TAG_SIZE, 'left'), Or(node.arg, tag)])
     def visit_InjectFrom(self, node, *args, **kwargs):
-        return [BitShift(node.arg, TAG_SIZE, 'right')]
+        loc, stmtlist = self.visit(node.arg)
+        # need to create a temporary variable to store the result of the shift
+        varname = self.varalloc.get_next_var()
+        return (Var(varname), stmtlist + [BitShift(node.arg, TAG_SIZE, 'right')])
+    def visit_GetTag(self, node, *args, **kwargs):
+        loc, stmtlist = self.visit(node.arg)
+        # need to create a temporary variable to store the result of the shift
+        varname = self.varalloc.get_next_var()
+        # int tag(pyobj val) { return val & MASK; }
+        return (Var(varname), stmtlist + [BitwiseAnd(node.arg, Imm32(3))])
 
 if __name__ == "__main__":
     import sys
@@ -101,6 +113,8 @@ if __name__ == "__main__":
         ast = compiler.parseFile(testcase)
         
         varalloc = VariableAllocator()
+        explicator = P1Explicate(varalloc)
+        ast = explicator.explicate(ast)
         flattener = P1Flattener(varalloc)
         stmtlist = flattener.flatten(ast)
         instruction_selector = P1InstructionSelector(varalloc)

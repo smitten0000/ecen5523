@@ -27,7 +27,7 @@ class P1Flattener(P0Flattener):
             # first, flatten rhs
             (rhsvar, rhsstmtlist) = self.flatten(node.rhs)
             # now make sure that the variable specified by Let is assigned the result
-            letassignstmt = [Assign([AssName(node.var, 'OP_ASSIGN')], rhsvar)]
+            letassignstmt = [Assign([AssName(node.var.name, 'OP_ASSIGN')], rhsvar)]
             # now flatten the body and return
             # NOTE: there should not be ANY Let nodes after a flatten
             (bodyvar, bodystmtlist) = self.flatten(node.body)
