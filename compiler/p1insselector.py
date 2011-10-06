@@ -79,7 +79,7 @@ class P1InstructionSelector(P0InstructionSelector):
         stmts.extend(elsestmts)
         stmts.append(Label('end%s' % label ))
         return stmts
-    def visit_ProjectTo(self, node, *args, **kwargs):
+    def visit_InjectFrom(self, node, *args, **kwargs):
         loc, stmtlist = self.visit(node.arg)
         # convert a simple value to a pyobj
         # pyobj inject_int(int i) { return (i << SHIFT) | INT_TAG; }
@@ -91,13 +91,22 @@ class P1InstructionSelector(P0InstructionSelector):
             raise Exception("Unknown tag type '%s'" % node.typ)
         # need to create a temporary variable to store the result of the shift
         varname = self.varalloc.get_next_var()
-        return (Var(varname), stmtlist + [BitShift(loc, Imm32(TAG_SIZE), 'left'), BitwiseOr(loc, Imm32(tag))])
-    def visit_InjectFrom(self, node, *args, **kwargs):
+        stmts = [Movl(loc,Var(varname)), 
+                 BitShift(Var(varname), Imm32(TAG_SIZE), 'left'),
+                 BitwiseOr(Var(varname), Imm32(tag))]
+        return (Var(varname), stmtlist + stmts)
+    def visit_ProjectTo(self, node, *args, **kwargs):
+        # int project_int(pyobj val) { assert((val & MASK) == INT_TAG); return val >> SHIFT; }
+        # int project_bool(pyobj val) { assert((val & MASK) == BOOL_TAG); return val >> SHIFT; }
+        # big_pyobj* project_big(pyobj val) { assert((val & MASK) == BIG_TAG); return (big_pyobj*)(val & ~MASK); }
         loc, stmtlist = self.visit(node.arg)
         # need to create a temporary variable to store the result of the shift
         varname = self.varalloc.get_next_var()
-        # node.arg may be a Const(), in which case we have to move it in to a temporary variable.
-        return (Var(varname), stmtlist + [Movl(loc,Var(varname)), BitShift(Var(varname), Imm32(TAG_SIZE), 'right')])
+        # only shift to the right if we are converting to int or bool
+        stmts = [Movl(loc,Var(varname))]
+        if node.typ == 'int' or node.typ == 'bool':
+            stmts.extend([BitShift(Var(varname), Imm32(TAG_SIZE), 'right')])
+        return (Var(varname), stmtlist + stmts)
     def visit_GetTag(self, node, *args, **kwargs):
         loc, stmtlist = self.visit(node.arg)
         # need to create a temporary variable to store the result of the shift

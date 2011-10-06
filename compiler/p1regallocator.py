@@ -73,7 +73,7 @@ class P1RegAllocator(P0RegAllocator):
         dst = node.dst
         if isinstance(src,Var): src = self.get_assignment(src)
         if isinstance(dst,Var): dst = self.get_assignment(dst)
-        return BitwiseAnd(src, dst)
+        return BitwiseOr(src, dst)
 
     def visit_BitShift(self, node, *args, **kwargs):
         src = node.value
