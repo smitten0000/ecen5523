@@ -83,6 +83,9 @@ class P1Explicate(object):
     def visit_Const(self, node):
         return InjectFrom('int', node)
 
+    def visit_Printnl(self, node):
+        return Printnl([self.visit(node.nodes[0])], node.dest)
+
     def visit_And(self, node):
         if debug:
             print node

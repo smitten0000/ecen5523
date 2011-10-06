@@ -34,6 +34,8 @@ if __name__ == "__main__":
         ast = compiler.parseFile(testcase)
         
         varalloc = VariableAllocator()
+        explicator = P1Explicate(varalloc)
+        ast = explicator.explicate(ast)
         flattener = P1Flattener(varalloc)
         stmtlist = flattener.flatten(ast)
         #code = '%s' % stmtlist

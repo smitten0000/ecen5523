@@ -37,6 +37,51 @@ class P1RegAllocator(P0RegAllocator):
                     for reg in P0RegAllocator.CALLER_SAVE:
                         self._add_edge(live, reg)
 
+    def visit_Cmp(self, node, *args, **kwargs):
+        src = node.rhs
+        if isinstance(src,Var):
+            src = self.get_assignment(src)
+        dst = node.lhs
+        if isinstance(dst,Var):
+            dst = self.get_assignment(dst)
+        return Cmp(src, dst)
+
+    def visit_JumpEquals(self, node, *args, **kwargs):
+        return node
+
+    def visit_Jump(self, node, *args, **kwargs):
+        return node
+
+    def visit_Label(self, node, *args, **kwargs):
+        return node
+
+    def visit_BitwiseNot(self, node, *args, **kwargs):
+        operand = node.value
+        if isinstance(operand,Var):
+            operand = self.get_assignment(operand)
+        return BitwiseNot(operand)
+
+    def visit_BitwiseAnd(self, node, *args, **kwargs):
+        src = node.value
+        dst = node.mask
+        if isinstance(src,Var): src = self.get_assignment(src)
+        if isinstance(dst,Var): dst = self.get_assignment(dst)
+        return BitwiseAnd(src, dst)
+
+    def visit_BitwiseOr(self, node, *args, **kwargs):
+        src = node.src
+        dst = node.dst
+        if isinstance(src,Var): src = self.get_assignment(src)
+        if isinstance(dst,Var): dst = self.get_assignment(dst)
+        return BitwiseAnd(src, dst)
+
+    def visit_BitShift(self, node, *args, **kwargs):
+        src = node.value
+        dst = node.places
+        if isinstance(src,Var): src = self.get_assignment(src)
+        if isinstance(dst,Var): dst = self.get_assignment(dst)
+        return BitShift(src, dst, node.dir)
+
 
 if __name__ == "__main__":
     import sys

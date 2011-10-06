@@ -88,7 +88,7 @@ class P1Flattener(P0Flattener):
             # second element in the tuple is a Stmt object.  Each tuple in the list corresponds to
             # an "if" or "elif" clause.  The else_ attribute is a Stmt object corresponding to the 
             # "else" clause.
-            return (Name(varname), test + [If([(vartes, Stmt([then]))], Stmt([else_]))])
+            return (Name(varname), test + [If([(vartes, Stmt(then))], Stmt(else_))])
         elif isinstance(node, Not):
             var, stmtlist = self.flatten(node.expr)
             return (var, stmtlist + [Not(var)])

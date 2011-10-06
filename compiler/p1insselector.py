@@ -55,23 +55,28 @@ class P1InstructionSelector(P0InstructionSelector):
         return (result, stmts)
     def visit_If(self, node, *args, **kwargs):
         '''Generate a cmp/je/jmp set with 0 for the else case (true is anything not 0) of an if statement'''
+        test, then = node.tests[0]
+        else_ = node.else_
+        # perform instruction selection on the collection of statements in the "test" block
+        testvar, teststmts = self.visit(test)
+        # do the same for the statements in the "then" and "else" blocks
+        # The difference for these is that they are encapsulated in a Stmt AST node, and therefore
+        # there is no variable returned in this case, just a list of Statement nodes 
+        # (see visit_Stmt in p0insselector.py)
+        elsestmts = self.visit(else_)
+        thenstmts = self.visit(then)
+        # Now, generate the branches and jumps
         label = self.labelalloc.get_next_label()
-        (test, then) = node.tests[0]
-        #then = [self.visit(x) for x in then]
-        t2 = []
-        for thenexpr in then:
-            t2 = [x for x in self.visit(thenexpr)]
-        then = t2
         cmpvarname = self.varalloc.get_next_var()  
-        stmts = [Movl(Imm32(0), Var(cmpvarname)), Cmp(Var(test.name), Var(cmpvarname)), JumpEquals('else%s' % label )]
-        stmts.extend(then)
-        stmts.append(Jump('end%s'%label))
-        stmts.append(Label('else%s'%label))
-        e2 = []
-        for ex in node.else_:
-            e2 = [x for x in self.visit(ex)]
-        else_ = e2
-        stmts.extend(else_)
+        stmts = []
+        stmts.extend(teststmts)
+        stmts.extend([Movl(Imm32(0), Var(cmpvarname)), 
+                      Cmp(testvar, Var(cmpvarname)), 
+                      JumpEquals('else%s' % label)])
+        stmts.extend(thenstmts)
+        stmts.append(Jump('end%s' % label))
+        stmts.append(Label('else%s' % label))
+        stmts.extend(elsestmts)
         stmts.append(Label('end%s' % label ))
         return stmts
     def visit_ProjectTo(self, node, *args, **kwargs):
@@ -79,25 +84,44 @@ class P1InstructionSelector(P0InstructionSelector):
         # convert a simple value to a pyobj
         # pyobj inject_int(int i) { return (i << SHIFT) | INT_TAG; }
         # pyobj inject_bool(int b) { return (b << SHIFT) | BOOL_TAG; }
-        tag = BIG_TAG
-        if node.typ == 'int':
-            tag = INT_TAG
-        elif node.typ == 'bool':
-            tag = BOOL_TAG
+        if node.typ == 'int': tag = INT_TAG
+        elif node.typ == 'bool': tag = BOOL_TAG
+        elif node.typ == 'big': tag = BIG_TAG
+        else:
+            raise Exception("Unknown tag type '%s'" % node.typ)
         # need to create a temporary variable to store the result of the shift
         varname = self.varalloc.get_next_var()
-        return (Var(varname), stmtlist + [BitShift(node.arg, TAG_SIZE, 'left'), Or(node.arg, tag)])
+        return (Var(varname), stmtlist + [BitShift(loc, Imm32(TAG_SIZE), 'left'), BitwiseOr(loc, Imm32(tag))])
     def visit_InjectFrom(self, node, *args, **kwargs):
         loc, stmtlist = self.visit(node.arg)
         # need to create a temporary variable to store the result of the shift
         varname = self.varalloc.get_next_var()
-        return (Var(varname), stmtlist + [BitShift(node.arg, TAG_SIZE, 'right')])
+        # node.arg may be a Const(), in which case we have to move it in to a temporary variable.
+        return (Var(varname), stmtlist + [Movl(loc,Var(varname)), BitShift(Var(varname), Imm32(TAG_SIZE), 'right')])
     def visit_GetTag(self, node, *args, **kwargs):
         loc, stmtlist = self.visit(node.arg)
         # need to create a temporary variable to store the result of the shift
         varname = self.varalloc.get_next_var()
         # int tag(pyobj val) { return val & MASK; }
-        return (Var(varname), stmtlist + [BitwiseAnd(node.arg, Imm32(3))])
+        return (Var(varname), stmtlist + [BitwiseAnd(loc, Imm32(3))])
+    def visit_Or(self, node, *args, **kwargs):
+        left,  leftstmtlist  = self.visit(node.nodes[0])
+        right, rightstmtlist = self.visit(node.nodes[1])
+        # need to create a temporary variable to store the result
+        varname = self.varalloc.get_next_var()
+        return (Var(varname), leftstmtlist + rightstmtlist + [BitwiseOr(left, right)])
+    def visit_And(self, node, *args, **kwargs):
+        left,  leftstmtlist  = self.visit(node.nodes[0])
+        right, rightstmtlist = self.visit(node.nodes[1])
+        # need to create a temporary variable to store the result
+        varname = self.varalloc.get_next_var()
+        return (Var(varname), leftstmtlist + rightstmtlist + [BitwiseAnd(left, right)])
+    def visit_Printnl(self, node, *args, **kwargs):
+        loc, stmtlist = self.visit(node.nodes[0])
+        return stmtlist + [Pushl(loc),
+                           Call('print_any'),
+                           Addl(Imm32(4), Register('esp'))]
+
 
 if __name__ == "__main__":
     import sys
@@ -118,7 +142,6 @@ if __name__ == "__main__":
         flattener = P1Flattener(varalloc)
         stmtlist = flattener.flatten(ast)
         instruction_selector = P1InstructionSelector(varalloc)
-        print stmtlist
         program = instruction_selector.visit(stmtlist)
         for stmt in program.statements:
             print stmt

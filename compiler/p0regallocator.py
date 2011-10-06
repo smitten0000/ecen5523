@@ -6,7 +6,7 @@ from x86ir import *
 class P0RegAllocator:
     ALL_REGS = [Register('eax'), Register('ebx'), Register('ecx'), Register('edx'), Register('edi'), Register('esi')]
     CALLER_SAVE = [Register('eax'), Register('ecx'), Register('edx')]
-    ALL_SLOTS = set(range(0,200))
+    ALL_SLOTS = set(range(0,500))
     def __init__(self, program):
         self.program = program
         self.liveness_after_k_dict={}
@@ -45,8 +45,8 @@ class P0RegAllocator:
         for instr in reversed(instructions):
             k = k - 1
             self.liveness_after_k_dict[k] = alive
-            if isinstance(instr, (Label,Jump, JumpEquals)):
-                continue
+            if not isinstance(instr, Instruction):
+                raise Exception("'%s' is not an Instruction" % instr)
             # get reads/writes performed by instruction, but only for variables
             writes = set(filter(lambda x: isinstance(x,Var), instr.writes()))
             reads = set(filter(lambda x: isinstance(x,Var), instr.reads()))
@@ -205,14 +205,7 @@ class P0RegAllocator:
         if isinstance(src,Var):
             src = self.get_assignment(src)
         return Pushl(src)
-    def visit_Cmp(self, node, *args, **kwargs):
-        src = node.rhs
-        if isinstance(src,Var):
-            src = self.get_assignment(src)
-        dst = node.lhs
-        if isinstance(dst,Var):
-            dst = self.get_assignment(dst)
-        return Cmp(src, dst)
+
     def visit_Addl(self, node, *args, **kwargs):
         src = node.src
         dst = node.dst
@@ -221,22 +214,13 @@ class P0RegAllocator:
         if isinstance(dst,Var):
             dst = self.get_assignment(dst)
         return Addl(src,dst)
-    def visit_JumpEquals(self, node, *args, **kwargs):
-        return node
-    def visit_Jump(self, node, *args, **kwargs):
-        return node
-    def visit_Label(self, node, *args, **kwargs):
-        return node
+
     def visit_Negl(self, node, *args, **kwargs):
         operand = node.operand
         if isinstance(operand,Var):
             operand = self.get_assignment(operand)
         return Negl(operand)
-    def visit_BitwiseNot(self, node, *args, **kwargs):
-        operand = node.value
-        if isinstance(operand,Var):
-            operand = self.get_assignment(operand)
-        return BitwiseNot(operand)
+
     def visit_Call(self, node, *args, **kwargs):
         return Call(node.func)
 

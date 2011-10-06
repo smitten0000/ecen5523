@@ -20,7 +20,7 @@ class Program(object):
                 instructions.append(instr)
         return instructions
 
-class Statement(object):
+class Statement(Instruction):
     def __init__(self, instructions, source):
         self.instructions = instructions
         self.source = source
@@ -28,6 +28,10 @@ class Statement(object):
         return "Statement([%s],'%s')" % (",".join([str(x) for x in self.instructions]), self.source)
     def __repr__(self):
         return self.__str__()
+    def writes(self):
+        return reduce(lambda x,y: x+y, [x.writes() for x in self.instructions])
+    def reads(self):
+        return reduce(lambda x,y: x+y, [x.reads() for x in self.instructions])
 
 class Movl(Instruction):
     def __init__(self, src, dst):
@@ -147,7 +151,7 @@ class StackSlot(object):
     def __hash__(self):
         return self.value.__hash__()
 
-class Cmp(object):
+class Cmp(Instruction):
     def __init__(self, lhs, rhs):
         self.lhs = lhs
         self.rhs = rhs
@@ -169,12 +173,16 @@ class Cmp(object):
 class CmpNe(Cmp):
     def __init__(self, lhs, rhs):
         Cmp.__init__(lhs,rhs)
+    def __str__(self):
+        return "CmpNe(%s, %s)" % (self.lhs, self.rhs)
+    def __repr__(self):
+        return self.__str__()
     
-class BitwiseNot(object):
+class BitwiseNot(Instruction):
     def __init__(self, value):
         self.value = value
     def __str__(self):
-        return "Not(%s)" % (self.value)
+        return "BitwiseNot(%s)" % (self.value)
     def __repr__(self):
         return self.__str__()
     def __eq__(self, other):
@@ -188,12 +196,12 @@ class BitwiseNot(object):
     def reads(self):
         return [self.value]
     
-class BitwiseAnd(object):
+class BitwiseAnd(Instruction):
     def __init__(self, value, mask):
         self.value = value
         self.mask = mask
     def __str__(self):
-        return "BitAnd(%s,%s)" % (self.value, self.mask)
+        return "BitwiseAnd(%s,%s)" % (self.value, self.mask)
     def __repr__(self):
         return self.__str__()
     def __eq__(self, other):
@@ -206,8 +214,27 @@ class BitwiseAnd(object):
         return [self.value]
     def reads(self):
         return [self.value]
+
+class BitwiseOr(Instruction):
+    def __init__(self, src, dst):
+        self.src = src
+        self.dst = dst 
+    def __str__(self):
+        return "BitwiseOr(%s,%s)" % (self.src, self.dst)
+    def __repr__(self):
+        return self.__str__()
+    def __eq__(self, other):
+        return self.src == other.src and self.dst == other.dst
+    def __ne__(self, other):
+        return not self.__eq__(other)
+    def __hash__(self):
+        return self.value.__hash__()
+    def writes(self):
+        return [self.dst]
+    def reads(self):
+        return [self.src, self.dst]
     
-class BitShift(object):
+class BitShift(Instruction):
     def __init__(self, value, places, direction):
         self.value = value
         self.places = places
@@ -227,7 +254,7 @@ class BitShift(object):
     def reads(self):
         return [self.value]
         
-class Label(object):
+class Label(Instruction):
     def __init__(self, label):
         self.label = label
     def __str__(self):
@@ -240,8 +267,12 @@ class Label(object):
         return not self.__eq__(other)
     def __hash__(self):
         return self.label.__hash__()
+    def writes(self):
+        return []
+    def reads(self):
+        return []
     
-class Jump(object):
+class Jump(Instruction):
     def __init__(self, label):
         self.label = label
     def __str__(self):
@@ -254,6 +285,10 @@ class Jump(object):
         return not self.__eq__(other)
     def __hash__(self):
         return self.label.__hash__()
+    def writes(self):
+        return []
+    def reads(self):
+        return []
     
 class JumpEquals(Jump):
     def __init__(self, label):

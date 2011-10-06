@@ -17,16 +17,15 @@ class P0InstructionSelector(object):
         return meth(node, *args, **kwargs)
 
     def visit_Module(self, node, *args, **kwargs):
-        return self.visit(node.node)
+        return Program(self.visit(node.node))
 
     def visit_Stmt(self, node, *args, **kwargs):
-        return Program([Statement(self.visit(x),pretty(x)) for x in node.nodes])
+        return [Statement(self.visit(x),pretty(x)) for x in node.nodes]
 
     def visit_Assign(self, node, *args, **kwargs):
         assname = node.nodes[0]
         if not self.varalloc.is_allocated(assname.name):
             raise Exception('Attempt to assign to previously unseen variable: %s' % assname.name)
-        print node.expr
         loc, stmtlist = self.visit(node.expr)
         return stmtlist + [Movl(loc, Var(assname.name))]
         
@@ -69,17 +68,17 @@ class P0InstructionSelector(object):
 
 
 if __name__ == "__main__":
-    import sys
+    import sys, compiler
     from p0parser import P0Parser
     from p0flattener import P0Flattener
     if len(sys.argv) < 2:
         sys.exit(1)
     testcases = sys.argv[1:]
     for testcase in testcases:
-        parser = P0Parser()
-        parser.build()
-        #ast = compiler.parseFile(testcase)
-        ast = parser.parseFile(testcase)
+        #parser = P0Parser()
+        #parser.build()
+        ast = compiler.parseFile(testcase)
+        #ast = parser.parseFile(testcase)
         varalloc = VariableAllocator()
         p0flattener = P0Flattener(varalloc)
         stmtlist = p0flattener.flatten(ast)

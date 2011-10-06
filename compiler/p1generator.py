@@ -43,9 +43,13 @@ class P1Generator(P0Generator):
         return '%s:' % node.label
     def visit_BitShift(self, node, *args, **kwargs ):
         if node.dir == 'left':
-            return '\tSHL %s, %s' % (node.places, node.value)
+            return '\tSHL %s, %s' % (self.visit(node.places), self.visit(node.value))
         else:
-            return '\tSHR %s, %s' % (node.places, node.value)
+            return '\tSHR %s, %s' % (self.visit(node.places), self.visit(node.value))
+    def visit_BitwiseAnd(self, node, *args, **kwargs):
+        return '\tandl %s, %s' % (self.visit(node.mask), self.visit(node.value))
+    def visit_BitwiseOr(self, node, *args, **kwargs):
+        return '\torl %s, %s' % (self.visit(node.src), self.visit(node.dst))
     
 if __name__ == "__main__":
     import sys
@@ -64,6 +68,8 @@ if __name__ == "__main__":
         ast = parseFile(testcase)
 #        ast = parser.parseFile(testcase)
         varalloc = VariableAllocator()
+        p1explicate = P1Explicate(varalloc)
+        ast = p1explicate.explicate(ast)
         p1flattener = P1Flattener(varalloc)
         stmtlist = p1flattener.flatten(ast)
         instruction_selector = P1InstructionSelector(varalloc)
@@ -74,5 +80,3 @@ if __name__ == "__main__":
         #program = stackallocator.substitute()
         generator = P1Generator()
         print generator.generate(program)
-        
-        

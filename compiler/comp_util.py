@@ -70,7 +70,7 @@ class priorityq:
         self.reprioritize(entry[0]-inc, task)
 
 
-def pretty(node,depth=0,indent='  '):
+def prettyIndent(node,depth=0,indent='  '):
     """Given an AST node, print out a human readable form."""
     space=indent*depth
     ret = space
@@ -114,6 +114,52 @@ def pretty(node,depth=0,indent='  '):
         ret = ret + 'Or(%s,%s)' % (pretty(node.nodes[0]), pretty(node.nodes[1]))
     elif isinstance(node, And):
         ret = ret + 'And(%s,%s)' % (pretty(node.nodes[0]), pretty(node.nodes[1]))
+    elif isinstance(node, Compare):
+        return 'Compare(%s, %s, %s)' % (node.expr, node.ops[0][0], node.ops[0][1])
+    else:
+        raise Exception('Unknown node: %s' % node.__class__)
+    return ret
+
+def pretty(node):
+    """Given an AST node, print out a human readable form."""
+    if isinstance(node, Printnl):
+        if node.dest is not None:
+            return 'print >> %s, %s' % (node.dest, pretty(node.nodes[0]))
+        else:
+            return 'print %s' % (pretty(node.nodes[0]))
+    elif isinstance(node, Assign):
+        return '%s = %s' % (pretty(node.nodes[0]), pretty(node.expr))
+    elif isinstance(node, Discard):
+        pass
+    elif isinstance(node, CallFunc):
+        if node.args is not None and len(node.args) > 0:
+            return '%s(%s)' % (pretty(node.node), node.args)
+        else:
+            return '%s()' % (node.node)
+    elif isinstance(node, Add):
+        return '%s + %s' % (pretty(node.left), pretty(node.right))
+    elif isinstance(node, UnarySub):
+        return '- %s' % (pretty(node.expr))
+    elif isinstance(node, Const):
+        return str(node.value)
+    elif isinstance(node, Name):
+        return node.name
+    elif isinstance(node, AssName):
+        return str(node.name)
+    elif isinstance(node, Not):
+        return 'Not(%s)' % node.expr
+    elif isinstance(node, If):
+        return 'If(%s) %s Else %s' % (node.tests[0][0], node.tests[0][1], node.else_)
+    elif isinstance(node, ProjectTo):
+        return 'ProjectTo(%s,%s)' % (node.typ, pretty(node.arg))
+    elif isinstance(node, InjectFrom):
+        return 'InjectFrom(%s,%s)' % (node.typ, pretty(node.arg))
+    elif isinstance(node, GetTag):
+        return 'GetTag(%s)' % (pretty(node.arg))
+    elif isinstance(node, Or):
+        return 'Or(%s,%s)' % (pretty(node.nodes[0]), pretty(node.nodes[1]))
+    elif isinstance(node, And):
+        return 'And(%s,%s)' % (pretty(node.nodes[0]), pretty(node.nodes[1]))
     elif isinstance(node, Compare):
         return 'Compare(%s, %s, %s)' % (node.expr, node.ops[0][0], node.ops[0][1])
     else:
