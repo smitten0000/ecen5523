@@ -112,7 +112,7 @@ class P1InstructionSelector(P0InstructionSelector):
         # need to create a temporary variable to store the result of the shift
         varname = self.varalloc.get_next_var()
         # int tag(pyobj val) { return val & MASK; }
-        return (Var(varname), stmtlist + [Movl(loc,Var(varname)), BitwiseAnd(Var(varname), Imm32(3))])
+        return (Var(varname), stmtlist + [Movl(loc,Var(varname)), BitwiseAnd(Imm32(3), Var(varname))])
     def visit_Or(self, node, *args, **kwargs):
         left,  leftstmtlist  = self.visit(node.nodes[0])
         right, rightstmtlist = self.visit(node.nodes[1])

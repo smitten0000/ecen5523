@@ -62,8 +62,8 @@ class P1RegAllocator(P0RegAllocator):
         return BitwiseNot(operand)
 
     def visit_BitwiseAnd(self, node, *args, **kwargs):
-        src = node.value
-        dst = node.mask
+        src = node.src
+        dst = node.dst
         if isinstance(src,Var): src = self.get_assignment(src)
         if isinstance(dst,Var): dst = self.get_assignment(dst)
         return BitwiseAnd(src, dst)

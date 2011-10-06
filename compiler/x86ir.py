@@ -197,23 +197,23 @@ class BitwiseNot(Instruction):
         return [self.value]
     
 class BitwiseAnd(Instruction):
-    def __init__(self, value, mask):
-        self.value = value
-        self.mask = mask
+    def __init__(self, src, dst):
+        self.src = src 
+        self.dst = dst 
     def __str__(self):
-        return "BitwiseAnd(%s,%s)" % (self.value, self.mask)
+        return "BitwiseAnd(%s,%s)" % (self.src, self.dst)
     def __repr__(self):
         return self.__str__()
     def __eq__(self, other):
-        return self.value == other.value and self.mask == other.mask
+        return self.src == other.src and self.dst == other.dst
     def __ne__(self, other):
         return not self.__eq__(other)
     def __hash__(self):
         return self.value.__hash__()
     def writes(self):
-        return [self.value]
+        return [self.dst]
     def reads(self):
-        return [self.value]
+        return [self.src, self.dst]
 
 class BitwiseOr(Instruction):
     def __init__(self, src, dst):

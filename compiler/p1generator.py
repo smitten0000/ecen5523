@@ -49,7 +49,7 @@ class P1Generator(P0Generator):
         else:
             raise Exception("Unknown direction '%s' for shift" % node.dir)
     def visit_BitwiseAnd(self, node, *args, **kwargs):
-        return '\tandl %s, %s' % (self.visit(node.mask), self.visit(node.value))
+        return '\tandl %s, %s' % (self.visit(node.src), self.visit(node.dst))
     def visit_BitwiseOr(self, node, *args, **kwargs):
         return '\torl %s, %s' % (self.visit(node.src), self.visit(node.dst))
     
