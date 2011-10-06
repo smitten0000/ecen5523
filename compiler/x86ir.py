@@ -235,24 +235,24 @@ class BitwiseOr(Instruction):
         return [self.src, self.dst]
     
 class BitShift(Instruction):
-    def __init__(self, value, places, direction):
-        self.value = value
-        self.places = places
+    def __init__(self, src, dst, direction):
+        self.src = src 
+        self.dst = dst 
         self.dir = direction
     def __str__(self):
         return "BitShift%s(%s,%s)" % (self.dir, self.value, self.places)
     def __repr__(self):
         return self.__str__()
     def __eq__(self, other):
-        return self.value == other.value and self.places == other.places and self.dir == other.dir
+        return self.src == other.src and self.dst == other.dst and self.dir == other.dir
     def __ne__(self, other):
         return not self.__eq__(other)
     def __hash__(self):
         return self.value.__hash__()
     def writes(self):
-        return [self.value]
+        return [self.dst]
     def reads(self):
-        return [self.value]
+        return [self.src, self.dst]
         
 class Label(Instruction):
     def __init__(self, label):

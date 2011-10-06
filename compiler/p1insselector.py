@@ -92,7 +92,7 @@ class P1InstructionSelector(P0InstructionSelector):
         # need to create a temporary variable to store the result of the shift
         varname = self.varalloc.get_next_var()
         stmts = [Movl(loc,Var(varname)), 
-                 BitShift(Var(varname), Imm32(TAG_SIZE), 'left'),
+                 BitShift(Imm32(TAG_SIZE), Var(varname), 'left'),
                  BitwiseOr(Imm32(tag),Var(varname))]
         return (Var(varname), stmtlist + stmts)
     def visit_ProjectTo(self, node, *args, **kwargs):
@@ -105,7 +105,7 @@ class P1InstructionSelector(P0InstructionSelector):
         # only shift to the right if we are converting to int or bool
         stmts = [Movl(loc,Var(varname))]
         if node.typ == 'int' or node.typ == 'bool':
-            stmts.extend([BitShift(Var(varname), Imm32(TAG_SIZE), 'right')])
+            stmts.extend([BitShift(Imm32(TAG_SIZE), Var(varname), 'right')])
         return (Var(varname), stmtlist + stmts)
     def visit_GetTag(self, node, *args, **kwargs):
         loc, stmtlist = self.visit(node.arg)

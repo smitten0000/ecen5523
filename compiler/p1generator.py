@@ -43,9 +43,9 @@ class P1Generator(P0Generator):
         return '%s:' % node.label
     def visit_BitShift(self, node, *args, **kwargs ):
         if node.dir == 'left':
-            return '\tSHL %s, %s' % (self.visit(node.places), self.visit(node.value))
+            return '\tSHL %s, %s' % (self.visit(node.src), self.visit(node.dst))
         elif node.dir == 'right':
-            return '\tSHR %s, %s' % (self.visit(node.places), self.visit(node.value))
+            return '\tSHR %s, %s' % (self.visit(node.src), self.visit(node.dst))
         else:
             raise Exception("Unknown direction '%s' for shift" % node.dir)
     def visit_BitwiseAnd(self, node, *args, **kwargs):
