@@ -93,7 +93,7 @@ class P1InstructionSelector(P0InstructionSelector):
         varname = self.varalloc.get_next_var()
         stmts = [Movl(loc,Var(varname)), 
                  BitShift(Var(varname), Imm32(TAG_SIZE), 'left'),
-                 BitwiseOr(Var(varname), Imm32(tag))]
+                 BitwiseOr(Imm32(tag),Var(varname))]
         return (Var(varname), stmtlist + stmts)
     def visit_ProjectTo(self, node, *args, **kwargs):
         # int project_int(pyobj val) { assert((val & MASK) == INT_TAG); return val >> SHIFT; }
