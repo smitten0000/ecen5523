@@ -28,7 +28,17 @@ class P1Generator(P0Generator):
     def visit_GetTag(self, node, *args, **kwargs):
         return '\tand %s, $3' %  self.visit(node.arg)    
     def visit_Cmp(self, node, *args, **kwargs):
-        return '\tCMP %s, %s' % (self.visit(node.lhs), self.visit(node.rhs))    
+        stmtlist=[]
+        # handle memory to memory "cmp" (this is just here to work with the stack allocator)
+        if isinstance(node.lhs,StackSlot) and isinstance(node.rhs, StackSlot):
+            stmtlist.append('\tmovl %s, %s' % (self.visit(node.lhs), self.visit(Register('eax'))))
+            node.lhs = Register('eax')
+        # handle imm32 to memory "cmp" (this is just here to work with the stack allocator)
+        elif isinstance(node.lhs,StackSlot) and isinstance(node.rhs, Imm32):
+            stmtlist.append('\tmovl %s, %s' % (self.visit(node.rhs), self.visit(Register('eax'))))
+            node.rhs = Register('eax')
+        stmtlist.append('\tcmpl %s, %s' % (self.visit(node.lhs), self.visit(node.rhs)))
+        return "\n".join(stmtlist)
     def visit_Or(self, node, *args, **kwargs):
         return '\tOR %s, %s' % (self.visit(node.nodes[0]), self.visit(node.nodes[1]))
     def visit_And(self, node, *args, **kwargs):
@@ -43,15 +53,28 @@ class P1Generator(P0Generator):
         return '%s:' % node.label
     def visit_BitShift(self, node, *args, **kwargs ):
         if node.dir == 'left':
-            return '\tSHL %s, %s' % (self.visit(node.src), self.visit(node.dst))
+            return '\tsall %s, %s' % (self.visit(node.src), self.visit(node.dst))
         elif node.dir == 'right':
-            return '\tSHR %s, %s' % (self.visit(node.src), self.visit(node.dst))
+            return '\tsarl %s, %s' % (self.visit(node.src), self.visit(node.dst))
         else:
             raise Exception("Unknown direction '%s' for shift" % node.dir)
     def visit_BitwiseAnd(self, node, *args, **kwargs):
-        return '\tandl %s, %s' % (self.visit(node.src), self.visit(node.dst))
+        stmtlist=[]
+        # handle memory to memory "and" (this is just here to work with the stack allocator)
+        if isinstance(node.src,StackSlot) and isinstance(node.dst, StackSlot):
+            stmtlist.append('\tmovl %s, %s' % (self.visit(node.src), self.visit(Register('eax'))))
+            node.src = Register('eax')
+        stmtlist.append('\tandl %s, %s' % (self.visit(node.src), self.visit(node.dst)))
+        return "\n".join(stmtlist)
     def visit_BitwiseOr(self, node, *args, **kwargs):
-        return '\torl %s, %s' % (self.visit(node.src), self.visit(node.dst))
+        stmtlist=[]
+        # handle memory to memory "or" (this is just here to work with the stack allocator)
+        if isinstance(node.src,StackSlot) and isinstance(node.dst, StackSlot):
+            stmtlist.append('\tmovl %s, %s' % (self.visit(node.src), self.visit(Register('eax'))))
+            node.src = Register('eax')
+        stmtlist.append('\torl %s, %s' % (self.visit(node.src), self.visit(node.dst)))
+        return "\n".join(stmtlist)
+
     
 if __name__ == "__main__":
     import sys

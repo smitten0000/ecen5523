@@ -10,6 +10,7 @@ import compiler
 
 from p0parser import P0Parser
 from p0stackallocator import P0StackAllocator
+from p1stackallocator import P1StackAllocator
 from p1flattener import P1Flattener
 from p1insselector import P1InstructionSelector
 from p1regallocator import P1RegAllocator
@@ -42,13 +43,15 @@ if __name__ == "__main__":
         #eval(compile(code,'test.txt','exec'))
         instruction_selector = P1InstructionSelector(varalloc)
         program = instruction_selector.visit(stmtlist)
-        regallocator = P1RegAllocator(program)
-        start = time.time()
-        program = regallocator.substitute()
-        end = time.time()
-        logger.debug("P0RegAllocator.substitute() took %.02fs" % (end - start))
+        #regallocator = P1RegAllocator(program)
+        #start = time.time()
+        #program = regallocator.substitute()
+        #end = time.time()
+        #logger.debug("P0RegAllocator.substitute() took %.02fs" % (end - start))
         #stackallocator = P0StackAllocator(program)
         #program = stackallocator.substitute()
+        stackallocator = P1StackAllocator(program)
+        program = stackallocator.substitute()
         generator = P1Generator()
         output = generator.generate(program)
         outputfile = '%s.s' % testcase[:testcase.rfind('.')]
