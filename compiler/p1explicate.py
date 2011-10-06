@@ -86,6 +86,17 @@ class P1Explicate(object):
     def visit_Printnl(self, node):
         return Printnl([self.visit(node.nodes[0])], node.dest)
 
+    def visit_CallFunc(self, node):
+        return InjectFrom('int',CallFunc(node.node, node.args))
+
+    def visit_UnarySub(self, node):
+        return InjectFrom('int',UnarySub(ProjectTo('int',self.visit(node.expr))))
+
+    def visit_Assign(self, node):
+        # remember to mark this variable as allocated
+        self.varalloc.add_var(node.nodes[0].name)
+        return Assign(node.nodes, self.visit(node.expr))
+
     def visit_And(self, node):
         if debug:
             print node
