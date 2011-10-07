@@ -150,9 +150,27 @@ class P1Explicate(object):
         return InjectFrom('int',UnarySub(ProjectTo('int',self.visit(node.expr))))
 
     def visit_Assign(self, node):
-        # remember to mark this variable as allocated
-        self.varalloc.add_var(node.nodes[0].name)
-        return Assign(node.nodes, self.visit(node.expr))
+        # the node.nodes[0] attribute may contain a subscript, so we have to 
+        # handle this case now.  We can't delegate to visit_Subscript, since that
+        # will result in a call to get_subscript, which is not what is intended.
+        # instead we a conditional below to determine what to do
+        if isinstance(node.nodes[0], AssName):
+            # "normal" behavior
+            # remember to mark this variable as allocated
+            self.varalloc.add_var(node.nodes[0].name)
+            return Assign([node.nodes[0]], self.visit(node.expr))
+        elif isinstance(node.nodes[0], Subscript):
+            subscript = node.nodes[0]
+            # make the expression that the subscript operates on explicit
+            expr = self.visit(subscript.expr)
+            # make the subscript explicit (only support one subscript)
+            subexpr = self.visit(subscript.subs[0])
+            # make the value explicit
+            valueexpr = self.visit(node.expr)
+            # generate a temporary for the assignment statement (even though its
+            # not going to be used by anyone since x = y = 2 is invalid in p1)
+            retvar = Name(self.varalloc.get_next_var())
+            return Assign([AssName(retvar,'OP_ASSIGN')], CallFunc(Name('set_subscript'),[expr,subexpr,valueexpr]))
     def visit_Not(self, node):
         expr1 = self.explicate(node.expr)
         var = Name(self.varalloc.get_next_var())
@@ -239,6 +257,19 @@ class P1Explicate(object):
         # and then flatten and evaluate the body
         return Let(leftvar, expr1,
                    Let(rightvar, expr2, ifexp))
+
+    def visit_Subscript(self, node):
+        # make the expression that the subscript operates on explicit
+        expr = self.visit(node.expr)
+        # make the subscript explicit (only support one subscript)
+        subexpr = self.visit(node.subs[0])
+        # generate a temporary var to refer to the expression by
+        exprvar = Name(self.varalloc.get_next_var())
+        # generate a temporary var to refer to the subscript expression by
+        subvar = Name(self.varalloc.get_next_var())
+        # Call the get_subscript function from the runtime
+        return Let(exprvar, expr, Let(subvar, subexpr, CallFunc(Name('get_subscript'),[exprvar,subvar]))) 
+
 
 
 if __name__ == "__main__":
