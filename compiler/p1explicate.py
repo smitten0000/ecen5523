@@ -173,7 +173,7 @@ class P1Explicate(object):
             raise Exception("unknown operator '%s'" % node.ops[0][0])
         ifexp = IfExp(
                   And([isIntOrBoolExp(leftvar),isIntOrBoolExp(rightvar)]),
-                  Compare(ProjectTo('int',leftvar), [(node.ops[0][0], ProjectTo('int',rightvar))]),
+                  InjectFrom('bool',Compare(ProjectTo('int',leftvar), [(node.ops[0][0], ProjectTo('int',rightvar))])),
                   IfExp(
                     And([compareTag(leftvar,bigTag),compareTag(rightvar,bigTag)]),
                     bigBehavior,
