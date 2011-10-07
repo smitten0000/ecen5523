@@ -177,7 +177,7 @@ class P1Explicate(object):
         ifexp = IfExp(compareTag(var,boolTag),
                       IfExp(Compare(var, [('==',Name('True'))]), InjectFrom('bool',Name('True')), InjectFrom('bool',Name('False'))),
                       IfExp(compareTag(var,intTag),
-                            IfExp(Compare(var, [('==',Const(0))]), InjectFrom('int',Name('True')), InjectFrom('bool',Name('False'))),
+                            IfExp(Compare(var, [('==',Const(1))]), InjectFrom('int',Name('True')), InjectFrom('bool',Name('False'))),
                             IfExp(Compare(CallFunc(Name('is_true'),[var]), [('==',InjectFrom('int',Name('True')))]), InjectFrom('int',Name('True')), InjectFrom('bool',Name('False')))
                       )
                             
