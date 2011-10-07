@@ -37,9 +37,8 @@ if __name__ == "__main__":
     import sys, compiler
     from comp_util import *
     from p0parser import P0Parser
-    from p0flattener import P0Flattener
-    from p0insselector import P0InstructionSelector
-    from p0regallocator import P0RegAllocator
+    from p1flattener import P1Flattener
+    from p1insselector import P1InstructionSelector
     if len(sys.argv) < 2:
         sys.exit(1)
     testcases = sys.argv[1:]

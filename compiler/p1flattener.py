@@ -104,6 +104,21 @@ class P1Flattener(P0Flattener):
             rhsvar, rhsstmtlist = self.flatten(rhs)
             varname = self.varalloc.get_next_var()
             return (Name(varname), lhsstmtlist + rhsstmtlist + [Assign([AssName(varname,'OP_ASSIGN')], Compare(lhsvar, [(oper, rhsvar)]))])
+        # overridden from p0flattener.py to handle arguments
+        elif isinstance(node, CallFunc):
+            # arguments can be arbitrary expressions, so we need to flatten those too.
+            # this is a list of tuples: [(var1,stmtlist1), (var2,stmtlist2), ...]
+            varstmtlist = [self.flatten(x) for x in node.args]
+            #print varstmtlist
+            # generate a temporary to store the result
+            varname = self.varalloc.get_next_var()
+            # convert the list of tuples to just a list of the variables; ditto for statements
+            varlist =  [x[0] for x in varstmtlist]
+            #print varlist
+            stmtlist = reduce(lambda x,y: x+y, [x[1] for x in varstmtlist], [])
+            #print stmtlist
+            # return a CallFunc with the variables substituted in
+            return (Name(varname), stmtlist + [Assign([AssName(varname, 'OP_ASSIGN')], CallFunc(node.node, varlist))])
         elif isinstance(node, Subscript):
             # We only need to handle one subscript per the grammar, e.g, a[1,2] is invalid P1
             # (a[1,2] is the only case where you get len(node.subs) > 1)
@@ -135,6 +150,6 @@ if __name__ == "__main__":
         ast = p1explicator.explicate(ast)
         p1flattener = P1Flattener(varalloc,True)
         stmtlist = p1flattener.flatten(ast)
-        #print stmtlist
+        print stmtlist
         print prettyAST(stmtlist)
         print '\n'.join([pretty(x) for x in stmtlist.node.nodes])

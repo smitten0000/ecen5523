@@ -18,7 +18,7 @@ class P0Flattener:
         if isinstance(node, Module):
             return Module(None, self.flatten(node.node), None)
         elif isinstance(node, Stmt):
-            return Stmt(reduce(lambda x,y: x+y, [self.flatten(x) for x in node.nodes]), None)
+            return Stmt(reduce(lambda x,y: x+y, [self.flatten(x) for x in node.nodes], []), None)
         elif isinstance(node, Printnl):
             if len(node.nodes) > 0:
                 var, stmtlist = self.flatten(node.nodes[0])

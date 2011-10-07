@@ -84,6 +84,7 @@ class P1InstructionSelector(P0InstructionSelector):
         # convert a simple value to a pyobj
         # pyobj inject_int(int i) { return (i << SHIFT) | INT_TAG; }
         # pyobj inject_bool(int b) { return (b << SHIFT) | BOOL_TAG; }
+        # pyobj inject_big(big_pyobj* p) { assert((((long)p) & MASK) == 0); return ((long)p) | BIG_TAG; }
         if node.typ == 'int': tag = INT_TAG
         elif node.typ == 'bool': tag = BOOL_TAG
         elif node.typ == 'big': tag = BIG_TAG
@@ -91,9 +92,11 @@ class P1InstructionSelector(P0InstructionSelector):
             raise Exception("Unknown tag type '%s'" % node.typ)
         # need to create a temporary variable to store the result of the shift
         varname = self.varalloc.get_next_var()
-        stmts = [Movl(loc,Var(varname)), 
-                 BitShift(Imm32(TAG_SIZE), Var(varname), 'left'),
-                 BitwiseOr(Imm32(tag),Var(varname))]
+        stmts = [Movl(loc,Var(varname))]
+        # only shift left if we are converting from an int or bool
+        if node.typ == 'int' or node.typ == 'bool':
+            stmts.extend([BitShift(Imm32(TAG_SIZE), Var(varname), 'left')])
+        stmts.extend([BitwiseOr(Imm32(tag),Var(varname))])
         return (Var(varname), stmtlist + stmts)
     def visit_ProjectTo(self, node, *args, **kwargs):
         # int project_int(pyobj val) { assert((val & MASK) == INT_TAG); return val >> SHIFT; }
@@ -125,11 +128,30 @@ class P1InstructionSelector(P0InstructionSelector):
         # need to create a temporary variable to store the result
         varname = self.varalloc.get_next_var()
         return (Var(varname), leftstmtlist + rightstmtlist + [Movl(left, Var(varname)), BitwiseAnd(right, Var(varname))])
+    # overridden from p0insselector.py to use print_any instead of print_int_nl
     def visit_Printnl(self, node, *args, **kwargs):
         loc, stmtlist = self.visit(node.nodes[0])
         return stmtlist + [Pushl(loc),
                            Call('print_any'),
                            Addl(Imm32(4), Register('esp'))]
+
+    # overridden from p0insselector.py to allow for arguments to CallFunc
+    def visit_CallFunc(self, node, *args, **kwargs):
+        # need to create a temporary variable here to store the result.
+        varname = self.varalloc.get_next_var()
+        instructions = []
+        # We have to generate a Pushl for each argument, but in reverse order to
+        # be consistent with the cdecl calling convention.
+        for x in reversed(node.args):
+            var, instrlist = self.visit(x)
+            instructions.extend(instrlist + [Pushl(var)])
+        # Convert the CallFunc to a Call() node in our x86IR
+        instructions.extend([Call(node.node.name)])
+        # Move the result from the eax register to the new temp var.
+        instructions.extend([Movl(Register('eax'),Var(varname))])
+        # Generate an Addl instruction to restore the stack pointer
+        instructions.extend([Addl(Imm32(4*len(node.args)), Register('esp'))])
+        return (Var(varname), instructions)
 
 
 if __name__ == "__main__":

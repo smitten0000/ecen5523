@@ -240,7 +240,7 @@ class BitShift(Instruction):
         self.dst = dst 
         self.dir = direction
     def __str__(self):
-        return "BitShift%s(%s,%s)" % (self.dir, self.value, self.places)
+        return "BitShift%s(%s,%s)" % (self.dir, self.src, self.dst)
     def __repr__(self):
         return self.__str__()
     def __eq__(self, other):
