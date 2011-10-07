@@ -91,8 +91,21 @@ class P1Explicate(object):
         return ProjectTo(node.typ, self.visit(node.arg))
 
     def visit_IfExp(self, node):
-        return IfExp(self.visit(node.test), self.visit(node.then), self.visit(node.else_))
-
+        test  = self.visit(node.test)
+        then  = self.visit(node.then)
+        else_ = self.visit(node.else_)
+        testvar = Name(self.varalloc.get_next_var())
+        thenvar = Name(self.varalloc.get_next_var())
+        elsevar = Name(self.varalloc.get_next_var())
+        ifexp = IfExp(
+                  isIntOrBoolExp(testvar),
+                  IfExp(testvar, thenvar, elsevar),
+                  IfExp(ProjectTo('bool',CallFunc(Name('is_true'),[testvar])), thenvar, elsevar)
+                )
+        return Let(testvar, test,
+                   Let(thenvar, then,
+                       Let(elsevar, else_, ifexp)))
+        
     def visit_List(self, node):
         # the size of the list has to be known at creation time
         # this should be the same as the number of nodes in the List AST node
@@ -115,6 +128,26 @@ class P1Explicate(object):
         let.body = varname
         # Use Let to return an expression that results in a pyobj
         return ret
+
+    def visit_Dict(self, node):
+        pyobj_dict = self.visit(InjectFrom('big',CallFunc(Name('create_dict'),[])))
+        # allocate a temp var 
+        varname = Name(self.varalloc.get_next_var())
+        # we are going to create a tree of Let nodes to create a single expression
+        # that executes all needed statements and returns the dictionary
+        ret = Let(varname, pyobj_dict, None)
+        let = ret
+        # for each expression, we have to assign it to the next consecutive index
+        for key, value in node.items:
+            tmp = Name(self.varalloc.get_next_var())
+            expr = self.visit(CallFunc(Name('set_subscript'),[varname, key, value]))
+            let.body = Let(tmp, expr, None)
+            let = let.body
+        # We need a final reference to the variable corresponding to the dictionary
+        let.body = varname
+        # Use Let to return an expression that results in a pyobj
+        return ret
+
     def visit_Name(self, node):
         if node.name == 'True':
             return InjectFrom('bool', Const(1))
@@ -128,18 +161,22 @@ class P1Explicate(object):
     
     def visit_Compare(self, node):
         # != and == should operate on booleans, is should operate on pointer address or raw value
-        if node.ops[0][0] == 'is':
-            return node
         lhs = self.explicate(node.expr)
         rhs = self.explicate(node.ops[0][1])
         leftvar = Name(self.varalloc.get_next_var())
         rightvar = Name(self.varalloc.get_next_var())
+        if node.ops[0][0] in ('==','!='):
+            bigBehavior = CallFunc(Name('equal'),[leftvar,rightvar])
+        elif node.ops[0][0] in ('is'):
+            bigBehavior = InjectFrom('bool',Compare(ProjectTo('big',leftvar), [('==', ProjectTo('big',rightvar))]))
+        else:
+            raise Exception("unknown operator '%s'" % node.ops[0][0])
         ifexp = IfExp(
                   And([isIntOrBoolExp(leftvar),isIntOrBoolExp(rightvar)]),
                   Compare(ProjectTo('int',leftvar), [(node.ops[0][0], ProjectTo('int',rightvar))]),
                   IfExp(
                     And([compareTag(leftvar,bigTag),compareTag(rightvar,bigTag)]),
-                    CallFunc(Name('equal'),[leftvar,rightvar]),
+                    bigBehavior,
                     CallFunc(Name('exit'),[])
                   )
                 )
@@ -218,8 +255,8 @@ class P1Explicate(object):
 
         ifexp = IfExp(
                   And([isIntOrBoolExp(leftvar), isIntOrBoolExp(rightvar)]),
-                  IfExp(Compare(InjectFrom('int',leftvar), [('==',Const(0))]), leftvar, rightvar),
-                  IfExp(Compare(InjectFrom('int',CallFunc(Name('is_true'),[leftvar])), [('==',Const(0))]), leftvar, rightvar)
+                  IfExp(Compare(ProjectTo('int',leftvar), [('==',Const(0))]), leftvar, rightvar),
+                  IfExp(Compare(ProjectTo('int',CallFunc(Name('is_true'),[leftvar])), [('==',Const(0))]), leftvar, rightvar)
                 )
         # Return a "Let" expression, which tells the flattener to flatten and
         # evaluate the RHS (2nd arg), assign it to the given variable (1st arg),
@@ -241,8 +278,8 @@ class P1Explicate(object):
 
         ifexp = IfExp(
                   And([isIntOrBoolExp(leftvar), isIntOrBoolExp(rightvar)]),
-                  IfExp(Compare(InjectFrom('int',leftvar), [('==',InjectFrom('int',Const(0)))]), rightvar, leftvar),
-                  IfExp(Compare(InjectFrom('int',CallFunc(Name('is_true'),[leftvar])), [('==',Const(0))]), rightvar, leftvar)
+                  IfExp(Compare(ProjectTo('int',leftvar), [('==',InjectFrom('int',Const(0)))]), rightvar, leftvar),
+                  IfExp(Compare(ProjectTo('int',CallFunc(Name('is_true'),[leftvar])), [('==',Const(0))]), rightvar, leftvar)
                 )
         # Return a "Let" expression, which tells the flattener to flatten and
         # evaluate the RHS (2nd arg), assign it to the given variable (1st arg),
