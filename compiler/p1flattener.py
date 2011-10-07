@@ -60,10 +60,7 @@ class P1Flattener(P0Flattener):
             keyvaluelist = map(lambda x: (keyvarlist[x],valuevarlist[x]), range(0,len(keyvarlist)))
             varname = self.varalloc.get_next_var()
             return (Name(varname), keystmtlist + valuestmtlist + [Assign([AssName(varname, 'OP_ASSIGN')], Dict(keyvaluelist))])
-        # not sure why we are handling tuple? Ah, this was probably because Dict.items is a tuple.
-        # I think its cleaner to separate into keys/values as done above.
-        #elif isinstance(node, tuple):
-        #    return (node,[])
+        
         elif isinstance(node, IfExp):
             # Go ahead and flatten all expressions, including the test expression, as well as the 
             # "then" and "else" expressions.

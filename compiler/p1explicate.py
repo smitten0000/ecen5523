@@ -54,6 +54,9 @@ intTag = Const(0)
 boolTag = Const(1)
 bigTag = Const(3)
 
+compareTag = lambda x,y: Compare(GetTag(x),[('==',y)])
+isIntOrBoolExp = lambda x: Or([compareTag(x,intTag),compareTag(x,boolTag)])
+
 # Concept borrowed from http://peter-hoffmann.com/2010/extrinsic-visitor-pattern-python-inheritance.html
 class P1Explicate(object):
     def __init__(self, varalloc):
@@ -116,8 +119,21 @@ class P1Explicate(object):
     # All operands in p0 are expected to be pyobj
     # therefore, we have to convert Const -> pyobj
     def visit_Const(self, node):
-        return InjectFrom('int', node)
-
+        return InjectFrom('int', node)    
+    
+    def visit_Compare(self, node):
+        # != and == should operate on booleans, is should operate on pointer address or raw value
+        if node.ops[0][0] == 'is':
+            return node
+        
+        lhs = self.explicate(node.expr)
+        rhs = self.explicate(node.ops[0][1])
+        leftvar = Name(self.varalloc.get_next_var())
+        rightvar = Name(self.varalloc.get_next_var())
+        expr = Compare(ProjectTo('bool', leftvar), [(node.ops[0][0],ProjectTo('bool',rightvar))]) 
+        return Let(leftvar, lhs, Let(rightvar, rhs, expr))
+        
+        
     def visit_Printnl(self, node):
         return Printnl([self.visit(node.nodes[0])], node.dest)
 
@@ -140,7 +156,8 @@ class P1Explicate(object):
     def visit_Not(self, node):
         expr1 = self.explicate(node.expr)
         var = Name(self.varalloc.get_next_var())
-        return Let(var, expr1, ProjectTo('bool', var))
+        
+        return Let(var, expr1, InjectFrom('bool', expr1))
 
     def visit_And(self, node):
         if debug:
@@ -153,13 +170,11 @@ class P1Explicate(object):
         # allocate new temporaries to hold the result of the subexpression
         leftvar = Name(self.varalloc.get_next_var())
         rightvar = Name(self.varalloc.get_next_var())
-        
-        compareTag = lambda x,y: Compare(GetTag(x),[('==',y)])
-        isIntOrBoolExp = lambda x: Or([compareTag(x,intTag),compareTag(x,boolTag)])
+
         ifexp = IfExp(
                       And([isIntOrBoolExp(leftvar), isIntOrBoolExp(rightvar)]),
-                        IfExp(Compare(ProjectTo('bool',leftvar), [('==',ProjectTo('bool',Name('False')))]), leftvar, rightvar),
-                        IfExp(Compare(ProjectTo('bool',CallFunc(Name('is_true'),[leftvar])), [('==',Name('False'))])   , leftvar, rightvar)
+                        IfExp(Compare(InjectFrom('bool',leftvar), [('==',Name('False'))]), leftvar, rightvar),
+                        IfExp(Compare(InjectFrom('bool',CallFunc(Name('is_true'),[leftvar])), [('==',Name('False'))])   , leftvar, rightvar)
                       )
         # Return a "Let" expression, which tells the flattener to flatten and
         # evaluate the RHS (2nd arg), assign it to the given variable (1st arg),
@@ -178,13 +193,11 @@ class P1Explicate(object):
         # allocate new temporaries to hold the result of the subexpression
         leftvar = Name(self.varalloc.get_next_var())
         rightvar = Name(self.varalloc.get_next_var())
-        
-        compareTag = lambda x,y: Compare(GetTag(x),[('==',y)])
-        isIntOrBoolExp = lambda x: Or([compareTag(x,intTag),compareTag(x,boolTag)])
+
         ifexp = IfExp(
                       And([isIntOrBoolExp(leftvar), isIntOrBoolExp(rightvar)]),
-                        IfExp(Compare(ProjectTo('bool',leftvar), [('==',ProjectTo('bool',Name('False')))]), rightvar, leftvar),
-                        IfExp(Compare(ProjectTo('bool',CallFunc(Name('is_true'),[leftvar])), [('==',Name('False'))])   , rightvar, leftvar)
+                        IfExp(Compare(InjectFrom('bool',leftvar), [('==',InjectFrom('bool',Name('False')))]), rightvar, leftvar),
+                        IfExp(Compare(InjectFrom('bool',CallFunc(Name('is_true'),[leftvar])), [('==',Name('False'))])   , rightvar, leftvar)
                       )
         # Return a "Let" expression, which tells the flattener to flatten and
         # evaluate the RHS (2nd arg), assign it to the given variable (1st arg),
@@ -208,9 +221,7 @@ class P1Explicate(object):
         # of a variable and either perform an integer Add, or call the runtime
         # to perform list concatenation, or error...)
         # some variables to help make the code more readable when referring to tags
-        # helper functions to help generate the AST
-        compareTag = lambda x,y: Compare(GetTag(x),[('==',y)])
-        isIntOrBoolExp = lambda x: Or([compareTag(x,intTag),compareTag(x,boolTag)])
+
         # Here is the "runtime" logic for doing an Add in P1.
         ifexp = IfExp(
                   # no need to explicate this And, because the operands should always booleans
