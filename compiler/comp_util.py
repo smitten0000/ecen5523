@@ -163,7 +163,7 @@ def pretty(node):
     elif isinstance(node, Compare):
         return 'Compare(%s, %s, %s)' % (node.expr, node.ops[0][0], node.ops[0][1])
     else:
-        raise Exception('Unknown node: %s' % node.__class__)
+        raise Exception('Unknown node: %s: %s' % (node.__class__, node))
     return ret
 
 def prettyAST(node, depth=0, indent='  '):

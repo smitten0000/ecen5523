@@ -50,6 +50,9 @@ class Let(Node):
     def getChildren(self):
         return [self.var, self.rhs, self.body]
 
+intTag = Const(0)
+boolTag = Const(1)
+bigTag = Const(3)
 
 # Concept borrowed from http://peter-hoffmann.com/2010/extrinsic-visitor-pattern-python-inheritance.html
 class P1Explicate(object):
@@ -108,29 +111,14 @@ class P1Explicate(object):
         # allocate new temporaries to hold the result of the subexpression
         leftvar = Name(self.varalloc.get_next_var())
         rightvar = Name(self.varalloc.get_next_var())
-        # Below, we create an AST tree that represents the logic executed at run-time 
-        # to describe the behavior of the And operation (e.g., check the type
-        # of a variable and either perform an integer Add, or call the runtime
-        # to perform list concatenation, or error...)
-        # some variables to help make the code more readable when referring to tags
-        intTag = Const(0)
-        boolTag = Const(1)
-        bigTag = Const(3)
-        # helper functions to help generate the AST
+        
         compareTag = lambda x,y: Compare(GetTag(x),[('==',y)])
         isIntOrBoolExp = lambda x: Or([compareTag(x,intTag),compareTag(x,boolTag)])
-        # Here is the "runtime" logic for doing an Add in P1.
         ifexp = IfExp(
-                  # no need to explicate this And, because the operands should always booleans
-                  And([isIntOrBoolExp(leftvar),isIntOrBoolExp(rightvar)]),
-                  InjectFrom('int',And((ProjectTo('bool',leftvar),ProjectTo('bool',rightvar)))),
-                  IfExp(
-                    # ditto for this And
-                    And([compareTag(leftvar,bigTag),compareTag(rightvar,bigTag)]),
-                    InjectFrom('big',And((ProjectTo('bool',leftvar),ProjectTo('bool',rightvar)))),
-                    CallFunc('exit',[])
-                  )
-                )
+                      And([isIntOrBoolExp(leftvar), isIntOrBoolExp(rightvar)]),
+                        IfExp(Compare(ProjectTo('bool',leftvar), [('==',ProjectTo('bool',Name('False')))]), rightvar, leftvar),
+                        IfExp(Compare(ProjectTo('bool',CallFunc(Name('is_true'),[leftvar])), [('==',Name('False'))])   , rightvar, leftvar)
+                      )
         # Return a "Let" expression, which tells the flattener to flatten and
         # evaluate the RHS (2nd arg), assign it to the given variable (1st arg),
         # and then flatten and evaluate the body
@@ -138,7 +126,38 @@ class P1Explicate(object):
                    Let(rightvar, expr2, ifexp))
 
     def visit_Or(self, node):
-        raise NotImplementedError('TODO: Implement me!')
+        if debug:
+            print node
+        expr1 = self.explicate(node.nodes[0])
+        expr2 = self.explicate(node.nodes[1])
+        if debug:
+            print expr1
+            print expr2
+        # allocate new temporaries to hold the result of the subexpression
+        leftvar = Name(self.varalloc.get_next_var())
+        rightvar = Name(self.varalloc.get_next_var())
+
+
+        # helper functions to help generate the AST
+        compareTag = lambda x,y: Compare(GetTag(x),[('==',y)])
+        isIntOrBoolExp = lambda x: Or([compareTag(x,intTag),compareTag(x,boolTag)])
+        # Here is the "runtime" logic for doing an Add in P1.
+        ifexp = IfExp(
+                  # no need to explicate this And, because the operands should always booleans
+                  And([isIntOrBoolExp(leftvar),isIntOrBoolExp(rightvar)]),
+                  InjectFrom('int',Or((ProjectTo('bool',leftvar),ProjectTo('bool',rightvar)))),
+                  IfExp(
+                    # ditto for this And
+                    And([compareTag(leftvar,bigTag),compareTag(rightvar,bigTag)]),
+                    InjectFrom('big',Or((ProjectTo('bool',leftvar),ProjectTo('bool',rightvar)))),
+                    CallFunc(Name('exit'),[])
+                  )
+                )
+        # Return a "Let" expression, which tells the flattener to flatten and
+        # evaluate the RHS (2nd arg), assign it to the given variable (1st arg),
+        # and then flatten and evaluate the body
+        return Let(leftvar, expr1,
+                   Let(rightvar, expr2, ifexp))
 
     def visit_Add(self, node):
         if debug:
@@ -156,9 +175,6 @@ class P1Explicate(object):
         # of a variable and either perform an integer Add, or call the runtime
         # to perform list concatenation, or error...)
         # some variables to help make the code more readable when referring to tags
-        intTag = Const(0)
-        boolTag = Const(1)
-        bigTag = Const(3)
         # helper functions to help generate the AST
         compareTag = lambda x,y: Compare(GetTag(x),[('==',y)])
         isIntOrBoolExp = lambda x: Or([compareTag(x,intTag),compareTag(x,boolTag)])
@@ -171,7 +187,7 @@ class P1Explicate(object):
                     # ditto for this And
                     And([compareTag(leftvar,bigTag),compareTag(rightvar,bigTag)]),
                     InjectFrom('big',Add((ProjectTo('big',leftvar),ProjectTo('big',rightvar)))),
-                    CallFunc('exit',[])
+                    CallFunc(Name('exit'),[])
                   )
                 )
         # Return a "Let" expression, which tells the flattener to flatten and
