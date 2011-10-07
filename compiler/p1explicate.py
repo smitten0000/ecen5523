@@ -111,7 +111,7 @@ class P1Explicate(object):
         return ret
     def visit_Name(self, node):
         if node.name=='True' or node.name == 'False':
-            return ProjectTo('bool', node)
+            return InjectFrom('bool', node)
         return node
     # All operands in p0 are expected to be pyobj
     # therefore, we have to convert Const -> pyobj
