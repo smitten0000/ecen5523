@@ -135,8 +135,8 @@ class P1Explicate(object):
     def visit_And(self, node):
         if debug:
             print node
-        expr1 = self.explicate(node.left)
-        expr2 = self.explicate(node.right)
+        expr1 = self.explicate(node.nodes[0])
+        expr2 = self.explicate(node.nodes[1])
         if debug:
             print expr1
             print expr2
@@ -144,7 +144,7 @@ class P1Explicate(object):
         leftvar = Name(self.varalloc.get_next_var())
         rightvar = Name(self.varalloc.get_next_var())
         # Below, we create an AST tree that represents the logic executed at run-time 
-        # to describe the behavior of the Add operation (e.g., check the type
+        # to describe the behavior of the And operation (e.g., check the type
         # of a variable and either perform an integer Add, or call the runtime
         # to perform list concatenation, or error...)
         # some variables to help make the code more readable when referring to tags
@@ -158,7 +158,7 @@ class P1Explicate(object):
         ifexp = IfExp(
                   # no need to explicate this And, because the operands should always booleans
                   And([isIntOrBoolExp(leftvar),isIntOrBoolExp(rightvar)]),
-                  InjectFrom('int',Add((ProjectTo('int',leftvar),ProjectTo('int',rightvar)))),
+                  InjectFrom('int',And((ProjectTo('bool',leftvar),ProjectTo('bool',rightvar)))),
                   IfExp(
                     # ditto for this And
                     And([compareTag(leftvar,bigTag),compareTag(rightvar,bigTag)]),
