@@ -90,6 +90,9 @@ class P1Explicate(object):
     def visit_ProjectTo(self, node):
         return ProjectTo(node.typ, self.visit(node.arg))
 
+    def visit_IfExp(self, node):
+        return IfExp(self.visit(node.test), self.visit(node.then), self.visit(node.else_))
+
     def visit_List(self, node):
         # the size of the list has to be known at creation time
         # this should be the same as the number of nodes in the List AST node
@@ -113,8 +116,10 @@ class P1Explicate(object):
         # Use Let to return an expression that results in a pyobj
         return ret
     def visit_Name(self, node):
-        if node.name=='True' or node.name == 'False':
-            return InjectFrom('bool', node)
+        if node.name == 'True':
+            return InjectFrom('bool', Const(1))
+        elif node.name == 'False':
+            return InjectFrom('bool', Const(0))
         return node
     # All operands in p0 are expected to be pyobj
     # therefore, we have to convert Const -> pyobj
@@ -125,14 +130,20 @@ class P1Explicate(object):
         # != and == should operate on booleans, is should operate on pointer address or raw value
         if node.ops[0][0] == 'is':
             return node
-        
         lhs = self.explicate(node.expr)
         rhs = self.explicate(node.ops[0][1])
         leftvar = Name(self.varalloc.get_next_var())
         rightvar = Name(self.varalloc.get_next_var())
-        expr = Compare(ProjectTo('bool', leftvar), [(node.ops[0][0],ProjectTo('bool',rightvar))]) 
-        return Let(leftvar, lhs, Let(rightvar, rhs, expr))
-        
+        ifexp = IfExp(
+                  And([isIntOrBoolExp(leftvar),isIntOrBoolExp(rightvar)]),
+                  Compare(ProjectTo('int',leftvar), [(node.ops[0][0], ProjectTo('int',rightvar))]),
+                  IfExp(
+                    And([compareTag(leftvar,bigTag),compareTag(rightvar,bigTag)]),
+                    CallFunc(Name('equal'),[leftvar,rightvar]),
+                    CallFunc(Name('exit'),[])
+                  )
+                )
+        return Let(leftvar, lhs, Let(rightvar, rhs, ifexp))
         
     def visit_Printnl(self, node):
         return Printnl([self.visit(node.nodes[0])], node.dest)
@@ -175,10 +186,19 @@ class P1Explicate(object):
         expr1 = self.explicate(node.expr)
         var = Name(self.varalloc.get_next_var())
         ifexp = IfExp(compareTag(var,boolTag),
-                      IfExp(Compare(var, [('==',Name('True'))]), InjectFrom('bool',Name('True')), InjectFrom('bool',Name('False'))),
+                      IfExp(Compare(ProjectTo('int',var), [('==',Const(0))]), 
+                            InjectFrom('bool',Const(1)), 
+                            InjectFrom('bool',Const(0))
+                           ),
                       IfExp(compareTag(var,intTag),
-                            IfExp(Compare(var, [('==',Const(1))]), InjectFrom('int',Name('True')), InjectFrom('bool',Name('False'))),
-                            IfExp(Compare(CallFunc(Name('is_true'),[var]), [('==',InjectFrom('int',Name('True')))]), InjectFrom('int',Name('True')), InjectFrom('bool',Name('False')))
+                            IfExp(Compare(ProjectTo('int',var), [('==',Const(0))]), 
+                                  InjectFrom('bool',Const(1)), 
+                                  InjectFrom('bool',Const(0))
+                                 ),
+                            IfExp(Compare(ProjectTo('int',CallFunc(Name('is_true'),[var])), [('==',InjectFrom('int',Const(0)))]),
+                                  InjectFrom('bool',Const(1)),
+                                  InjectFrom('bool',Const(0))
+                                 )
                       )
                             
               )
@@ -197,10 +217,10 @@ class P1Explicate(object):
         rightvar = Name(self.varalloc.get_next_var())
 
         ifexp = IfExp(
-                      And([isIntOrBoolExp(leftvar), isIntOrBoolExp(rightvar)]),
-                        IfExp(Compare(InjectFrom('bool',leftvar), [('==',Name('False'))]), leftvar, rightvar),
-                        IfExp(Compare(InjectFrom('bool',CallFunc(Name('is_true'),[leftvar])), [('==',Name('False'))])   , leftvar, rightvar)
-                      )
+                  And([isIntOrBoolExp(leftvar), isIntOrBoolExp(rightvar)]),
+                  IfExp(Compare(InjectFrom('int',leftvar), [('==',Const(0))]), leftvar, rightvar),
+                  IfExp(Compare(InjectFrom('int',CallFunc(Name('is_true'),[leftvar])), [('==',Const(0))]), leftvar, rightvar)
+                )
         # Return a "Let" expression, which tells the flattener to flatten and
         # evaluate the RHS (2nd arg), assign it to the given variable (1st arg),
         # and then flatten and evaluate the body
@@ -220,10 +240,10 @@ class P1Explicate(object):
         rightvar = Name(self.varalloc.get_next_var())
 
         ifexp = IfExp(
-                      And([isIntOrBoolExp(leftvar), isIntOrBoolExp(rightvar)]),
-                        IfExp(Compare(InjectFrom('bool',leftvar), [('==',InjectFrom('bool',Name('False')))]), rightvar, leftvar),
-                        IfExp(Compare(InjectFrom('bool',CallFunc(Name('is_true'),[leftvar])), [('==',Name('False'))])   , rightvar, leftvar)
-                      )
+                  And([isIntOrBoolExp(leftvar), isIntOrBoolExp(rightvar)]),
+                  IfExp(Compare(InjectFrom('int',leftvar), [('==',InjectFrom('int',Const(0)))]), rightvar, leftvar),
+                  IfExp(Compare(InjectFrom('int',CallFunc(Name('is_true'),[leftvar])), [('==',Const(0))]), rightvar, leftvar)
+                )
         # Return a "Let" expression, which tells the flattener to flatten and
         # evaluate the RHS (2nd arg), assign it to the given variable (1st arg),
         # and then flatten and evaluate the body
