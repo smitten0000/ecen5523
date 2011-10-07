@@ -99,7 +99,7 @@ class P1Explicate(object):
         elsevar = Name(self.varalloc.get_next_var())
         ifexp = IfExp(
                   isIntOrBoolExp(testvar),
-                  IfExp(testvar, thenvar, elsevar),
+                  IfExp(ProjectTo('bool',testvar), thenvar, elsevar),
                   IfExp(ProjectTo('bool',CallFunc(Name('is_true'),[testvar])), thenvar, elsevar)
                 )
         return Let(testvar, test,
