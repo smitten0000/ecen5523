@@ -165,8 +165,10 @@ class P1Explicate(object):
         rhs = self.explicate(node.ops[0][1])
         leftvar = Name(self.varalloc.get_next_var())
         rightvar = Name(self.varalloc.get_next_var())
-        if node.ops[0][0] in ('==','!='):
-            bigBehavior = CallFunc(Name('equal'),[leftvar,rightvar])
+        if node.ops[0][0] in ('=='):
+            bigBehavior = InjectFrom('bool',CallFunc(Name('equal'),[ProjectTo('big',leftvar),ProjectTo('big',rightvar)]))
+        elif node.ops[0][0] in ('!='):
+            bigBehavior = InjectFrom('bool',CallFunc(Name('not_equal'),[ProjectTo('big',leftvar),ProjectTo('big',rightvar)]))
         elif node.ops[0][0] in ('is'):
             bigBehavior = InjectFrom('bool',Compare(ProjectTo('big',leftvar), [('==', ProjectTo('big',rightvar))]))
         else:
