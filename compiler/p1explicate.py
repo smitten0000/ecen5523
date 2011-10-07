@@ -156,8 +156,15 @@ class P1Explicate(object):
     def visit_Not(self, node):
         expr1 = self.explicate(node.expr)
         var = Name(self.varalloc.get_next_var())
-        
-        return Let(var, expr1, InjectFrom('bool', expr1))
+        ifexp = IfExp(compareTag(var,boolTag),
+                      IfExp(Compare(var, [('==',Name('True'))]), InjectFrom('bool',Name('True')), InjectFrom('bool',Name('False'))),
+                      IfExp(compareTag(var,intTag),
+                            IfExp(Compare(var, [('==',Const(0))]), InjectFrom('int',Name('True')), InjectFrom('bool',Name('False'))),
+                            IfExp(Compare(CallFunc(Name('is_true'),[var]), [('==',InjectFrom('int',Name('True')))]), InjectFrom('int',Name('True')), InjectFrom('bool',Name('False')))
+                      )
+                            
+              )
+        return Let(var, expr1, ifexp)
 
     def visit_And(self, node):
         if debug:
