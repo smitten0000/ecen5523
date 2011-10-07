@@ -166,16 +166,24 @@ class P1Explicate(object):
         leftvar = Name(self.varalloc.get_next_var())
         rightvar = Name(self.varalloc.get_next_var())
         if node.ops[0][0] in ('=='):
+            primitiveBehavior = InjectFrom('bool',Compare(ProjectTo('int',leftvar), [(node.ops[0][0], ProjectTo('int',rightvar))]))
             bigBehavior = InjectFrom('bool',CallFunc(Name('equal'),[ProjectTo('big',leftvar),ProjectTo('big',rightvar)]))
         elif node.ops[0][0] in ('!='):
+            primitiveBehavior = InjectFrom('bool',Compare(ProjectTo('int',leftvar), [(node.ops[0][0], ProjectTo('int',rightvar))]))
             bigBehavior = InjectFrom('bool',CallFunc(Name('not_equal'),[ProjectTo('big',leftvar),ProjectTo('big',rightvar)]))
         elif node.ops[0][0] in ('is'):
+            primitiveBehavior = IfExp(
+                                  Or([And([compareTag(leftvar,intTag),compareTag(rightvar,boolTag)]),
+                                      And([compareTag(leftvar,boolTag),compareTag(rightvar,intTag)])]),
+                                  InjectFrom('bool',Const(0)),
+                                  InjectFrom('bool',Compare(ProjectTo('int',leftvar), [(node.ops[0][0], ProjectTo('int',rightvar))]))
+                                )
             bigBehavior = InjectFrom('bool',Compare(ProjectTo('big',leftvar), [('==', ProjectTo('big',rightvar))]))
         else:
             raise Exception("unknown operator '%s'" % node.ops[0][0])
         ifexp = IfExp(
                   And([isIntOrBoolExp(leftvar),isIntOrBoolExp(rightvar)]),
-                  InjectFrom('bool',Compare(ProjectTo('int',leftvar), [(node.ops[0][0], ProjectTo('int',rightvar))])),
+                  primitiveBehavior,
                   IfExp(
                     And([compareTag(leftvar,bigTag),compareTag(rightvar,bigTag)]),
                     bigBehavior,
