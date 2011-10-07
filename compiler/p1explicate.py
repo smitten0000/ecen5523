@@ -78,6 +78,35 @@ class P1Explicate(object):
     def visit_Discard(self, node):
         return Discard(self.visit(node.expr))
 
+    def visit_InjectFrom(self, node):
+        return InjectFrom(node.typ, self.visit(node.arg))
+
+    def visit_ProjectTo(self, node):
+        return ProjectTo(node.typ, self.visit(node.arg))
+
+    def visit_List(self, node):
+        # the size of the list has to be known at creation time
+        # this should be the same as the number of nodes in the List AST node
+        pyobj_list = self.visit(InjectFrom('big',CallFunc(Name('create_list'),[Const(len(node.nodes))])))
+        # allocate a temp var 
+        varname = Name(self.varalloc.get_next_var())
+        # we are going to create a tree of Let nodes to create a single expression
+        # that executes all needed statements and returns the list
+        # here is where we assign that return value.  In the case where we have
+        # zero arguments, just return pyobj_list itself
+        ret = Let(varname, pyobj_list, None)
+        let = ret
+        # for each expression, we have to assign it to the next consecutive index
+        for i in range(0,len(node.nodes)):
+            tmp = Name(self.varalloc.get_next_var())
+            expr = self.visit(CallFunc(Name('set_subscript'),[varname, Const(i), node.nodes[i]]))
+            let.body = Let(tmp, expr, None)
+            let = let.body
+        # We need a final reference to the variable corresponding to the list
+        let.body = varname
+        # Use Let to return an expression that results in a pyobj
+        return ret
+
     # All operands in p0 are expected to be pyobj
     # therefore, we have to convert Const -> pyobj
     def visit_Const(self, node):
@@ -87,7 +116,13 @@ class P1Explicate(object):
         return Printnl([self.visit(node.nodes[0])], node.dest)
 
     def visit_CallFunc(self, node):
-        return InjectFrom('int',CallFunc(node.node, node.args))
+        expressions = [self.visit(x) for x in node.args]
+        # CallFunc should always return a pyobj.  This is the case for most of the
+        # functions in runtime.c, but for 'input', this isn't the case.  
+        # Instead, we need to call 'input_int' 
+        if node.node.name == 'input':
+            node.node.name = 'input_int'
+        return CallFunc(node.node, expressions, None, None)
 
     def visit_UnarySub(self, node):
         return InjectFrom('int',UnarySub(ProjectTo('int',self.visit(node.expr))))
@@ -128,7 +163,7 @@ class P1Explicate(object):
                     # ditto for this And
                     And([compareTag(leftvar,bigTag),compareTag(rightvar,bigTag)]),
                     InjectFrom('big',Add((ProjectTo('big',leftvar),ProjectTo('big',rightvar)))),
-                    CallFunc('exit',[])
+                    CallFunc(Name('exit'),[])
                   )
                 )
         # Return a "Let" expression, which tells the flattener to flatten and
@@ -171,7 +206,7 @@ class P1Explicate(object):
                     # ditto for this And
                     And([compareTag(leftvar,bigTag),compareTag(rightvar,bigTag)]),
                     InjectFrom('big',Add((ProjectTo('big',leftvar),ProjectTo('big',rightvar)))),
-                    CallFunc('exit',[])
+                    CallFunc(Name('exit'),[])
                   )
                 )
         # Return a "Let" expression, which tells the flattener to flatten and
