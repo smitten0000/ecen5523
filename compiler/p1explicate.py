@@ -312,7 +312,7 @@ class P1Explicate(object):
                   IfExp(
                     # ditto for this And
                     And([compareTag(leftvar,bigTag),compareTag(rightvar,bigTag)]),
-                    InjectFrom('big',Add((ProjectTo('big',leftvar),ProjectTo('big',rightvar)))),
+                    InjectFrom('big',CallFunc(Name('add'),[ProjectTo('big',leftvar),ProjectTo('big',rightvar)])),
                     CallFunc(Name('exit'),[])
                   )
                 )

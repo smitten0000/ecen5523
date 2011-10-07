@@ -109,6 +109,8 @@ class P1InstructionSelector(P0InstructionSelector):
         stmts = [Movl(loc,Var(varname))]
         if node.typ == 'int' or node.typ == 'bool':
             stmts.extend([BitShift(Imm32(TAG_SIZE), Var(varname), 'right')])
+        else:
+            stmts.extend([BitwiseAnd(Imm32(~3), Var(varname))])
         return (Var(varname), stmtlist + stmts)
     def visit_GetTag(self, node, *args, **kwargs):
         loc, stmtlist = self.visit(node.arg)
