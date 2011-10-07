@@ -137,6 +137,10 @@ class P1Explicate(object):
         # remember to mark this variable as allocated
         self.varalloc.add_var(node.nodes[0].name)
         return Assign(node.nodes, self.visit(node.expr))
+    def visit_Not(self, node):
+        expr1 = self.explicate(node.expr)
+        var = Name(self.varalloc.get_next_var())
+        return Let(var, expr1, ProjectTo('bool', var))
 
     def visit_And(self, node):
         if debug:

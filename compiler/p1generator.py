@@ -40,11 +40,11 @@ class P1Generator(P0Generator):
         stmtlist.append('\tcmpl %s, %s' % (self.visit(node.lhs), self.visit(node.rhs)))
         return "\n".join(stmtlist)
     def visit_Or(self, node, *args, **kwargs):
-        return '\tOR %s, %s' % (self.visit(node.nodes[0]), self.visit(node.nodes[1]))
+        return '\tORL %s, %s' % (self.visit(node.nodes[0]), self.visit(node.nodes[1]))
     def visit_And(self, node, *args, **kwargs):
-        return '\tAND %s, %s' % (self.visit(node.nodes[0]), self.visit(node.nodes[1]))
+        return '\tANDL %s, %s' % (self.visit(node.nodes[0]), self.visit(node.nodes[1]))
     def visit_BitwiseNot(self, node, *args, **kwargs):
-        return '\tNOT %s' % self.visit(node.value)
+        return '\tNOTL %s' % self.visit(node.value)
     def visit_JumpEquals(self, node, *args, **kwargs):
         return '\tJE %s' % node.label
     def visit_Jump(self, node, *args, **kwargs):

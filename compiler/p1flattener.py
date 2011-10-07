@@ -91,7 +91,9 @@ class P1Flattener(P0Flattener):
             return (Name(varname), test + [If([(vartes, Stmt(then))], Stmt(else_))])
         elif isinstance(node, Not):
             var, stmtlist = self.flatten(node.expr)
-            return (var, stmtlist + [Not(var)])
+            tempvar = self.varalloc.get_next_var()
+            
+            return (Name(tempvar), stmtlist + [Assign([AssName(tempvar,'OP_ASSIGN')], var), Not(Name(tempvar))])
         elif isinstance(node, Compare):
             # Only need to handle binary comparison operators.  So if len(node.ops) > 1, its a syntax error.
             # For example, a == b == c is valid python, but invalid P1
