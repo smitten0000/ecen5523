@@ -11,11 +11,11 @@ class P1Generator(P0Generator):
     '''
     Adds the necessary assembly instructions for type checking, if expressions, etc
     '''
-    def __init__(self):
+    def __init__(self, allowMem2Mem=True):
         '''
         Constructor
         '''
-        P0Generator.__init__(self)
+        P0Generator.__init__(self, allowMem2Mem)
     
     def visit_Imm32(self, node, *args, **kwargs):
         # This is most likely wrong, we will need to change some logic in the
@@ -31,12 +31,18 @@ class P1Generator(P0Generator):
         stmtlist=[]
         # handle memory to memory "cmp" (this is just here to work with the stack allocator)
         if isinstance(node.lhs,StackSlot) and isinstance(node.rhs, StackSlot):
-            stmtlist.append('\tmovl %s, %s' % (self.visit(node.lhs), self.visit(Register('eax'))))
-            node.lhs = Register('eax')
-        # handle imm32 to memory "cmp" (this is just here to work with the stack allocator)
+            if self.allowMem2Mem:
+                stmtlist.append('\tmovl %s, %s' % (self.visit(node.lhs), self.visit(Register('eax'))))
+                node.lhs = Register('eax')
+            else:
+                raise Exception ('Detected memory to memory during %s"' % node.__class__.__name__)
+            # handle imm32 to memory "cmp" (this is just here to work with the stack allocator)
         elif isinstance(node.lhs,StackSlot) and isinstance(node.rhs, Imm32):
-            stmtlist.append('\tmovl %s, %s' % (self.visit(node.rhs), self.visit(Register('eax'))))
-            node.rhs = Register('eax')
+            if self.allowMem2Mem:
+                stmtlist.append('\tmovl %s, %s' % (self.visit(node.rhs), self.visit(Register('eax'))))
+                node.rhs = Register('eax')
+            else:
+                raise Exception ('Detected memory to imm32 during %s"' % node.__class__.__name__)
         stmtlist.append('\tcmpl %s, %s' % (self.visit(node.lhs), self.visit(node.rhs)))
         return "\n".join(stmtlist)
     def visit_Or(self, node, *args, **kwargs):
@@ -62,16 +68,22 @@ class P1Generator(P0Generator):
         stmtlist=[]
         # handle memory to memory "and" (this is just here to work with the stack allocator)
         if isinstance(node.src,StackSlot) and isinstance(node.dst, StackSlot):
-            stmtlist.append('\tmovl %s, %s' % (self.visit(node.src), self.visit(Register('eax'))))
-            node.src = Register('eax')
+            if self.allowMem2Mem:
+                stmtlist.append('\tmovl %s, %s' % (self.visit(node.src), self.visit(Register('eax'))))
+                node.src = Register('eax')
+            else:
+                raise Exception ('Detected memory to memory during %s"' % node.__class__.__name__)
         stmtlist.append('\tandl %s, %s' % (self.visit(node.src), self.visit(node.dst)))
         return "\n".join(stmtlist)
     def visit_BitwiseOr(self, node, *args, **kwargs):
         stmtlist=[]
         # handle memory to memory "or" (this is just here to work with the stack allocator)
         if isinstance(node.src,StackSlot) and isinstance(node.dst, StackSlot):
-            stmtlist.append('\tmovl %s, %s' % (self.visit(node.src), self.visit(Register('eax'))))
-            node.src = Register('eax')
+            if self.allowMem2Mem:
+                stmtlist.append('\tmovl %s, %s' % (self.visit(node.src), self.visit(Register('eax'))))
+                node.src = Register('eax')
+            else:
+                raise Exception ('Detected memory to memory during %s"' % node.__class__.__name__)
         stmtlist.append('\torl %s, %s' % (self.visit(node.src), self.visit(node.dst)))
         return "\n".join(stmtlist)
 

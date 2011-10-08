@@ -102,7 +102,7 @@ def show_test_result(test_name, compile, run):
 
 print 'Test Name                              [Comp] [Run!]'
 
-for t in tests:
+for t in sorted(tests):
     test_name = t
     base = splitext(t)[0]
     cfilename = base+'.s'

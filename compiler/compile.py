@@ -27,6 +27,8 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=logging.WARN)
 
+    sys.setrecursionlimit(10000)
+
     testcases = sys.argv[1:]
     for testcase in testcases:
         #parser = P0Parser()
@@ -57,7 +59,7 @@ if __name__ == "__main__":
         program = allocator.substitute()
         ifinsselector = P1IfInstructionSelector(varalloc,instruction_selector.labelalloc)
         program = ifinsselector.visit(program)
-        generator = P1Generator()
+        generator = P1Generator(False)
         output = generator.generate(program)
         outputfile = '%s.s' % testcase[:testcase.rfind('.')]
         f = open(outputfile, 'w')

@@ -3,8 +3,9 @@
 from x86ir import *
 
 class P0Generator(object):
-    def __init__(self):
+    def __init__(self, allowMem2Mem=True):
         self.maxslot = 0
+        self.allowMem2Mem = allowMem2Mem
 
     def get_stacksize(self):
         return self.maxslot * 4
@@ -45,8 +46,11 @@ main:
         #    return ""
         # handle memory to memory moves
         if isinstance(node.src,StackSlot) and isinstance(node.dst, StackSlot):
-            stmtlist.append('\tmovl %s, %s' % (self.visit(node.src), self.visit(Register('eax'))))
-            node.src = Register('eax')
+            if self.allowMem2Mem:
+                stmtlist.append('\tmovl %s, %s' % (self.visit(node.src), self.visit(Register('eax'))))
+                node.src = Register('eax')
+            else:
+                raise Exception ('Detected memory to memory during %s"' % node.__class__.__name__)
         stmtlist.append('\tmovl %s, %s' % (self.visit(node.src), self.visit(node.dst)))
         return "\n".join(stmtlist)
         
@@ -57,8 +61,11 @@ main:
         stmtlist=[]
         # handle memory to memory moves
         if isinstance(node.src,StackSlot) and isinstance(node.dst, StackSlot):
-            stmtlist.append('\tmovl %s, %s' % (self.visit(node.src), self.visit(Register('eax'))))
-            node.src = Register('eax')
+            if self.allowMem2Mem:
+                stmtlist.append('\tmovl %s, %s' % (self.visit(node.src), self.visit(Register('eax'))))
+                node.src = Register('eax')
+            else:
+                raise Exception ('Detected memory to memory during %s"' % node.__class__.__name__)
         stmtlist.append('\taddl %s, %s' % (self.visit(node.src), self.visit(node.dst)))
         return "\n".join(stmtlist)
 
