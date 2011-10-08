@@ -1,18 +1,22 @@
 # vim: set ts=4 sw=4 expandtab:
 
-class Instruction(object):
+from compiler.ast import Node, flatten
+
+class Instruction(Node):
     def writes(self):
         raise NotImplementedError('writes() not implemented')
     def reads(self):
         raise NotImplementedError('reads() not implemented')
 
-class Program(object):
+class Program(Node):
     def __init__(self, statements):
         self.statements = statements
     def __str__(self):
         return "Program([%s])" % ",".join([str(x) for x in self.statements])
     def __repr__(self):
         return self.__str__()
+    def getChildren(self):
+        return tuple(flatten(self.statements))
     def instructions(self):
         instructions=[]
         for statement in self.statements:
@@ -20,14 +24,20 @@ class Program(object):
                 instructions.append(instr)
         return instructions
 
-class Statement(Instruction):
+class Statement(Node):
     def __init__(self, instructions, source):
         self.instructions = instructions
         self.source = source
     def __str__(self):
-        return "Statement([%s],'%s')" % (",".join([str(x) for x in self.instructions]), self.source)
+        #return "Statement([%s],'%s')" % (",".join([str(x) for x in self.instructions]), self.source)
+        return "Statement([%s])" % (",".join([str(x) for x in self.instructions]))
     def __repr__(self):
         return self.__str__()
+    def getChildren(self):
+        l=[]
+        l.extend(flatten(self.instructions))
+#        l.append(self.source)
+        return tuple(l)
     def writes(self):
         return reduce(lambda x,y: x+y, [x.writes() for x in self.instructions])
     def reads(self):
@@ -95,7 +105,7 @@ class Negl(Instruction):
     def reads(self):
         return [self.operand]
 
-class Register(object):
+class Register(Node):
     def __init__(self, name):
         self.name = name
     def __str__(self):
@@ -109,7 +119,7 @@ class Register(object):
     def __hash__(self):
         return self.name.__hash__()
 
-class Var(object):
+class Var(Node):
     def __init__(self, name):
         self.name = name
     def __str__(self):
@@ -122,8 +132,12 @@ class Var(object):
         return not self.__eq__(other)
     def __hash__(self):
         return self.name.__hash__()
+    # need this for set operations b/c Node overrides __iter__ to
+    # call getChildren().  Nasty.
+    def getChildren(self):
+        return tuple()
 
-class Imm32(object):
+class Imm32(Node):
     def __init__(self, value):
         self.value = value
     def __str__(self):
@@ -137,7 +151,7 @@ class Imm32(object):
     def __hash__(self):
         return self.value.__hash__()
 
-class StackSlot(object):
+class StackSlot(Node):
     def __init__(self, slot):
         self.slot = slot
     def __str__(self):
@@ -295,3 +309,15 @@ class JumpEquals(Jump):
         Jump.__init__(self, label)
     def __str__(self):
         return "JumpEquals(%s)" % self.label
+
+class x86If(Node):
+    def __init__(self, test, then, else_):
+        self.test = test
+        self.then = then
+        self.else_ = else_
+    def __str__(self):
+        return "x86If(%s,%s,%s)" % (self.test, self.then, self.else_)
+    def __repr__(self):
+        return self.__str__()
+    def getChildren(self):
+        return (self.test, self.then, self.else_)

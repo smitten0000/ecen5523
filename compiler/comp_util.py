@@ -170,7 +170,7 @@ def prettyAST(node, depth=0, indent='  '):
     if node is None:
         ret = '%sNone' % (indent*depth)
     # handle the "leaf" nodes as special cases to make the output easier to read
-    elif isinstance(node, (Const,Name)):
+    elif isinstance(node, (Const,Name,Var,Register,Instruction)):
         ret = '%s%s' % (indent*depth, node)
     # somewhat hackish; ideally these nodes would be defined in a p1ast.py file
     # and we could include that at the top...  Better yet, define a visitor for

@@ -227,7 +227,7 @@ class P1Explicate(object):
             valueexpr = self.visit(node.expr)
             # generate a temporary for the assignment statement (even though its
             # not going to be used by anyone since x = y = 2 is invalid in p1)
-            retvar = Name(self.varalloc.get_next_var())
+            retvar = self.varalloc.get_next_var()
             return Assign([AssName(retvar,'OP_ASSIGN')], CallFunc(Name('set_subscript'),[expr,subexpr,valueexpr]))
     def visit_Not(self, node):
         expr1 = self.explicate(node.expr)

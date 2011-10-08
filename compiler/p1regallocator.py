@@ -13,14 +13,52 @@ class P1RegAllocator(P0RegAllocator):
     def __init__(self, program):
         P0RegAllocator.__init__(self, program)
 
-    def build_interference_graph(self):
+    def Lbefore(self, instructionlist, Lafter=set()):
+        """Computes liveness recursively.  Liveness is stored as an attribute on
+        the instruction itself, to be used later during construction of the
+        interference graph."""
+        # our base case
+        if len(instructionlist) < 1:
+            return Lafter
+        instr = instructionlist[0]
+        # compute Lafter (haha, laughter, get it?)
+        laughter = self.Lbefore(instructionlist[1:], Lafter)
+        # just store the liveness set in the instruction node itself.
+        instr.liveafter = laughter
+        # Now, return the liveness before. How this is computed depends on whether 
+        # we have an x86If or a real Instruction.
+        if isinstance(instr, x86If):
+            return (set(instr.test) | self.Lbefore(instr.then,instr.liveafter) | self.Lbefore(instr.else_,instr.liveafter))
+        elif isinstance(instr, Instruction):
+            # get reads/writes performed by instruction, but only for variables
+            writes = set(filter(lambda x: isinstance(x,Var), instr.writes()))
+            reads = set(filter(lambda x: isinstance(x,Var), instr.reads()))
+            # add all variables to the graph
+            for x in writes: self._add_vertex(x)
+            for x in reads: self._add_vertex(x)
+            # For all x86 instructions, Lbefore(instr,Lafter) = Lafter - writes | reads
+            return (instr.liveafter - writes) | reads
+        else:
+            raise Exception("Unknown instruction: '%s'" % instr)
+
+    # overridden from p0regallocator.py since we are changing our strategy
+    # to handle structured control flow (If)
+    def liveness_analyze(self):
         instructions = self.program.instructions()
-        for k in range(0,len(instructions)):
-            instr = instructions[k]
+        # compute liveness recursively
+        self.Lbefore(instructions)
+
+    def build_interference_graph_instr(self, instructions):
+        for instr in instructions:
             # get the list of variables live at this point
-            live_after_k = list(self.liveness_after_k_dict[k])
+            live_after_k = instr.liveafter
+            # rule #0 (added in p1)
+            # Need to recurse on x86If nodes.
+            if isinstance(instr,x86If):
+                self.build_interference_graph_instr(instr.then)
+                self.build_interference_graph_instr(instr.else_)
             # rule #1
-            if isinstance(instr,Movl):
+            elif isinstance(instr,Movl):
                 for live in live_after_k:
                     if instr.dst != live or (isinstance(instr.src,Var) and instr.src != live):
                         self._add_edge(instr.dst, live)
@@ -36,6 +74,27 @@ class P1RegAllocator(P0RegAllocator):
                 for live in live_after_k:
                     for reg in P0RegAllocator.CALLER_SAVE:
                         self._add_edge(live, reg)
+
+    # overridden from p0regallocator.py 
+    def build_interference_graph(self):
+        self.build_interference_graph_instr(self.program.instructions())
+
+    def print_liveness_instr(self, instructions):
+        for instr in instructions:
+            print "%5s. %-40s : %s" % (self.instrcnt, instr, instr.liveafter)
+            if isinstance(instr,x86If):
+                self.print_liveness_instr(instr.then)
+                self.print_liveness_instr(instr.else_)
+
+    # override from p0regallocator.py
+    def print_liveness(self):
+        self.print_liveness_instr(self.program.instructions())
+
+    def visit_x86If(self, node, *args, **kwargs):
+        test = node.test
+        if isinstance(test,Var):
+            test = self.get_assignment(test)
+        return x86If(test, [self.visit(x) for x in node.then], [self.visit(x) for x in node.else_])
 
     def visit_Cmp(self, node, *args, **kwargs):
         src = node.rhs
@@ -99,12 +158,15 @@ if __name__ == "__main__":
         #ast = parser.parseFile(testcase)
         ast = compiler.parseFile(testcase)
         varalloc = VariableAllocator()
-        p0flattener = P1Flattener(varalloc)
-        stmtlist = p0flattener.flatten(ast)
+        explicate = P1Explicate(varalloc)
+        ast = explicate.explicate(ast)
+        flattener = P1Flattener(varalloc)
+        stmtlist = flattener.flatten(ast)
         instruction_selector = P1InstructionSelector(varalloc)
         program = instruction_selector.visit(stmtlist)
-        regallocator = P0RegAllocator(program)
-        print regallocator.substitute()
+        print prettyAST(program)
+        regallocator = P1RegAllocator(program)
+        print prettyAST(regallocator.substitute())
         #import cProfile as profile
         #import pstats
         #output_file = 'profile.out'

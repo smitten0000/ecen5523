@@ -54,31 +54,22 @@ class P1InstructionSelector(P0InstructionSelector):
         stmts = stmts + [Cmp(lhsvar, rhsvar),JumpEquals('else%s'%label),Movl(thenval, result),Jump('end%s'%label),Label('else%s'%label), Movl(elseval,result),Label('end%s'%label)]
         return (result, stmts)
     def visit_If(self, node, *args, **kwargs):
-        '''Generate a cmp/je/jmp set with 0 for the else case (true is anything not 0) of an if statement'''
+        # test has type Name()
+        # then has type Stmt()
+        # else_ has type Stmt()
         test, then = node.tests[0]
         else_ = node.else_
-        # perform instruction selection on the collection of statements in the "test" block
-        testvar, teststmts = self.visit(test)
-        # do the same for the statements in the "then" and "else" blocks
-        # The difference for these is that they are encapsulated in a Stmt AST node, and therefore
-        # there is no variable returned in this case, just a list of Statement nodes 
+        # perform instruction selection for statements in the "then" and "else" blocks
+        # These are encapsulated in a Stmt AST node, and therefore there is no variable
+        # returned in this case, just a list of Statement nodes 
         # (see visit_Stmt in p0insselector.py)
         elsestmts = self.visit(else_)
         thenstmts = self.visit(then)
-        # Now, generate the branches and jumps
-        label = self.labelalloc.get_next_label()
-        cmpvarname = self.varalloc.get_next_var()  
-        stmts = []
-        stmts.extend(teststmts)
-        stmts.extend([Movl(Imm32(0), Var(cmpvarname)), 
-                      Cmp(testvar, Var(cmpvarname)), 
-                      JumpEquals('else%s' % label)])
-        stmts.extend(thenstmts)
-        stmts.append(Jump('end%s' % label))
-        stmts.append(Label('else%s' % label))
-        stmts.extend(elsestmts)
-        stmts.append(Label('end%s' % label ))
-        return stmts
+        # get rid of the pesky Statement nodes
+        elsestmts = reduce(lambda x,y: x+y, [x.instructions for x in elsestmts], [])
+        thenstmts = reduce(lambda x,y: x+y, [x.instructions for x in thenstmts], [])
+        # encapsulate the flattened code into an If again.
+        return [x86If(Var(test.name), thenstmts, elsestmts)]
     def visit_InjectFrom(self, node, *args, **kwargs):
         loc, stmtlist = self.visit(node.arg)
         # convert a simple value to a pyobj
@@ -176,5 +167,5 @@ if __name__ == "__main__":
         stmtlist = flattener.flatten(ast)
         instruction_selector = P1InstructionSelector(varalloc)
         program = instruction_selector.visit(stmtlist)
-        for stmt in program.statements:
-            print stmt
+        print program
+        print prettyAST(program)

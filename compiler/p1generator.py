@@ -84,6 +84,7 @@ if __name__ == "__main__":
     from p1insselector import P1InstructionSelector
     from p1regallocator import P1RegAllocator
     from p0stackallocator import P0StackAllocator
+    from p1ifinsselector import P1IfInstructionSelector
     if len(sys.argv) < 2:
         sys.exit(1)
     testcases = sys.argv[1:]
@@ -97,11 +98,13 @@ if __name__ == "__main__":
         ast = p1explicate.explicate(ast)
         p1flattener = P1Flattener(varalloc)
         stmtlist = p1flattener.flatten(ast)
-        instruction_selector = P1InstructionSelector(varalloc)
-        program = instruction_selector.visit(stmtlist)
+        insselector = P1InstructionSelector(varalloc)
+        program = insselector.visit(stmtlist)
         regallocator = P1RegAllocator(program)
         program = regallocator.substitute()
         #stackallocator = P0StackAllocator(program)
         #program = stackallocator.substitute()
+        ifinsselector = P1IfInstructionSelector(varalloc,insselector.labelalloc)
+        program = ifinsselector.visit(program)
         generator = P1Generator()
         print generator.generate(program)
