@@ -2,10 +2,17 @@
 
 from comp_util import *
 from x86ir import *
+<<<<<<< HEAD
 from SpillVisitor import SpillVisitor
 
 UNSPILLABLE=1
 SPILLABLE=20
+=======
+from p0spillgenerator import P0SpillGenerator
+import logging
+
+logger = logging.getLogger(__name__)
+>>>>>>> 20ba852c93f2f472b2fa281920131df5c6acbf16
 
 class P0RegAllocator:
     ALL_REGS = [Register('eax'), Register('ebx'), Register('ecx'), Register('edx'), Register('edi'), Register('esi')]
@@ -14,6 +21,13 @@ class P0RegAllocator:
     def __init__(self, program, varalloc):
         self.program = program
         self.varalloc = varalloc
+<<<<<<< HEAD
+=======
+        self.spillgenerator = P0SpillGenerator(varalloc)
+        self._reset()
+
+    def _reset(self):
+>>>>>>> 20ba852c93f2f472b2fa281920131df5c6acbf16
         self.liveness_after_k_dict={}
         self.interf_graph = {}
         self.register_assgnmnt = {}
@@ -106,6 +120,7 @@ class P0RegAllocator:
         
         saturation_q = priorityq()
         for node, sat in nodesat:
+<<<<<<< HEAD
             if node.spillable:
                 # we negate the saturation to produce the same effect as a max-heap
                 saturation_q.add_task(-sat, node, SPILLABLE)
@@ -113,6 +128,11 @@ class P0RegAllocator:
                 if debug:
                     print 'node %s is unspillable' % node
                 saturation_q.add_task(-sat, node, UNSPILLABLE)
+=======
+            # we negate the saturation to produce the same effect as a max-heap
+            spillable = SPILLABLE if node.spillable else UNSPILLABLE
+            saturation_q.add_task(-sat, node, spillable)
+>>>>>>> 20ba852c93f2f472b2fa281920131df5c6acbf16
         while len(vertices) > 0:
             # find the entry in the list with the highest saturation
             # this corresponds to the "most-constrained" node; we tackle this first 
@@ -171,6 +191,7 @@ class P0RegAllocator:
 
     def substitute(self):
         """ Substitutes the register assignments in for the corresponding variables"""
+<<<<<<< HEAD
         is_safe = False
         retval = []
         while not is_safe:
@@ -217,6 +238,23 @@ class P0RegAllocator:
         #self.print_graph()
         self.color_graph()
         return self.visit(self.program)
+=======
+        spilled = True
+        while spilled:
+            self._reset()
+            self.liveness_analyze()
+            #self.print_liveness()
+            self.build_interference_graph()
+            #self.print_graph()
+            self.color_graph()
+            #self.print_register_alloc()
+            # assign a storage location to Vars (either Register or StackSlot)
+            self.program = self.visit(self.program)
+            # generate spill code (may introduce additional instructions and
+            # temporary variables into the program)
+            spilled, self.program = self.spillgenerator.generate_spill(self.program)
+        return self.program
+>>>>>>> 20ba852c93f2f472b2fa281920131df5c6acbf16
 
     def visit(self, node, *args, **kwargs):
         meth = None
@@ -236,25 +274,27 @@ class P0RegAllocator:
         return Statement(instructions,node.source)
 
     def visit_Movl(self, node, *args, **kwargs):
-        src = node.src
-        dst = node.dst
-        if isinstance(src,Var):
-            src = self.get_assignment(src)
-        if isinstance(dst,Var):
-            dst = self.get_assignment(dst)
+        src = self.visit(node.src)
+        dst = self.visit(node.dst)
         # if the source and destination are the same, then return None,
         # indicating a no-operation
+<<<<<<< HEAD
         if src.__class__ == dst.__class__ and src == dst:
             return None
         return Movl(src,dst, node)
+=======
+        #if isinstance(src,Var) and isinstance(dst,Var):
+        #    if src.storage.__class__ == dst.storage.__class__ and src.storage == dst.storage:
+        #        logger.debug('Removing unnecessary assignment: %s' % Movl(src,dst))
+        #        return None
+        return Movl(src,dst)
+>>>>>>> 20ba852c93f2f472b2fa281920131df5c6acbf16
         
     def visit_Pushl(self, node, *args, **kwargs):
-        src = node.src
-        if isinstance(src,Var):
-            src = self.get_assignment(src)
-        return Pushl(src)
+        return Pushl(self.visit(node.src))
 
     def visit_Addl(self, node, *args, **kwargs):
+<<<<<<< HEAD
         src = node.src
         dst = node.dst
         if isinstance(src,Var):
@@ -262,16 +302,26 @@ class P0RegAllocator:
         if isinstance(dst,Var):
             dst = self.get_assignment(dst)
         return Addl(src,dst, node)
+=======
+        return Addl(self.visit(node.src),self.visit(node.dst))
+>>>>>>> 20ba852c93f2f472b2fa281920131df5c6acbf16
 
     def visit_Negl(self, node, *args, **kwargs):
-        operand = node.operand
-        if isinstance(operand,Var):
-            operand = self.get_assignment(operand)
-        return Negl(operand)
+        return Negl(self.visit(node.operand))
 
     def visit_Call(self, node, *args, **kwargs):
         return Call(node.func)
 
+    def visit_Var(self, node, *args, **kwargs):
+        # assign the variable a storage location (either Register or StackSlot)
+        node.storage = self.get_assignment(node)
+        return node
+
+    def visit_Imm32(self, node, *args, **kwargs):
+        return node
+
+    def visit_Register(self, node, *args, **kwargs):
+        return node
 
 
 if __name__ == "__main__":
@@ -294,9 +344,13 @@ if __name__ == "__main__":
         instruction_selector = P0InstructionSelector(varalloc)
         program = instruction_selector.visit(stmtlist)
         regallocator = P0RegAllocator(program, varalloc)
+<<<<<<< HEAD
         retval = regallocator.substitute()
 
         #print retval
+=======
+        print regallocator.substitute()
+>>>>>>> 20ba852c93f2f472b2fa281920131df5c6acbf16
         #import cProfile as profile
         #import pstats
         #output_file = 'profile.out'

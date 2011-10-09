@@ -26,6 +26,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     logging.basicConfig(level=logging.WARN)
+    #logging.basicConfig(level=logging.DEBUG)
 
     sys.setrecursionlimit(10000)
 

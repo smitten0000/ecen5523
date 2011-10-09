@@ -82,13 +82,17 @@ main:
         return '%%%s' % node.name
 
     def visit_Var(self, node, *args, **kwargs):
-        raise Exception('Var must be converted to StackSlot prior to assembly generation')
-
-    def visit_StackSlot(self, node, *args, **kwargs):
-        if node.slot > self.maxslot:
-            self.maxslot = node.slot
-        return '%s(%%ebp)' % (node.slot * -4)
-
+        if node.storage is None:
+            raise Exception ("Variable '%s' has not been assigned a storage location (either Register or StackSlot)" % node.name)
+        if isinstance(node.storage, Register):
+            return '%%%s' % node.storage.name
+        elif isinstance(node.storage, StackSlot):
+            if node.storage.slot > self.maxslot:
+                self.maxslot = node.storage.slot
+            return '%s(%%ebp)' % (node.storage.slot * -4)
+        else:
+            raise Exception("Unknown storage class '%s' for Variable '%s'" % (node.storage.__class__.__name__, node.name))
+            
 
 if __name__ == "__main__":
     import sys

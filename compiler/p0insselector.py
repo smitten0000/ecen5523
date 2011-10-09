@@ -27,7 +27,7 @@ class P0InstructionSelector(object):
         if not self.varalloc.is_allocated(assname.name):
             raise Exception('Attempt to assign to previously unseen variable: %s' % assname.name)
         loc, stmtlist = self.visit(node.expr)
-        return stmtlist + [Movl(loc, Var(assname.name))]
+        return stmtlist + [Movl(loc, Var(assname.name), node)]
         
     def visit_Printnl(self, node, *args, **kwargs):
         loc, stmtlist = self.visit(node.nodes[0])
@@ -40,14 +40,14 @@ class P0InstructionSelector(object):
         right, rightstmt = self.visit(node.right)
         # need to create a temporary variable here to store the result.
         varname = self.varalloc.get_next_var()
-        return (Var(varname), leftstmt + rightstmt + [Movl(right, Var(varname)), Addl(left, Var(varname))])
+        return (Var(varname), leftstmt + rightstmt + [Movl(right, Var(varname), node), Addl(left, Var(varname), node)])
 
     def visit_UnarySub(self, node, *args, **kwargs):
         loc, stmtlist = self.visit(node.expr)
         # need to create a temporary variable here to store the result.
         varname = self.varalloc.get_next_var()
         tmpvar = Var(varname)
-        return (tmpvar, stmtlist + [Movl(loc, tmpvar), Negl(tmpvar)])
+        return (tmpvar, stmtlist + [Movl(loc, tmpvar, node), Negl(tmpvar)])
 
     def visit_CallFunc(self, node, *args, **kwargs):
         # need to create a temporary variable here to store the result.

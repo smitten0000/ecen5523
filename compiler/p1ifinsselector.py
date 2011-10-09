@@ -77,7 +77,7 @@ if __name__ == "__main__":
         stmtlist = flattener.flatten(ast)
         insselector = P1InstructionSelector(varalloc)
         program = insselector.visit(stmtlist)
-        regallocator = P1RegAllocator(program)
+        regallocator = P1RegAllocator(program, varalloc)
         program = regallocator.substitute()
         ifinsselector = P1IfInstructionSelector(varalloc,insselector.labelalloc)
         program = ifinsselector.visit(program)
