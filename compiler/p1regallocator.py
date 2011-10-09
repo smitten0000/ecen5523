@@ -7,11 +7,12 @@ debug = False
 from comp_util import *
 from x86ir import *
 from p0regallocator import P0RegAllocator
+from SpillVisitor import SpillVisitor
 
 class P1RegAllocator(P0RegAllocator):
     
-    def __init__(self, program):
-        P0RegAllocator.__init__(self, program)
+    def __init__(self, program, varalloc):
+        P0RegAllocator.__init__(self, program, varalloc)
 
     def Lbefore(self, instructionlist, Lafter=set()):
         """Computes liveness recursively.  Liveness is stored as an attribute on
@@ -164,9 +165,32 @@ if __name__ == "__main__":
         stmtlist = flattener.flatten(ast)
         instruction_selector = P1InstructionSelector(varalloc)
         program = instruction_selector.visit(stmtlist)
-        print prettyAST(program)
-        regallocator = P1RegAllocator(program)
-        print prettyAST(regallocator.substitute())
+        #print prettyAST(program)
+        regallocator = P1RegAllocator(program, varalloc)
+        #print prettyAST(regallocator.substitute())
+        retval = regallocator.substitute()
+        spill = SpillVisitor()
+        # DANGER highly inefficient code ahead
+#        for statement in retval:
+#            for instruction in statement.instructions:
+#                unsafe_op = spill.visit(instruction)
+#                if unsafe_op != None:
+#                    print 'found unsafe op'
+#                    for prog_stmt in program.statements:
+#                        index = 0
+#                        for prog_instr in prog_stmt.instructions:
+#                            if prog_instr is unsafe_op.original:
+#                                
+#                                print unsafe_op
+#                                print unsafe_op.original
+#                                varname = varalloc.get_next_var()
+#                                tmpassign = Movl(unsafe_op.src, Name(varname), unsafe_op)
+#                                prog_stmt.instructions.insert(index, tmpassign)
+#                                unsafe_op.original.src = Name(varname)
+#                                break
+#                            index = index + 1    
+        print regallocator.substitute()
+
         #import cProfile as profile
         #import pstats
         #output_file = 'profile.out'

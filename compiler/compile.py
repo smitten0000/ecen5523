@@ -55,7 +55,7 @@ if __name__ == "__main__":
         #program = stackallocator.substitute()
         #stackallocator = P1StackAllocator(program)
         #program = stackallocator.substitute()
-        allocator = P1RegAllocator(program)
+        allocator = P1RegAllocator(program, varalloc)
         program = allocator.substitute()
         ifinsselector = P1IfInstructionSelector(varalloc,instruction_selector.labelalloc)
         program = ifinsselector.visit(program)

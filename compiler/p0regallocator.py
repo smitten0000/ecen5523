@@ -2,13 +2,18 @@
 
 from comp_util import *
 from x86ir import *
+from SpillVisitor import SpillVisitor
+
+UNSPILLABLE=1
+SPILLABLE=20
 
 class P0RegAllocator:
     ALL_REGS = [Register('eax'), Register('ebx'), Register('ecx'), Register('edx'), Register('edi'), Register('esi')]
     CALLER_SAVE = [Register('eax'), Register('ecx'), Register('edx')]
     ALL_SLOTS = set(range(0,500))
-    def __init__(self, program):
+    def __init__(self, program, varalloc):
         self.program = program
+        self.varalloc = varalloc
         self.liveness_after_k_dict={}
         self.interf_graph = {}
         self.register_assgnmnt = {}
@@ -98,12 +103,16 @@ class P0RegAllocator:
         nodesat = map(lambda x:(x,self.saturation(x)), vertices)
         # create a priority queue (see comp_util module) and add all nodes
         # with their corresponding priority
-        UNSPILLABLE=1
-        SPILLABLE=2
+        
         saturation_q = priorityq()
         for node, sat in nodesat:
-            # we negate the saturation to produce the same effect as a max-heap
-            saturation_q.add_task(-sat, node, SPILLABLE)
+            if node.spillable:
+                # we negate the saturation to produce the same effect as a max-heap
+                saturation_q.add_task(-sat, node, SPILLABLE)
+            else:
+                if debug:
+                    print 'node %s is unspillable' % node
+                saturation_q.add_task(-sat, node, UNSPILLABLE)
         while len(vertices) > 0:
             # find the entry in the list with the highest saturation
             # this corresponds to the "most-constrained" node; we tackle this first 
@@ -162,12 +171,51 @@ class P0RegAllocator:
 
     def substitute(self):
         """ Substitutes the register assignments in for the corresponding variables"""
+        is_safe = False
+        retval = []
+        while not is_safe:
+            is_safe = True
+            self.liveness_after_k_dict={}
+            self.interf_graph = {}
+            self.register_assgnmnt = {}
+            # all registers should start out with an assignment for their corresponding "index"
+            for reg in P0RegAllocator.ALL_REGS:
+                self.register_assgnmnt[reg] = P0RegAllocator.ALL_REGS.index(reg)
+            retval = self.internal_sub()
+            spill = SpillVisitor()
+            
+            for statement in retval:
+                for instruction in statement.instructions:
+                    unsafe_op = spill.visit(instruction)
+                    if unsafe_op != None:
+                        is_safe = False
+                        if debug:
+                            print 'found unsafe op'
+                        for prog_stmt in self.program.statements:
+                            index = 0
+                            for prog_instr in prog_stmt.instructions:
+                                if prog_instr is unsafe_op.original:
+                                    if debug:
+                                        print prog_stmt
+                                    
+                                    varname = Var(self.varalloc.get_next_var(), spillable=False)
+                                    tmpassign = Movl(unsafe_op.original.src, varname, unsafe_op)
+                                    prog_stmt.instructions[index] = tmpassign
+                                    
+                                    tmpassign = Movl(varname,unsafe_op.original.dst, unsafe_op)
+                                    prog_stmt.instructions.insert(index+1, tmpassign)
+                                    if debug:
+                                        print prog_stmt
+                                    prog_instr.src = varname
+                                    break
+                                index = index + 1
+        return retval
+    def internal_sub(self):
         self.liveness_analyze()
         #self.print_liveness()
         self.build_interference_graph()
         #self.print_graph()
         self.color_graph()
-        #self.print_register_alloc()
         return self.visit(self.program)
 
     def visit(self, node, *args, **kwargs):
@@ -198,7 +246,7 @@ class P0RegAllocator:
         # indicating a no-operation
         if src.__class__ == dst.__class__ and src == dst:
             return None
-        return Movl(src,dst)
+        return Movl(src,dst, node)
         
     def visit_Pushl(self, node, *args, **kwargs):
         src = node.src
@@ -213,7 +261,7 @@ class P0RegAllocator:
             src = self.get_assignment(src)
         if isinstance(dst,Var):
             dst = self.get_assignment(dst)
-        return Addl(src,dst)
+        return Addl(src,dst, node)
 
     def visit_Negl(self, node, *args, **kwargs):
         operand = node.operand
@@ -245,8 +293,10 @@ if __name__ == "__main__":
         stmtlist = p0flattener.flatten(ast)
         instruction_selector = P0InstructionSelector(varalloc)
         program = instruction_selector.visit(stmtlist)
-        regallocator = P0RegAllocator(program)
-        print regallocator.substitute()
+        regallocator = P0RegAllocator(program, varalloc)
+        retval = regallocator.substitute()
+
+        #print retval
         #import cProfile as profile
         #import pstats
         #output_file = 'profile.out'
