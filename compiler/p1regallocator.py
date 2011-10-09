@@ -7,11 +7,13 @@ debug = False
 from comp_util import *
 from x86ir import *
 from p0regallocator import P0RegAllocator
+from p1spillgenerator import P1SpillGenerator
 
 class P1RegAllocator(P0RegAllocator):
     
-    def __init__(self, program):
-        P0RegAllocator.__init__(self, program)
+    def __init__(self, program, varalloc):
+        P0RegAllocator.__init__(self, program, varalloc)
+        self.spillgenerator = P1SpillGenerator(varalloc)
 
     def Lbefore(self, instructionlist, Lafter=set()):
         """Computes liveness recursively.  Liveness is stored as an attribute on
@@ -91,19 +93,14 @@ class P1RegAllocator(P0RegAllocator):
         self.print_liveness_instr(self.program.instructions())
 
     def visit_x86If(self, node, *args, **kwargs):
-        test = node.test
-        if isinstance(test,Var):
-            test = self.get_assignment(test)
-        return x86If(test, [self.visit(x) for x in node.then], [self.visit(x) for x in node.else_])
+        then = [self.visit(x) for x in node.then]
+        then = [x for x in then if x is not None]
+        else_ = [self.visit(x) for x in node.else_]
+        else_ = [x for x in else_ if x is not None]
+        return x86If(self.visit(node.test), then, else_)
 
     def visit_Cmp(self, node, *args, **kwargs):
-        src = node.rhs
-        if isinstance(src,Var):
-            src = self.get_assignment(src)
-        dst = node.lhs
-        if isinstance(dst,Var):
-            dst = self.get_assignment(dst)
-        return Cmp(src, dst)
+        return Cmp(self.visit(node.lhs), self.visit(node.rhs))
 
     def visit_JumpEquals(self, node, *args, **kwargs):
         return node
@@ -115,31 +112,16 @@ class P1RegAllocator(P0RegAllocator):
         return node
 
     def visit_BitwiseNot(self, node, *args, **kwargs):
-        operand = node.value
-        if isinstance(operand,Var):
-            operand = self.get_assignment(operand)
-        return BitwiseNot(operand)
+        return BitwiseNot(self.visit(node.value))
 
     def visit_BitwiseAnd(self, node, *args, **kwargs):
-        src = node.src
-        dst = node.dst
-        if isinstance(src,Var): src = self.get_assignment(src)
-        if isinstance(dst,Var): dst = self.get_assignment(dst)
-        return BitwiseAnd(src, dst)
+        return BitwiseAnd(self.visit(node.src), self.visit(node.dst))
 
     def visit_BitwiseOr(self, node, *args, **kwargs):
-        src = node.src
-        dst = node.dst
-        if isinstance(src,Var): src = self.get_assignment(src)
-        if isinstance(dst,Var): dst = self.get_assignment(dst)
-        return BitwiseOr(src, dst)
+        return BitwiseOr(self.visit(node.src), self.visit(node.dst))
 
     def visit_BitShift(self, node, *args, **kwargs):
-        src = node.src
-        dst = node.dst
-        if isinstance(src,Var): src = self.get_assignment(src)
-        if isinstance(dst,Var): dst = self.get_assignment(dst)
-        return BitShift(src, dst, node.dir)
+        return BitShift(self.visit(node.src), self.visit(node.dst), node.dir)
 
 
 if __name__ == "__main__":
@@ -165,7 +147,7 @@ if __name__ == "__main__":
         instruction_selector = P1InstructionSelector(varalloc)
         program = instruction_selector.visit(stmtlist)
         print prettyAST(program)
-        regallocator = P1RegAllocator(program)
+        regallocator = P1RegAllocator(program, varalloc)
         print prettyAST(regallocator.substitute())
         #import cProfile as profile
         #import pstats

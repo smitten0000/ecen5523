@@ -120,8 +120,10 @@ class Register(Node):
         return self.name.__hash__()
 
 class Var(Node):
-    def __init__(self, name):
+    def __init__(self, name, spillable=True, storage=None):
         self.name = name
+        self.spillable = spillable
+        self.storage = None   # one of Register() or StackSlot()
     def __str__(self):
         return "Var('%s')" % (self.name)
     def __repr__(self):

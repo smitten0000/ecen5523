@@ -26,6 +26,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     logging.basicConfig(level=logging.WARN)
+    #logging.basicConfig(level=logging.DEBUG)
 
     sys.setrecursionlimit(10000)
 
@@ -55,7 +56,7 @@ if __name__ == "__main__":
         #program = stackallocator.substitute()
         #stackallocator = P1StackAllocator(program)
         #program = stackallocator.substitute()
-        allocator = P1RegAllocator(program)
+        allocator = P1RegAllocator(program, varalloc)
         program = allocator.substitute()
         ifinsselector = P1IfInstructionSelector(varalloc,instruction_selector.labelalloc)
         program = ifinsselector.visit(program)
