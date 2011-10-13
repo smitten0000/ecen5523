@@ -21,7 +21,7 @@ class P0Generator(object):
         meth_name = 'visit_'+node.__class__.__name__
         meth = getattr(self, meth_name, None)
         if not meth:
-            raise Exception('Unknown node: %s method: %s' % (node.__class__, meth))
+            raise Exception('Unknown node: %s method: %s' % (node.__class__, meth_name))
         return meth(node, *args, **kwargs)
 
     def visit_Program(self, node, *args, **kwargs):
