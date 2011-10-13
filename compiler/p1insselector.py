@@ -51,7 +51,7 @@ class P1InstructionSelector(P0InstructionSelector):
             elseval = Imm32(0)
         else: #is
             None
-        stmts = stmts + [Cmp(lhsvar, rhsvar),JumpEquals('else%s'%label),Movl(thenval, result, node),Jump('end%s'%label),Label('else%s'%label), Movl(elseval,result, node),Label('end%s'%label)]
+        stmts = stmts + [Cmp(lhsvar, rhsvar),JumpEquals('else%s'%label),Movl(thenval, result),Jump('end%s'%label),Label('else%s'%label), Movl(elseval,result),Label('end%s'%label)]
         return (result, stmts)
     def visit_If(self, node, *args, **kwargs):
         # test has type Name()
@@ -83,7 +83,7 @@ class P1InstructionSelector(P0InstructionSelector):
             raise Exception("Unknown tag type '%s'" % node.typ)
         # need to create a temporary variable to store the result of the shift
         varname = self.varalloc.get_next_var()
-        stmts = [Movl(loc,Var(varname), node)]
+        stmts = [Movl(loc,Var(varname))]
         # only shift left if we are converting from an int or bool
         if node.typ == 'int' or node.typ == 'bool':
             stmts.extend([BitShift(Imm32(TAG_SIZE), Var(varname), 'left')])
@@ -97,7 +97,7 @@ class P1InstructionSelector(P0InstructionSelector):
         # need to create a temporary variable to store the result of the shift
         varname = self.varalloc.get_next_var()
         # only shift to the right if we are converting to int or bool
-        stmts = [Movl(loc,Var(varname), node)]
+        stmts = [Movl(loc,Var(varname))]
         if node.typ == 'int' or node.typ == 'bool':
             stmts.extend([BitShift(Imm32(TAG_SIZE), Var(varname), 'right')])
         else:
@@ -108,25 +108,25 @@ class P1InstructionSelector(P0InstructionSelector):
         # need to create a temporary variable to store the result of the shift
         varname = self.varalloc.get_next_var()
         # int tag(pyobj val) { return val & MASK; }
-        return (Var(varname), stmtlist + [Movl(loc,Var(varname), node), BitwiseAnd(Imm32(3), Var(varname))])
+        return (Var(varname), stmtlist + [Movl(loc,Var(varname)), BitwiseAnd(Imm32(3), Var(varname))])
     def visit_Or(self, node, *args, **kwargs):
         left,  leftstmtlist  = self.visit(node.nodes[0])
         right, rightstmtlist = self.visit(node.nodes[1])
         # need to create a temporary variable to store the result
         varname = self.varalloc.get_next_var()
-        return (Var(varname), leftstmtlist + rightstmtlist + [Movl(left, Var(varname), node), BitwiseOr(right, Var(varname))])
+        return (Var(varname), leftstmtlist + rightstmtlist + [Movl(left, Var(varname)), BitwiseOr(right, Var(varname))])
     def visit_And(self, node, *args, **kwargs):
         left,  leftstmtlist  = self.visit(node.nodes[0])
         right, rightstmtlist = self.visit(node.nodes[1])
         # need to create a temporary variable to store the result
         varname = self.varalloc.get_next_var()
-        return (Var(varname), leftstmtlist + rightstmtlist + [Movl(left, Var(varname), node), BitwiseAnd(right, Var(varname))])
+        return (Var(varname), leftstmtlist + rightstmtlist + [Movl(left, Var(varname)), BitwiseAnd(right, Var(varname))])
     # overridden from p0insselector.py to use print_any instead of print_int_nl
     def visit_Printnl(self, node, *args, **kwargs):
         loc, stmtlist = self.visit(node.nodes[0])
         return stmtlist + [Pushl(loc),
                            Call('print_any'),
-                           Addl(Imm32(4), Register('esp'), node)]
+                           Addl(Imm32(4), Register('esp'))]
 
     # overridden from p0insselector.py to allow for arguments to CallFunc
     def visit_CallFunc(self, node, *args, **kwargs):
@@ -141,9 +141,9 @@ class P1InstructionSelector(P0InstructionSelector):
         # Convert the CallFunc to a Call() node in our x86IR
         instructions.extend([Call(node.node.name)])
         # Move the result from the eax register to the new temp var.
-        instructions.extend([Movl(Register('eax'),Var(varname), node)])
+        instructions.extend([Movl(Register('eax'),Var(varname))])
         # Generate an Addl instruction to restore the stack pointer
-        instructions.extend([Addl(Imm32(4*len(node.args)), Register('esp'), node)])
+        instructions.extend([Addl(Imm32(4*len(node.args)), Register('esp'))])
         return (Var(varname), instructions)
 
 

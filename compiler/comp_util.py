@@ -44,7 +44,7 @@ class priorityq:
 
     def add_task(self, priority, task, count=None):
         if count is None:
-            count = next(self.counter)
+            count = next(counter)
         entry = [priority, count, task]
         self.task_finder[task] = entry
         heapq.heappush(self.pq, entry)
@@ -164,7 +164,7 @@ def pretty(node):
         return 'Compare(%s, %s, %s)' % (node.expr, node.ops[0][0], node.ops[0][1])
     else:
         raise Exception('Unknown node: %s: %s' % (node.__class__, node))
-    return ''
+    return ret
 
 def prettyAST(node, depth=0, indent='  '):
     if node is None:

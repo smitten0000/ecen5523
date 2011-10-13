@@ -44,12 +44,11 @@ class Statement(Node):
         return reduce(lambda x,y: x+y, [x.reads() for x in self.instructions])
 
 class Movl(Instruction):
-    def __init__(self, src, dst, original):
+    def __init__(self, src, dst):
         self.src = src
         self.dst = dst
-        self.original = original
     def __str__(self):
-        return "Movl(%s=%s)" % (self.dst, self.src)
+        return "Movl(%s,%s)" % (self.src, self.dst)
     def __repr__(self):
         return self.__str__()
     def writes(self):
@@ -70,10 +69,9 @@ class Pushl(Instruction):
         return [self.src]
 
 class Addl(Instruction):
-    def __init__(self, src, dst, original):
+    def __init__(self, src, dst):
         self.src = src 
-        self.dst = dst
-        self.original = original 
+        self.dst = dst 
     def __str__(self):
         return "Addl(%s,%s)" % (self.src, self.dst)
     def __repr__(self):
@@ -115,7 +113,7 @@ class Register(Node):
     def __repr__(self):
         return self.__str__()
     def __eq__(self, other):
-        return isinstance(other, Register) and self.name == other.name
+        return self.name == other.name
     def __ne__(self, other):
         return not self.__eq__(other)
     def __hash__(self):
@@ -131,7 +129,7 @@ class Var(Node):
     def __repr__(self):
         return self.__str__()
     def __eq__(self, other):
-        return isinstance(other, Var) and self.name == other.name
+        return self.name == other.name
     def __ne__(self, other):
         return not self.__eq__(other)
     def __hash__(self):
@@ -149,7 +147,7 @@ class Imm32(Node):
     def __repr__(self):
         return self.__str__()
     def __eq__(self, other):
-        return isinstance(other, Imm32) and self.value == other.value
+        return self.value == other.value
     def __ne__(self, other):
         return not self.__eq__(other)
     def __hash__(self):
@@ -163,11 +161,11 @@ class StackSlot(Node):
     def __repr__(self):
         return self.__str__()
     def __eq__(self, other):
-        return isinstance(other, StackSlot) and self.slot == other.slot
+        return self.slot == other.slot
     def __ne__(self, other):
         return not self.__eq__(other)
     def __hash__(self):
-        return self.slot.__hash__()
+        return self.value.__hash__()
 
 class Cmp(Instruction):
     def __init__(self, lhs, rhs):
@@ -178,7 +176,7 @@ class Cmp(Instruction):
     def __repr__(self):
         return self.__str__()
     def __eq__(self, other):
-        return isinstance(other, Cmp) and self.lhs == other.lhs and self.rhs == other.rhs
+        return self.lhs == other.lhs and self.rhs == other.rhs
     def __ne__(self, other):
         return not self.__eq__(other)
     def __hash__(self):
@@ -204,7 +202,7 @@ class BitwiseNot(Instruction):
     def __repr__(self):
         return self.__str__()
     def __eq__(self, other):
-        return isinstance(other, BitwiseNot) and self.value == other.value
+        return self.value == other.value
     def __ne__(self, other):
         return not self.__eq__(other)
     def __hash__(self):
@@ -223,7 +221,7 @@ class BitwiseAnd(Instruction):
     def __repr__(self):
         return self.__str__()
     def __eq__(self, other):
-        return isinstance(other, BitwiseAnd) and self.src == other.src and self.dst == other.dst
+        return self.src == other.src and self.dst == other.dst
     def __ne__(self, other):
         return not self.__eq__(other)
     def __hash__(self):
@@ -280,7 +278,7 @@ class Label(Instruction):
     def __repr__(self):
         return self.__str__()
     def __eq__(self, other):
-        return isinstance(other, Label) and self.label == other.label
+        return self.label == other.label
     def __ne__(self, other):
         return not self.__eq__(other)
     def __hash__(self):
@@ -298,7 +296,7 @@ class Jump(Instruction):
     def __repr__(self):
         return self.__str__()
     def __eq__(self, other):
-        return isinstance(other, Jump) and self.label == other.label
+        return self.label == other.label
     def __ne__(self, other):
         return not self.__eq__(other)
     def __hash__(self):
