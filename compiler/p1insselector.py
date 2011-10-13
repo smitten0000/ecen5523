@@ -33,6 +33,13 @@ class P1InstructionSelector(P0InstructionSelector):
         lhsvar, lhs = self.visit(node.expr)
         rhsvar, rhs = self.visit(node.ops[0][1])
         result = Var(self.varalloc.get_next_var())
+        # If the rhs operand is an Imm32, then we need to move it
+        # into a temp var since Imm32 can only appear on the LHS
+        # for a Cmp (it does a subtract but doesn't store the result)
+        if isinstance(rhsvar,Imm32):
+            tempvar = Var(self.varalloc.get_next_var())
+            stmts = stmts + [Movl(rhsvar, tempvar)]
+            rhsvar = tempvar
         # take care of any necessary flattening for the statements
         # but there should be none at this point
         stmts = stmts + lhs + rhs

@@ -95,16 +95,25 @@ class P1Explicate(object):
         then  = self.visit(node.then)
         else_ = self.visit(node.else_)
         testvar = Name(self.varalloc.get_next_var())
-        thenvar = Name(self.varalloc.get_next_var())
-        elsevar = Name(self.varalloc.get_next_var())
         ifexp = IfExp(
                   isIntOrBoolExp(testvar),
-                  IfExp(ProjectTo('bool',testvar), thenvar, elsevar),
-                  IfExp(ProjectTo('bool',CallFunc(Name('is_true'),[testvar])), thenvar, elsevar)
+                  IfExp(ProjectTo('bool',testvar), then, else_),
+                  IfExp(ProjectTo('bool',CallFunc(Name('is_true'),[testvar])), then, else_)
                 )
-        return Let(testvar, test,
-                   Let(thenvar, then,
-                       Let(elsevar, else_, ifexp)))
+#        ifexp = IfExp(isIntOrBoolExp(testvar),
+#                      IfExp(Compare(ProjectTo('int',testvar), [('==',Const(0))]), 
+#                            else_,
+#                            then
+#                           ),
+#                      IfExp(Compare(ProjectTo('int',CallFunc(Name('is_true'),[testvar])), [('==',InjectFrom('int',Const(0)))]),
+#                            else_,
+#                            then
+#                           )
+#                     )
+        return Let(testvar, test, ifexp)
+#        return Let(testvar, test,
+#                   Let(thenvar, then,
+#                       Let(elsevar, else_, ifexp)))
         
     def visit_List(self, node):
         # the size of the list has to be known at creation time

@@ -206,15 +206,7 @@ class P0RegAllocator:
         return Statement(instructions,node.source)
 
     def visit_Movl(self, node, *args, **kwargs):
-        src = self.visit(node.src)
-        dst = self.visit(node.dst)
-        # if the source and destination are the same, then return None,
-        # indicating a no-operation
-        #if isinstance(src,Var) and isinstance(dst,Var):
-        #    if src.storage.__class__ == dst.storage.__class__ and src.storage == dst.storage:
-        #        logger.debug('Removing unnecessary assignment: %s' % Movl(src,dst))
-        #        return None
-        return Movl(src,dst)
+        return Movl(self.visit(node.src),self.visit(node.dst))
         
     def visit_Pushl(self, node, *args, **kwargs):
         return Pushl(self.visit(node.src))

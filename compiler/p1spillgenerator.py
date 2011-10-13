@@ -5,6 +5,8 @@ from x86ir import *
 from p0spillgenerator import P0SpillGenerator
 import logging
 
+logger = logging.getLogger(__name__)
+
 
 class P1SpillGenerator(P0SpillGenerator):
     

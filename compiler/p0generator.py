@@ -1,6 +1,9 @@
 # vim: set ts=4 sw=4 expandtab:
 
 from x86ir import *
+import logging
+
+logger = logging.getLogger(__name__)
 
 class P0Generator(object):
     def __init__(self, allowMem2Mem=True):
@@ -37,13 +40,18 @@ main:
 """ % (self.get_stacksize(), program)
 
     def visit_Statement(self, node, *args, **kwargs):
-        return ("\t# %s\n" %  node.source) + "\n".join([self.visit(x) for x in node.instructions]) + "\n"
+        instructions = [self.visit(x) for x in node.instructions]
+        # filter out removed instructions
+        instructions = [x for x in instructions if x is not None]
+        return ("\t# %s\n" %  node.source) + "\n".join(instructions) + "\n"
 
     def visit_Movl(self, node, *args, **kwargs):
         stmtlist=[]
         # if the source and destination are the same, then this is a no-op, return nothing
-        #if node.src.__class__ == node.dst.__class__ and node.src == node.dst:
-        #    return ""
+        if isinstance(node.src,Var) and isinstance(node.dst,Var):
+            if node.src.storage.__class__ == node.dst.storage.__class__ and node.src.storage == node.dst.storage:
+                logger.debug('Removing unnecessary assignment: %s (%s)' % (Movl(node.src,node.dst), Movl(node.src.storage, node.dst.storage)))
+                return None
         # handle memory to memory moves
         if isinstance(node.src,StackSlot) and isinstance(node.dst, StackSlot):
             if self.allowMem2Mem:
