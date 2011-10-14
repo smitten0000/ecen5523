@@ -1,17 +1,20 @@
 Python AST: (from compiler.parse(...))
 ======================================================
+S = Statement, E = Expression
 P0:           P1:          P2:
-Module        Or           Function
-Stmt          And          Lambda
-Printnl       IfExp        Return
-Assign        List
-Discard       Dict
-Add           Compare
-UnarySub      Not
-CallFunc      Subscript
-Const
-Name
+============= ============ ===========
+Module     S  Or        E  Function S
+Stmt       S  And       E  Lambda   E
+Printnl    S  IfExp     E  Return   S
+Assign     S  List      E
+Discard    S  Dict      E
+Add        E  Compare   E
+UnarySub   E  Not       E
+CallFunc   E  Subscript E
+Const      E
+Name       E
 AssName
+
 
 Additional Nodes in Flatten but not part of python AST
 ======================================================

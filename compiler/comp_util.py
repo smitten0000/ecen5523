@@ -176,7 +176,7 @@ def prettyAST(node, depth=0, indent='  '):
     # each language definition and extend it.  But this works for now.
     elif node.__class__.__name__ in ('GetTag','ProjectTo'):
         ret = '%s%s' % (indent*depth, node)
-    elif isinstance(node,(str,int,list)):
+    elif isinstance(node,(str,int,list,tuple)):
         ret = "%s%s" % (indent*depth, node)
     elif isinstance(node, Node):
         ret = '%s%s(\n' % (indent*depth, node.__class__.__name__)
