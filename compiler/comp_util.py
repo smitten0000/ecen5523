@@ -187,3 +187,38 @@ def prettyAST(node, depth=0, indent='  '):
     else:
         raise Exception('Encountered unhandled AST Node (%s)', node.__class__.__name__)
     return ret
+
+def free_vars(n):
+    if isinstance(n, Add):
+        return free_vars(n.left) | free_vars(n.right)
+    elif isinstance(n, UnarySub):
+        return free_vars(n.expr)
+    elif isinstance(n, CallFunc):
+        # the name of the function being called should be considered "free" (n.node)
+        return free_vars(n.node) | reduce(lambda x,y: x+y, [free_vars(x) for x in n.args], set([]))
+    elif isinstance(n, Const):
+        return set([])
+    elif isinstance(n, Name):
+        if n.name == 'True' or n.name == 'False':
+            return set([])
+        return set([n.name])
+    elif isinstance(n, (Or,And)):
+        return free_vars(n.nodes[0]) + free_vars(n.nodes[1])
+    elif isinstance(n, IfExp):
+        return free_vars(n.test) | free_vars(n.then) | free_vars(n.else_)
+    elif isinstance(n, List):
+        return reduce(lambda x,y: x|y, [free_vars(x) for x in n.nodes], set([]))
+    elif isinstance(n, Dict):
+        keys = reduce(lambda x,y: x|y, [free_vars(x[0]) for x in n.items], set([]))
+        values = reduce(lambda x,y: x|y, [free_vars(x[1]) for x in n.items], set([])) 
+        return keys | values
+    elif isinstance(n, Compare):
+        return free_vars(n.ops[0][1]) | free_vars(n.expr)
+    elif isinstance(n, Not):
+        return free_vars(n.expr)
+    elif isinstance(n, Subscript):
+        return free_vars(n.expr) | free_vars(n.subs[0])
+    elif isinstance(n, Lambda):
+        return free_vars(n.code) - set(n.argnames)
+    else:
+        raise Exception('Unhandled expression: "%s"' % n)
