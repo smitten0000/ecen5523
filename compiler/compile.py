@@ -66,3 +66,4 @@ if __name__ == "__main__":
         f = open(outputfile, 'w')
         print >> f, output
         f.close()
+        logging.shutdown()
