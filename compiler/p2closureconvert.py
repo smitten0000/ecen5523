@@ -5,17 +5,28 @@ from x86ir import *
 from p2explicate import P2Explicate
 from p2uniquifyvars import P2UniquifyVars
 from p2heapify import P2Heapify
+from p2freevars import P2FreeVars
+
 
 import logging
-
+    
 class P2ClosureConversion(object):
-    def __init__(self, varalloc):
-        P1Explicate.__init__(self, varalloc)
+    def __init__(self):
         self.log = logging.getLogger('closure')
+        self.name_alloc = {}
+        self.globals = []
+        self.freevars = P2FreeVars()
+        
+    def get_next_name(self, name):
+        if name in self.name_alloc:
+            self.name_alloc[name] =self.name_alloc[name]+1
+        else:
+            self.name_alloc[name] = 0
+        return 'glob_fun_%s_%d' % (name, self.name_alloc[name])             
 
     def visit(self, node, *args, **kwargs):
+        self.log.debug(node)
         meth = None
-        
         meth_name = 'visit_'+node.__class__.__name__
         meth = getattr(self, meth_name, None)
         # we return the node passed in by default so we do not have to handle
@@ -24,24 +35,69 @@ class P2ClosureConversion(object):
             return node
         return meth(node, *args, **kwargs)
     
+    def visit_Module(self,node, *args, **kwargs):
+        return self.visit(node.node)
+    def visit_Stmt(self,node, *args, **kwargs):
+        visited = [self.visit(x) for x in node.nodes]
+        self.log.debug('Visited and produced %s'%visited)
+        return Stmt(visited)
+    def visit_Assign(self, node, *args, **kwargs):
+        self.log.debug('Visiting rhs of assign %s'%node.expr)
+        return Assign(node.nodes, self.visit(node.expr)) 
+    def visit_Lambda(self, node, *args, **kwargs):
+        # allocate a new function name
+        name = self.get_next_name(node.lineno)
+        
+        # walk the body to perform closure conversion on any sub-lambdas
+        # this could generate new closures as well, which get put in to the
+        # global definition area
+        newbody = self.visit(node.body)
+
+        fvs = self.freevars.visit(node) - node.argnames
+        self.log.debug('Computed free_vars as %s'%fvs)
+        code = []
+        #ssign([AssName(retvar,'OP_ASSIGN')], CallFunc(Name('set_subscript'),[expr,subexpr,valueexpr]))
+        ctr = 0
+        for var in fvs:
+            code.append( Assign([AssName(Name(var), 'OP_ASSIGN')], Subscript)
+        
+        self.log.debug(node)
+    
+
     
 if __name__ == "__main__":
+    # create logger
+    log = logging.getLogger('closure')
+    log.setLevel(logging.DEBUG)
+    
+    # create console handler and set level to debug
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+    
+    # create formatter
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    
+    # add formatter to ch
+    ch.setFormatter(formatter)
+    
+    # add ch to logger
+    log.addHandler(ch)
+
     import sys, compiler
-    from p0parser import P0Parser
     if len(sys.argv) < 2:
         sys.exit(1)
     testcases = sys.argv[1:]
     debug = True
     for testcase in testcases:
-        p2unique = P2UniquifyVars(ast)
+        p2unique = P2UniquifyVars()
         p2explicator = P2Explicate(VariableAllocator())
         p2heap = P2Heapify()
         p2closure = P2ClosureConversion()
 
         ast = compiler.parseFile(testcase)
         unique = p2unique.visit(ast)        
-        explicated = p1explicator.explicate(unique)
+        explicated = p2explicator.explicate(unique)
         heaped = p2heap.visit(explicated)
         ast = p2closure.visit(heaped)
         
-        print prettyAST(ast)
+        #print prettyAST(ast)

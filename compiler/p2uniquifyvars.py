@@ -1,3 +1,6 @@
+from compiler.ast import *
+from comp_util import *
+from x86ir import *
 
 class P2UniquifyVars:
     def __init__(self):

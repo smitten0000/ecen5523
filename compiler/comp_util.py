@@ -222,3 +222,32 @@ def free_vars(n):
         return free_vars(n.code) - set(n.argnames)
     else:
         raise Exception('Unhandled expression: "%s"' % n)
+
+class CallFuncIndirect(Node):
+    def __init__(self, node, args, star_args = None, dstar_args = None, lineno=None):
+        self.node = node
+        self.args = args
+        self.star_args = star_args
+        self.dstar_args = dstar_args
+        self.lineno = lineno
+
+    def getChildren(self):
+        children = []
+        children.append(self.node)
+        children.extend(flatten(self.args))
+        children.append(self.star_args)
+        children.append(self.dstar_args)
+        return tuple(children)
+
+    def getChildNodes(self):
+        nodelist = []
+        nodelist.append(self.node)
+        nodelist.extend(flatten_nodes(self.args))
+        if self.star_args is not None:
+            nodelist.append(self.star_args)
+        if self.dstar_args is not None:
+            nodelist.append(self.dstar_args)
+        return tuple(nodelist)
+
+    def __repr__(self):
+        return "CallFuncIndirect(%s, %s, %s, %s)" % (repr(self.node), repr(self.args), repr(self.star_args), repr(self.dstar_args))
