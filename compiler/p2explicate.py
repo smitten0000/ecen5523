@@ -14,11 +14,11 @@ class P2Explicate(P1Explicate):
         #Function: decorators, name, argnames, defaults, flags, doc, code
         #Lamba: argnames, defaults, flags, code
         #Assign([AssName(retvar,'OP_ASSIGN')], CallFunc(Name('set_subscript'),[expr,subexpr,valueexpr]))
-        return Assign([AssName(node.name, 'OP_ASSIGN')], Lambda(node.argnames, node.defaults, node.flags, self.visit(node.code), node.lineno))
+        return Assign([AssName(node.name, 'OP_ASSIGN')], Lambda(node.argnames, node.defaults, node.flags, self.visit(node.code), node.name))
 
     def visit_Lambda(self, node, *args, **kwargs):
         #Lamba: argnames, defaults, flags, code
-        return Lambda(node.argnames, node.defaults, node.flags, Return(node.code), node.lineno)
+        return Lambda(node.argnames, node.defaults, node.flags, Return(node.code), 'lambda')
 
 
 if __name__ == "__main__":
