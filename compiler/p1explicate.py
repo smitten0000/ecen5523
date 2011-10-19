@@ -137,7 +137,7 @@ class P1Explicate(object):
         # for each expression, we have to assign it to the next consecutive index
         for i in range(0,len(node.nodes)):
             tmp = Name(self.varalloc.get_next_var())
-            expr = self.visit(CallFunc(Name('set_subscript'),[varname, Const(i), node.nodes[i]]))
+            expr = CallFunc(Name('set_subscript'),[varname, self.visit(Const(i)), self.visit(node.nodes[i])])
             let.body = Let(tmp, expr, None)
             let = let.body
         # We need a final reference to the variable corresponding to the list
@@ -156,7 +156,7 @@ class P1Explicate(object):
         # for each expression, we have to assign it to the next consecutive index
         for key, value in node.items:
             tmp = Name(self.varalloc.get_next_var())
-            expr = self.visit(CallFunc(Name('set_subscript'),[varname, key, value]))
+            expr = CallFunc(Name('set_subscript'),[varname, self.visit(key), self.visit(value)])
             let.body = Let(tmp, expr, None)
             let = let.body
         # We need a final reference to the variable corresponding to the dictionary
@@ -218,7 +218,7 @@ class P1Explicate(object):
         # Instead, we need to call 'input_int' 
         if node.node.name == 'input':
             node.node.name = 'input_int'
-        return CallFunc(node.node, expressions, None, None)
+        return CallFunc(self.visit(node.node), expressions, None, node.lineno)
 
     def visit_UnarySub(self, node):
         return InjectFrom('int',UnarySub(ProjectTo('int',self.visit(node.expr))))
