@@ -12,7 +12,7 @@ import logging
     
 class P2ClosureConversion(object):
     def __init__(self):
-        self.log = logging.getLogger('closure')
+        self.log = logging.getLogger('compiler.closure')
         self.name_alloc = {}
         self.globals = []
         self.freevars = P2FreeVars()
@@ -23,6 +23,12 @@ class P2ClosureConversion(object):
         else:
             self.name_alloc[name] = 0
         return 'glob_fun_%s_%d' % (name, self.name_alloc[name])             
+
+    def transform(self, node, *args, **kwargs):
+        self.log.info ('Starting closure conversion')
+        ret = self.visit(node)
+        self.log.info ('Finished closure conversion')
+        return ret
 
     def visit(self, node, *args, **kwargs):
         self.log.debug(node)
@@ -59,35 +65,20 @@ class P2ClosureConversion(object):
         #ssign([AssName(retvar,'OP_ASSIGN')], CallFunc(Name('set_subscript'),[expr,subexpr,valueexpr]))
         ctr = 0
         for var in fvs:
-            code.append( Assign([AssName(Name(var), 'OP_ASSIGN')], Subscript)
+            code.append( Assign([AssName(Name(var), 'OP_ASSIGN')], Subscript))
         
         self.log.debug(node)
     
 
     
 if __name__ == "__main__":
-    # create logger
-    log = logging.getLogger('closure')
-    log.setLevel(logging.DEBUG)
-    
-    # create console handler and set level to debug
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
-    
-    # create formatter
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    
-    # add formatter to ch
-    ch.setFormatter(formatter)
-    
-    # add ch to logger
-    log.addHandler(ch)
-
     import sys, compiler
+    import logging.config
     if len(sys.argv) < 2:
         sys.exit(1)
+    # configure logging 
+    logging.config.fileConfig('logging.cfg')
     testcases = sys.argv[1:]
-    debug = True
     for testcase in testcases:
         p2unique = P2UniquifyVars()
         p2explicator = P2Explicate(VariableAllocator())
@@ -95,9 +86,9 @@ if __name__ == "__main__":
         p2closure = P2ClosureConversion()
 
         ast = compiler.parseFile(testcase)
-        unique = p2unique.visit(ast)        
+        unique = p2unique.transform(ast)        
         explicated = p2explicator.explicate(unique)
-        heaped = p2heap.visit(explicated)
-        ast = p2closure.visit(heaped)
+        heaped = p2heap.transform(explicated)
+        ast = p2closure.transform(heaped)
         
         #print prettyAST(ast)

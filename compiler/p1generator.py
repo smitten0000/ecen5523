@@ -90,6 +90,7 @@ class P1Generator(P0Generator):
     
 if __name__ == "__main__":
     import sys
+    import logging.config
     from comp_util import *
     
     from p1flattener import P1Flattener
@@ -99,6 +100,8 @@ if __name__ == "__main__":
     from p1ifinsselector import P1IfInstructionSelector
     if len(sys.argv) < 2:
         sys.exit(1)
+    # configure logging 
+    logging.config.fileConfig('logging.cfg')
     testcases = sys.argv[1:]
     for testcase in testcases:
 #        parser = P1parser()

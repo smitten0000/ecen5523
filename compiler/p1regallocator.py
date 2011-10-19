@@ -2,8 +2,6 @@
 
 import compiler
 
-debug = False
-
 from comp_util import *
 from x86ir import *
 from p0regallocator import P0RegAllocator
@@ -126,14 +124,16 @@ class P1RegAllocator(P0RegAllocator):
 
 if __name__ == "__main__":
     import sys
+    import logging.config
     from comp_util import *
     from p0parser import P0Parser
     from p1flattener import P1Flattener
     from p1insselector import P1InstructionSelector
     if len(sys.argv) < 2:
         sys.exit(1)
+    # configure logging 
+    logging.config.fileConfig('logging.cfg')
     testcases = sys.argv[1:]
-    debug = True
     for testcase in testcases:
         #parser = P0Parser()
         #parser.build()

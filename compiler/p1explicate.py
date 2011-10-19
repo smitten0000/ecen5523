@@ -1,10 +1,10 @@
 # vim: set ts=4 sw=4 expandtab:
 
-debug = False # set to True when module is this
-
 from compiler.ast import *
 from comp_util import *
 from x86ir import *
+
+import logging
 
 class GetTag(Node):
     def __init__(self, arg):
@@ -60,7 +60,14 @@ isIntOrBoolExp = lambda x: Or([compareTag(x,intTag),compareTag(x,boolTag)])
 # Concept borrowed from http://peter-hoffmann.com/2010/extrinsic-visitor-pattern-python-inheritance.html
 class P1Explicate(object):
     def __init__(self, varalloc):
+        self.log = logging.getLogger('compiler.explicate')
         self.varalloc = varalloc
+
+    def transform(self, node):
+        self.log.info ('Starting explicate')
+        ret = self.explicate(node)
+        self.log.info ('Finished explicate')
+        return ret
 
     def explicate(self, node):
         return self.visit(node)
@@ -261,13 +268,11 @@ class P1Explicate(object):
         return Let(var, expr1, ifexp)
 
     def visit_And(self, node):
-        if debug:
-            print node
+        self.log.debug(node)
         expr1 = self.explicate(node.nodes[0])
         expr2 = self.explicate(node.nodes[1])
-        if debug:
-            print expr1
-            print expr2
+        self.log.debug(expr1)
+        self.log.debug(expr2)
         # allocate new temporaries to hold the result of the subexpression
         leftvar = Name(self.varalloc.get_next_var())
         rightvar = Name(self.varalloc.get_next_var())
@@ -284,13 +289,11 @@ class P1Explicate(object):
                    Let(rightvar, expr2, ifexp))
 
     def visit_Or(self, node):
-        if debug:
-            print node
+        self.log.debug(node)
         expr1 = self.explicate(node.nodes[0])
         expr2 = self.explicate(node.nodes[1])
-        if debug:
-            print expr1
-            print expr2
+        self.log.debug(expr1)
+        self.log.debug(expr2)
         # allocate new temporaries to hold the result of the subexpression
         leftvar = Name(self.varalloc.get_next_var())
         rightvar = Name(self.varalloc.get_next_var())
@@ -307,13 +310,11 @@ class P1Explicate(object):
                    Let(rightvar, expr2, ifexp))
 
     def visit_Add(self, node):
-        if debug:
-            print node
+        self.log.debug(node)
         expr1 = self.explicate(node.left)
         expr2 = self.explicate(node.right)
-        if debug:
-            print expr1
-            print expr2
+        self.log.debug(expr1)
+        self.log.debug(expr2)
         # allocate new temporaries to hold the result of the subexpression
         leftvar = Name(self.varalloc.get_next_var())
         rightvar = Name(self.varalloc.get_next_var())
@@ -360,12 +361,13 @@ if __name__ == "__main__":
     from p0parser import P0Parser
     if len(sys.argv) < 2:
         sys.exit(1)
+    # configure logging 
+    logging.config.fileConfig('logging.cfg')
     testcases = sys.argv[1:]
-    debug = True
     for testcase in testcases:
         #parser = P0Parser()
         #parser.build()
         ast = compiler.parseFile(testcase)
         #ast = parser.parseFile(testcase)
         p1explicator = P1Explicate(VariableAllocator())
-        print prettyAST(p1explicator.explicate(ast))
+        print prettyAST(p1explicator.transform(ast))

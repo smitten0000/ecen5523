@@ -6,6 +6,7 @@
 # HW1
 
 import sys, logging
+import logging.config
 import compiler
 
 from p0parser import P0Parser
@@ -19,14 +20,14 @@ from p1generator import P1Generator
 from comp_util import *
 import time
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('compiler.main')
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         sys.exit(1)
 
-    logging.basicConfig(level=logging.WARN)
-    #logging.basicConfig(level=logging.DEBUG)
+    # configure logging 
+    logging.config.fileConfig('logging.cfg')
 
     sys.setrecursionlimit(10000)
 
@@ -35,6 +36,7 @@ if __name__ == "__main__":
         #parser = P0Parser()
         #parser.build()
         #ast = parser.parseFile(testcase)
+        logger.info("Working on test case '%s'" % testcase)
         
         ast = compiler.parseFile(testcase)
         

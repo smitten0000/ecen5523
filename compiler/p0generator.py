@@ -3,10 +3,10 @@
 from x86ir import *
 import logging
 
-logger = logging.getLogger(__name__)
 
 class P0Generator(object):
     def __init__(self, allowMem2Mem=True):
+        self.log = logging.getLogger('compiler.generator')
         self.maxslot = 0
         self.allowMem2Mem = allowMem2Mem
 
@@ -14,7 +14,10 @@ class P0Generator(object):
         return self.maxslot * 4
 
     def generate(self, stmtlist):
-        return self.visit(stmtlist)
+        self.log.info ('Starting assembly generate')
+        ret = self.visit(stmtlist)
+        self.log.info ('Finished assembly generate')
+        return ret
 
     def visit(self, node, *args, **kwargs):
         meth = None
@@ -50,7 +53,7 @@ main:
         # if the source and destination are the same, then this is a no-op, return nothing
         if isinstance(node.src,Var) and isinstance(node.dst,Var):
             if node.src.storage.__class__ == node.dst.storage.__class__ and node.src.storage == node.dst.storage:
-                logger.debug('Removing unnecessary assignment: %s (%s)' % (Movl(node.src,node.dst), Movl(node.src.storage, node.dst.storage)))
+                self.log.debug('Removing unnecessary assignment: %s (%s)' % (Movl(node.src,node.dst), Movl(node.src.storage, node.dst.storage)))
                 return None
         # handle memory to memory moves
         if isinstance(node.src,StackSlot) and isinstance(node.dst, StackSlot):
@@ -104,6 +107,7 @@ main:
 
 if __name__ == "__main__":
     import sys
+    import logging.config
     from comp_util import *
     from p0parser import P0Parser
     from p0flattener import P0Flattener
@@ -112,6 +116,8 @@ if __name__ == "__main__":
     from p0stackallocator import P0StackAllocator
     if len(sys.argv) < 2:
         sys.exit(1)
+    # configure logging 
+    logging.config.fileConfig('logging.cfg')
     testcases = sys.argv[1:]
     for testcase in testcases:
         parser = P0Parser()

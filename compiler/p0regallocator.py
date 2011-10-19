@@ -5,13 +5,13 @@ from x86ir import *
 from p0spillgenerator import P0SpillGenerator
 import logging
 
-logger = logging.getLogger(__name__)
 
 class P0RegAllocator:
     ALL_REGS = [Register('eax'), Register('ebx'), Register('ecx'), Register('edx'), Register('edi'), Register('esi')]
     CALLER_SAVE = [Register('eax'), Register('ecx'), Register('edx')]
     ALL_SLOTS = set(range(0,500))
     def __init__(self, program, varalloc):
+        self.log = logging.getLogger('compiler.regalloc')
         self.program = program
         self.varalloc = varalloc
         self.spillgenerator = P0SpillGenerator(varalloc)
@@ -171,6 +171,7 @@ class P0RegAllocator:
             return P0RegAllocator.ALL_REGS[assignment]
 
     def substitute(self):
+        self.log.info ('Starting register allocation')
         """ Substitutes the register assignments in for the corresponding variables"""
         spilled = True
         while spilled:
@@ -186,6 +187,7 @@ class P0RegAllocator:
             # generate spill code (may introduce additional instructions and
             # temporary variables into the program)
             spilled, self.program = self.spillgenerator.generate_spill(self.program)
+        self.log.info ('Finished register allocation')
         return self.program
 
     def visit(self, node, *args, **kwargs):
@@ -234,12 +236,15 @@ class P0RegAllocator:
 
 if __name__ == "__main__":
     import sys
+    import logging.config
     from comp_util import *
     from p0parser import P0Parser
     from p0flattener import P0Flattener
     from p0insselector import P0InstructionSelector
     if len(sys.argv) < 2:
         sys.exit(1)
+    # configure logging 
+    logging.config.fileConfig('logging.cfg')
     testcases = sys.argv[1:]
     for testcase in testcases:
         parser = P0Parser()
