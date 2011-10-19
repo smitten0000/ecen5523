@@ -3,6 +3,7 @@ from comp_util import *
 from x86ir import *
 import logging
 
+from p2uniquifyvars import P2UniquifyVars
 from p1explicate import P1Explicate
 
 
@@ -16,7 +17,7 @@ class P2Explicate(P1Explicate):
         #Assign([AssName(retvar,'OP_ASSIGN')], CallFunc(Name('set_subscript'),[expr,subexpr,valueexpr]))
         return Assign([AssName(node.name, 'OP_ASSIGN')], Lambda(node.argnames, node.defaults, node.flags, self.visit(node.code), node.name))
     def visit_CallFunc(self, node, *args, **kwargs):
-        p1expl = P1Explicate.visit(node)
+        p1expl = P1Explicate.visit_CallFunc(self, node, *args, **kwargs)
         # convert the remaining CallFuncs to indirect since they are from a def or a lambda
         if node.node.name == 'input':
             return p1expl
@@ -30,7 +31,7 @@ class P2Explicate(P1Explicate):
         
     def visit_Lambda(self, node, *args, **kwargs):
         #Lamba: argnames, defaults, flags, code
-        return Lambda(node.argnames, node.defaults, node.flags, Return(node.code), 'lambda')
+        return Lambda(node.argnames, node.defaults, node.flags, Return(self.visit(node.code)), 'lambda')
 
 
 if __name__ == "__main__":
@@ -47,5 +48,7 @@ if __name__ == "__main__":
         #parser.build()
         ast = compiler.parseFile(testcase)
         #ast = parser.parseFile(testcase)
+        p2unique = P2UniquifyVars()
+        unique = p2unique.transform(ast)        
         p2explicator = P2Explicate(VariableAllocator())
-        print prettyAST(p2explicator.transform(ast))
+        print prettyAST(p2explicator.transform(unique))

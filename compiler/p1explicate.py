@@ -125,7 +125,7 @@ class P1Explicate(object):
     def visit_List(self, node):
         # the size of the list has to be known at creation time
         # this should be the same as the number of nodes in the List AST node
-        pyobj_list = self.visit(InjectFrom('big',CallFunc(Name('create_list'),[Const(len(node.nodes))])))
+        pyobj_list = InjectFrom('big',CallFunc(Name('create_list'),[self.visit(Const(len(node.nodes)))]))
         # allocate a temp var 
         varname = Name(self.varalloc.get_next_var())
         # we are going to create a tree of Let nodes to create a single expression

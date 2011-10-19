@@ -3,10 +3,13 @@ from compiler.ast import *
 from comp_util import *
 from p0parser import P0Parser
 
+import logging
+
 class P0Flattener:
     """Class to performing flattening of complex expressions."""
     def __init__ (self, varalloc):
         self.varalloc = varalloc
+        self.log = logging.getLogger('compiler.flatten')
 
     def flatten (self, node):
         """Takes an AST as input, and then "flattens" the tree into a list of statements."""

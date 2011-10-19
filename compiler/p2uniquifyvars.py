@@ -53,7 +53,7 @@ class P2UniquifyVars:
         if varname not in self.vardict:
             self.vardict[varname] = []
             self.varcounter[varname] = 0
-        ret = varname + '/' + str(self.varcounter[varname])
+        ret = varname + '$' + str(self.varcounter[varname])
         self.varcounter[varname] = self.varcounter[varname] + 1
         self.vardict[varname].append(ret)
         return ret
