@@ -11,8 +11,9 @@ from p2freevars import P2FreeVars
 import logging
     
 class P2ClosureConversion(object):
-    def __init__(self, explicate):
+    def __init__(self, explicate, varalloc):
         self.log = logging.getLogger('compiler.closure')
+        self.varalloc = varalloc
         self.name_alloc = {}
         self.functions = []
         self.freevars = P2FreeVars()
@@ -36,10 +37,11 @@ class P2ClosureConversion(object):
         meth = None
         meth_name = 'visit_'+node.__class__.__name__
         meth = getattr(self, meth_name, None)
-        # we return the node passed in by default so we do not have to handle
-        # every case unless necessary
+        # we cannot blindly return the node itself, if there is no visit 
+        # function for that type.  This is because the children of that node may need
+        # to be recursed upon: ex.  Printnl(CallFuncIndirect(...))
         if not meth:
-            return node
+            raise Exception('Unknown node: %s method: %s' % (node.__class__, meth_name))
         return meth(node, *args, **kwargs)
     
     def visit_Module(self,node, *args, **kwargs):
@@ -48,9 +50,52 @@ class P2ClosureConversion(object):
         visited = [self.visit(x) for x in node.nodes]
         self.log.debug('Visited and produced %s'%visited)
         return Stmt(visited)
+    def visit_Printnl(self, node, *args, **kwargs):
+        return Printnl([self.visit(node.nodes[0])], node.dest)
     def visit_Assign(self, node, *args, **kwargs):
         self.log.debug('Visiting rhs of assign %s'%node.expr)
         return Assign(node.nodes, self.visit(node.expr)) 
+    def visit_Discard(self, node, *args, **kwargs):
+        return Discard(self.visit(node.expr))
+    def visit_Add(self, node, *args, **kwargs):
+        return Add((self.visit(node.left), self.visit(node.right)))
+    def visit_UnarySub(self, node, *args, **kwargs):
+        return UnarySub(self.visit(node.expr))
+    def visit_CallFunc(self, node, *args, **kwargs):
+        return CallFunc(self.visit(node.node), [self.visit(x) for x in node.args])
+    def visit_Const(self, node, *args, **kwargs):
+        return node
+    def visit_Name(self, node, *args, **kwargs):
+        return node
+    def visit_Or(self, node, *args, **kwargs):
+        return Or([self.visit(x) for x in node.nodes])
+    def visit_And(self, node, *args, **kwargs):
+        return And([self.visit(x) for x in node.nodes])
+    def visit_IfExp(self, node, *args, **kwargs):
+        return IfExp(self.visit(node.test), self.visit(node.then), self.visit(node.else_))
+    # List/Dict/Function no longer exist after explicate
+    def visit_List(self, node, *args, **kwargs):
+        raise Exception('Encountered List AST in closure conversion.  List should no longer exist after explicate')
+    def visit_Dict(self, node, *args, **kwargs):
+        raise Exception('Encountered Dict AST in closure conversion.  Dict should no longer exist after explicate')
+    def visit_Function(self, node, *args, **kwargs):
+        raise Exception('Encountered Function AST in closure conversion.  Function should no longer exist after explicate')
+    def visit_Compare(self, node, *args, **kwargs):
+        return Compare(self.visit(node.expr), [(node.ops[0][0], self.visit(node.ops[0][1]))])
+    def visit_Not(self, node, *args, **kwargs):
+        return Not(self.visit(node.expr))
+    def visit_Subscript(self, node, *args, **kwargs):
+        return Subscript(self.visit(node.expr), node.flags, [self.visit(node.subs[0])])
+    def visit_Return(self, node, *args, **kwargs):
+        return Return(self.visit(node.value))
+    def visit_InjectFrom(self, node, *args, **kwargs):
+        return InjectFrom(node.typ, self.visit(node.arg))
+    def visit_ProjectTo(self, node, *args, **kwargs):
+        return ProjectTo(node.typ, self.visit(node.arg))
+    def visit_GetTag(self, node, *args, **kwargs):
+        return GetTag(self.visit(node.arg))
+    def visit_Let(self, node, *args, **kwargs):
+        return Let(self.var, self.visit(self.rhs), self.visit(self.body))
     def visit_Lambda(self, node, *args, **kwargs):
         # allocate a new function name
         name = self.get_next_name(node.lineno)
@@ -78,6 +123,20 @@ class P2ClosureConversion(object):
         #for var in fvs:
         #    code.append( Assign([AssName(Name(var), 'OP_ASSIGN')], Subscript))
 
+    def visit_CallFuncIndirect(self, node, *args, **kwargs):
+        # First, get a new temporary variable to refer to the expression "node.node", which
+        # should evaluate to a closure
+        closurevar = Name(self.varalloc.get_next_var())
+        ret = Let(
+                closurevar, 
+                node.node, 
+                CallFuncIndirect(
+                  CallFunc('get_fun_ptr',[closurevar]),
+                  [CallFunc('get_free_vars',[closurevar])] + node.args
+                )
+              )
+        return ret
+
     
 if __name__ == "__main__":
     import sys, compiler
@@ -88,10 +147,11 @@ if __name__ == "__main__":
     logging.config.fileConfig('logging.cfg')
     testcases = sys.argv[1:]
     for testcase in testcases:
+        varalloc = VariableAllocator()
         p2unique = P2UniquifyVars()
-        p2explicator = P2Explicate(VariableAllocator())
+        p2explicator = P2Explicate(varalloc)
         p2heap = P2Heapify()
-        p2closure = P2ClosureConversion(p2explicator)
+        p2closure = P2ClosureConversion(p2explicator, varalloc)
 
         ast = compiler.parseFile(testcase)
         unique = p2unique.transform(ast)        

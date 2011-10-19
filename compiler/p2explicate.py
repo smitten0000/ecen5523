@@ -26,6 +26,7 @@ class P2Explicate(P1Explicate):
         # a[0] = f
         # 4 + a[0](4)
     
+        # all arguments should already be explicated at this point.
         return CallFuncIndirect(p1expl.node, p1expl.args, p1expl.star_args, p1expl.dstar_args, p1expl.lineno)
         
         
