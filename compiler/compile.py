@@ -12,8 +12,8 @@ import compiler
 from p0parser import P0Parser
 from p0stackallocator import P0StackAllocator
 from p1stackallocator import P1StackAllocator
-from p1flattener import P1Flattener
-from p1insselector import P1InstructionSelector
+from p2flattener import P2Flattener
+from p2insselector import P2InstructionSelector
 from p1regallocator import P1RegAllocator
 from p1ifinsselector import P1IfInstructionSelector
 from p1generator import P1Generator
