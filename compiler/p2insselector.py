@@ -46,7 +46,9 @@ class P2InstructionSelector(P1InstructionSelector):
             var, instrlist = self.visit(x)
             instructions.extend(instrlist + [Pushl(var)])
         # Convert the CallFuncIndirect to a CallAddress() node in our x86IR
-        instructions.extend([CallAddress(node.node)])
+        var, stmtlist = self.visit(node.node)
+        instructions.extend(stmtlist)
+        instructions.extend([CallAddress(var)])
         # Move the result from the eax register to the new temp var.
         instructions.extend([Movl(Register('eax'),Var(varname))])
         # Generate an Addl instruction to restore the stack pointer

@@ -33,7 +33,6 @@ class P2ClosureConversion(object):
         return [main] + self.functions
 
     def visit(self, node, *args, **kwargs):
-        self.log.debug(node)
         meth = None
         meth_name = 'visit_'+node.__class__.__name__
         meth = getattr(self, meth_name, None)
@@ -95,7 +94,7 @@ class P2ClosureConversion(object):
     def visit_GetTag(self, node, *args, **kwargs):
         return GetTag(self.visit(node.arg))
     def visit_Let(self, node, *args, **kwargs):
-        return Let(self.var, self.visit(self.rhs), self.visit(self.body))
+        return Let(node.var, self.visit(node.rhs), self.visit(node.body))
     def visit_Lambda(self, node, *args, **kwargs):
         # allocate a new function name
         name = self.get_next_name(node.lineno)

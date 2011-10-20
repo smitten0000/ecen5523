@@ -1,18 +1,15 @@
 # vim: set ts=4 sw=4 expandtab:
 
-import compiler
-
 from comp_util import *
 from x86ir import *
 from p0regallocator import P0RegAllocator
-from p1spillgenerator import P1SpillGenerator
+from p1regallocator import P1RegAllocator
+from p2spillgenerator import P2SpillGenerator
 
 class P2RegAllocator(P1RegAllocator):
-    
     def __init__(self, program, varalloc):
         P1RegAllocator.__init__(self, program, varalloc)
-        self.spillgenerator = P1SpillGenerator(varalloc)
-
+        self.spillgenerator = P2SpillGenerator(varalloc)
 
     def build_interference_graph_instr(self, instructions):
         for instr in instructions:
@@ -48,16 +45,19 @@ class P2RegAllocator(P1RegAllocator):
         return Ret(self.visit(node.value))
 
     def visit_x86Function(self, node, *args, **kwargs):
-        return x86Function(node.name, node.argnames, self.visit(node.code), node.lineno)
+        return x86Function(node.name, node.argnames, [self.visit(x) for x in node.statements], node.lineno)
 
 
 if __name__ == "__main__":
-    import sys
+    import sys, compiler
     import logging.config
     from comp_util import *
-    from p0parser import P0Parser
-    from p1flattener import P1Flattener
-    from p1insselector import P1InstructionSelector
+    from p2uniquifyvars import P2UniquifyVars
+    from p2explicate import P2Explicate
+    from p2heapify import P2Heapify
+    from p2closureconvert import P2ClosureConversion
+    from p2flattener import P2Flattener
+    from p2insselector import P2InstructionSelector
     if len(sys.argv) < 2:
         sys.exit(1)
     # configure logging 
@@ -67,7 +67,7 @@ if __name__ == "__main__":
         varalloc = VariableAllocator()
         p2unique = P2UniquifyVars()
         p2explicator = P2Explicate(varalloc)
-        p2heap = P2Heapify()
+        #p2heap = P2Heapify()
         p2closure = P2ClosureConversion(p2explicator, varalloc)
         p2flatten = P2Flattener(varalloc)
         p2insselector = P2InstructionSelector(varalloc)

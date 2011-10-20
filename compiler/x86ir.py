@@ -125,6 +125,11 @@ class Var(Node):
         self.spillable = spillable
         self.storage = None   # one of Register() or StackSlot()
     def __str__(self):
+        if self.storage is not None:
+            if isinstance(self.storage, (Register,StackSlot)):
+                return str(self.storage)
+            else:
+                assert(False)
         return "Var('%s')" % (self.name)
     def __repr__(self):
         return self.__str__()
@@ -325,20 +330,26 @@ class x86If(Node):
         return (self.test, self.then, self.else_)
 
 class x86Function(Node):
-    def __init__(self, name, argnames, code, lineno=None):
+    def __init__(self, name, argnames, statements, lineno=None):
         self.name = name
         self.argnames = argnames
-        self.code = code
+        self.statements = statements
         self.lineno = lineno
     def __str__(self):
-        return "x86Function_%s([%s])" % (self.name,",".join([str(x) for x in self.code]))
+        return "x86Function(%s, [%s])" % (self.name,",".join([str(x) for x in self.argnames]))
     def __repr__(self):
         return self.__str__()
     def getChildren(self):
         l=[self.name]
         l.extend(self.argnames)
-        l.extend(flatten(self.code))
+        l.extend(flatten(self.statements))
         return tuple(l)
+    def instructions(self):
+        instructions=[]
+        for statement in self.statements:
+            for instr in statement.instructions:
+                instructions.append(instr)
+        return instructions
 
 class CallAddress(Instruction):
     def __init__(self, address):
