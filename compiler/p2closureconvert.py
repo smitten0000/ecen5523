@@ -28,9 +28,9 @@ class P2ClosureConversion(object):
 
     def transform(self, node, *args, **kwargs):
         self.log.info ('Starting closure conversion')
-        ret = self.visit(node)
+        main = self.visit(node)
         self.log.info ('Finished closure conversion')
-        return [ret] + self.functions
+        return [main] + self.functions
 
     def visit(self, node, *args, **kwargs):
         self.log.debug(node)
@@ -45,7 +45,7 @@ class P2ClosureConversion(object):
         return meth(node, *args, **kwargs)
     
     def visit_Module(self,node, *args, **kwargs):
-        return self.visit(node.node)
+        return Module(None, self.visit(node.node), None)
     def visit_Stmt(self,node, *args, **kwargs):
         visited = [self.visit(x) for x in node.nodes]
         self.log.debug('Visited and produced %s'%visited)
@@ -112,7 +112,7 @@ class P2ClosureConversion(object):
         self.functions.append(func)
 
         fvs = self.explicate.explicate(List(()))
-        return InjectFrom('big', CallFunc('create_closure', [Name(name), fvs], None, None))
+        return InjectFrom('big', CallFunc(Name('create_closure'), [Const(name), fvs], None, None))
 
         #self.log.debug(node)
         #fvs = self.freevars.visit(node) - node.argnames
@@ -131,8 +131,8 @@ class P2ClosureConversion(object):
                 closurevar, 
                 node.node, 
                 CallFuncIndirect(
-                  CallFunc('get_fun_ptr',[closurevar]),
-                  [CallFunc('get_free_vars',[closurevar])] + node.args
+                  CallFunc(Name('get_fun_ptr'),[closurevar]),
+                  [CallFunc(Name('get_free_vars'),[closurevar])] + node.args
                 )
               )
         return ret

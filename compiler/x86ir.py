@@ -323,3 +323,43 @@ class x86If(Node):
         return self.__str__()
     def getChildren(self):
         return (self.test, self.then, self.else_)
+
+class x86Function(Node):
+    def __init__(self, name, argnames, code, lineno=None):
+        self.name = name
+        self.argnames = argnames
+        self.code = code
+        self.lineno = lineno
+    def __str__(self):
+        return "x86Function_%s([%s])" % (self.name,",".join([str(x) for x in self.code]))
+    def __repr__(self):
+        return self.__str__()
+    def getChildren(self):
+        l=[self.name]
+        l.extend(self.argnames)
+        l.extend(flatten(self.code))
+        return tuple(l)
+
+class CallAddress(Instruction):
+    def __init__(self, address):
+        self.address = address
+    def __str__(self):
+        return "CallAddress(%s)" % (self.address)
+    def __repr__(self):
+        return self.__str__()
+    def writes(self):
+        return []
+    def reads(self):
+        return [self.address]
+
+class Ret(Instruction):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return "Ret(%s)" % (self.value)
+    def __repr__(self):
+        return self.__str__()
+    def writes(self):
+        return [Register('eax')]
+    def reads(self):
+        return [self.value]

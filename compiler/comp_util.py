@@ -131,7 +131,7 @@ def pretty(node):
         return '%s = %s' % (pretty(node.nodes[0]), pretty(node.expr))
     elif isinstance(node, Discard):
         pass
-    elif isinstance(node, CallFunc):
+    elif isinstance(node, (CallFunc,CallFuncIndirect)):
         if node.args is not None and len(node.args) > 0:
             return '%s(%s)' % (pretty(node.node), node.args)
         else:
@@ -162,6 +162,10 @@ def pretty(node):
         return 'And(%s,%s)' % (pretty(node.nodes[0]), pretty(node.nodes[1]))
     elif isinstance(node, Compare):
         return 'Compare(%s, %s, %s)' % (node.expr, node.ops[0][0], node.ops[0][1])
+    elif isinstance(node, Function):
+        return 'Function_%s(%s)' % (node.name, ",".join(x for x in node.argnames))
+    elif isinstance(node, Return):
+        return 'Return(%s)' % (node.value)
     else:
         raise Exception('Unknown node: %s: %s' % (node.__class__, node))
 

@@ -3,10 +3,13 @@
 from comp_util import *
 from x86ir import *
 
+import logging
+
 # Concept borrowed from http://peter-hoffmann.com/2010/extrinsic-visitor-pattern-python-inheritance.html
 class P0InstructionSelector(object):
     def __init__(self, varalloc):
         self.varalloc = varalloc
+        self.log = logging.getLogger('compiler.insselect')
 
     def visit(self, node, *args, **kwargs):
         meth = None
@@ -20,7 +23,18 @@ class P0InstructionSelector(object):
         return Program(self.visit(node.node))
 
     def visit_Stmt(self, node, *args, **kwargs):
-        return [Statement(self.visit(x),pretty(x)) for x in node.nodes]
+        stmtlist=[]
+        for x in node.nodes:
+            self.log.debug('x=%s' % x)
+            instrlist = self.visit(x)
+            self.log.debug('instrlist=%s' % instrlist)
+            source = pretty(x)
+            self.log.debug('source=%s' % source)
+            stmtlist.append(Statement(instrlist,source))
+        return stmtlist
+#        ret = [Statement(self.visit(x),pretty(x)) for x in node.nodes]
+#        self.log.debug(ret)
+#        return ret
 
     def visit_Assign(self, node, *args, **kwargs):
         assname = node.nodes[0]
