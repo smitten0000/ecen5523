@@ -9,7 +9,13 @@ class P2Generator(P1Generator):
         return '\tcall *%s' %  self.visit(node.address)    
 
     def visit_Ret(self, node, *args, **kwargs):
-        return '\tmovl %s,%%eax\n\tleave\n\tret' %  self.visit(node.value)    
+        return '''
+\tpopl %%ebx\n
+\tpopl %%edi\n
+\tpopl %%esi\n
+\tmovl %s,%%eax\n
+\tleave\n\tret
+''' %  self.visit(node.value)    
 
     def visit_x86Function(self, node, *args, **kwargs):
         function = "\n".join([self.visit(x) for x in node.statements])
@@ -18,12 +24,18 @@ class P2Generator(P1Generator):
 \tpushl %%ebp
 \tmovl %%esp, %%ebp
 \tsubl $%s,%%esp # make stack space for variables
+\tpushl %%esi
+\tpushl %%edi
+\tpushl %%ebx
 
 %s
 \tmovl $0, %%eax # put return value in eax
 \tleave
 \tret
 """ % (node.name, self.get_stacksize(), function)
+
+    def visit_StackSlot(self, node, *args, **kwargs):
+        return '%s(%%ebp)' % (node.slot * -4)
 
     
 if __name__ == "__main__":

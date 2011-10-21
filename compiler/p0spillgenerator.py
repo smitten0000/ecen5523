@@ -4,11 +4,11 @@ from comp_util import *
 from x86ir import *
 import logging
 
-logger = logging.getLogger(__name__)
 
 class P0SpillGenerator:
     def __init__(self, varalloc):
         self.varalloc = varalloc
+        self.log = logging.getLogger('compiler.spill')
 
     def generate_spill(self, program):
         """ Returns a tuple; the first element is a boolean indicating whether or not a
@@ -55,9 +55,9 @@ class P0SpillGenerator:
             assert(src.storage is not None)
             assert(dst.storage is not None)
             if isinstance(src.storage, StackSlot) and isinstance(dst.storage, StackSlot):
-                logger.debug('Detected spill: %s' % node)
+                self.log.debug('Detected spill: %s' % node)
                 var = Var(self.varalloc.get_next_var(),False)  # 2nd arg False = unspillable
-                logger.debug('Introducing variable: %s' % var)
+                self.log.debug('Introducing variable: %s' % var)
                 # return true for 1st element in tuple, to indicate a spill has happened.
                 return (True, [Movl(src, var), Movl(var, dst)])
         return (False, [Movl(src,dst)])
@@ -73,9 +73,9 @@ class P0SpillGenerator:
             assert(src.storage is not None)
             assert(dst.storage is not None)
             if isinstance(src.storage, StackSlot) and isinstance(dst.storage, StackSlot):
-                logger.debug('Detected spill: %s' % node)
+                self.log.debug('Detected spill: %s' % node)
                 var = Var(self.varalloc.get_next_var(),False) 
-                logger.debug('Introducing variable: %s' % var)
+                self.log.debug('Introducing variable: %s' % var)
                 return (True, [Movl(dst, var), Addl(src, var), Movl(var, dst)])
         return (False, [Addl(src,dst)])
 

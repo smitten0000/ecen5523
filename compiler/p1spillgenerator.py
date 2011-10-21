@@ -5,9 +5,6 @@ from x86ir import *
 from p0spillgenerator import P0SpillGenerator
 import logging
 
-logger = logging.getLogger(__name__)
-
-
 class P1SpillGenerator(P0SpillGenerator):
     
     def __init__(self, varalloc):
@@ -37,9 +34,9 @@ class P1SpillGenerator(P0SpillGenerator):
             assert(src.storage is not None)
             assert(dst.storage is not None)
             if isinstance(src.storage, StackSlot) and isinstance(dst.storage, StackSlot):
-                logger.debug('Detected spill: %s' % node)
+                self.log.debug('Detected spill: %s' % node)
                 var = Var(self.varalloc.get_next_var(),False) 
-                logger.debug('Introducing variable: %s' % var)
+                self.log.debug('Introducing variable: %s' % var)
                 return (True, [Movl(dst, var), Cmp(src, var)])
         return (False, [Cmp(src, dst)])
 
@@ -63,9 +60,9 @@ class P1SpillGenerator(P0SpillGenerator):
             assert(src.storage is not None)
             assert(dst.storage is not None)
             if isinstance(src.storage, StackSlot) and isinstance(dst.storage, StackSlot):
-                logger.debug('Detected spill: %s' % node)
+                self.log.debug('Detected spill: %s' % node)
                 var = Var(self.varalloc.get_next_var(),False) 
-                logger.debug('Introducing variable: %s' % var)
+                self.log.debug('Introducing variable: %s' % var)
                 return (True, [Movl(dst, var), BitwiseAnd(src, var), Movl(var, dst)])
         return (False, [BitwiseAnd(src, dst)])
 
@@ -77,9 +74,9 @@ class P1SpillGenerator(P0SpillGenerator):
             assert(src.storage is not None)
             assert(dst.storage is not None)
             if isinstance(src.storage, StackSlot) and isinstance(dst.storage, StackSlot):
-                logger.debug('Detected spill: %s' % node)
+                self.log.debug('Detected spill: %s' % node)
                 var = Var(self.varalloc.get_next_var(),False) 
-                logger.debug('Introducing variable: %s' % var)
+                self.log.debug('Introducing variable: %s' % var)
                 return (True, [Movl(dst, var), BitwiseOr(src, var), Movl(var, dst)])
         return (False, [BitwiseOr(src, dst)])
 
@@ -91,9 +88,9 @@ class P1SpillGenerator(P0SpillGenerator):
             assert(src.storage is not None)
             assert(dst.storage is not None)
             if isinstance(src.storage, StackSlot) and isinstance(dst.storage, StackSlot):
-                logger.debug('Detected spill: %s' % node)
+                self.log.debug('Detected spill: %s' % node)
                 var = Var(self.varalloc.get_next_var(),False) 
-                logger.debug('Introducing variable: %s' % var)
+                self.log.debug('Introducing variable: %s' % var)
                 return (True, [Movl(dst, var), BitShift(src, var), Movl(var, dst)])
         return (False, [BitShift(src, dst, node.dir)])
 

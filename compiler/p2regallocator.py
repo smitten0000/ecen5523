@@ -47,6 +47,9 @@ class P2RegAllocator(P1RegAllocator):
     def visit_x86Function(self, node, *args, **kwargs):
         return x86Function(node.name, node.argnames, [self.visit(x) for x in node.statements], node.lineno)
 
+    def visit_StackSlot(self, node, *args, **kwargs):
+        return node
+
 
 if __name__ == "__main__":
     import sys, compiler

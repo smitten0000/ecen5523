@@ -227,6 +227,45 @@ def free_vars(n):
     else:
         raise Exception('Unhandled expression: "%s"' % n)
 
+def getLocalAssigns(n):
+    """
+    Returns the set of variables that are assigned to within the current scope,
+    ignoring assignments in nested scopes (functions).
+    """
+    if isinstance(n, Module):
+        return getLocalAssigns(n.node)
+    elif isinstance(n, Stmt):
+        assigns = [getLocalAssigns(x) for x in n.nodes]
+        return reduce(lambda x,y: x|y, assigns, set([]))
+    elif isinstance(n, Printnl):
+        return set([])
+    elif isinstance(n, Assign):
+        if isinstance(n.nodes[0], Subscript):
+            # assigning to a subscript of a variable does not constitute
+            # assigning to the variable itself.  Return empty set.
+            return set([])
+        elif isinstance(n.nodes[0], AssName):
+            return set([n.nodes[0].name])
+        else:
+            raise Exception('Unhandled Assign case: %s' % n.nodes[0])
+    elif isinstance(n, Discard):
+        # there shouldn't ever be a case where there will be an assignment in a Discard
+        # since a Discard is, by definition, a statement that produced no assignments
+        return set([])
+    elif isinstance(n, Return):
+        return set([])
+    elif isinstance(n, Function):
+        # a function definition is equivalent to an assignment to a 
+        # variable with the same name as the function
+        # No need to recurse into the Function since the intent of the function
+        # is to only find assigments for the local scope
+        return set([n.name])
+    elif isinstance(n, (Add,UnarySub,CallFunc,Const,Name,Or,And,IfExp,List,Dict,Compare,Not,Subscript,Lambda)):
+        # these are all expressions, so no assignments
+        return set([])
+    else:
+        raise Exception('Unhandled expression: "%s"' % n)
+
 class CallFuncIndirect(Node):
     def __init__(self, node, args, star_args = None, dstar_args = None, lineno=None):
         self.node = node

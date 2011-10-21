@@ -1,4 +1,5 @@
 from compiler.ast import *
+from comp_util import *
 
 import logging, logging.config
 
@@ -8,46 +9,6 @@ class P2UniquifyVars:
         self.log = logging.getLogger('compiler.uniquify')
         self.vardict = {}
         self.varcounter = {}
-
-    def getLocalAssigns(self, n):
-        """
-        Returns the set of variables that are assigned to within the current scope,
-        ignoring assignments in nested scopes (functions).
-        """
-        if isinstance(n, Module):
-            return self.getLocalAssigns(n.node)
-        elif isinstance(n, Stmt):
-            assigns = [self.getLocalAssigns(x) for x in n.nodes]
-            return reduce(lambda x,y: x|y, assigns, set([]))
-        elif isinstance(n, Printnl):
-            return set([])
-        elif isinstance(n, Assign):
-            if isinstance(n.nodes[0], Subscript):
-                # assigning to a subscript of a variable does not constitute
-                # assigning to the variable itself.  Return empty set.
-                return set([])
-            elif isinstance(n.nodes[0], AssName):
-                return set([n.nodes[0].name])
-            else:
-                raise Exception('Unhandled Assign case: %s' % n.nodes[0])
-        elif isinstance(n, Discard):
-            # there shouldn't ever be a case where there will be an assignment in a Discard
-            # since a Discard is, by definition, a statement that produced no assignments
-            return set([])
-        elif isinstance(n, Return):
-            return set([])
-        elif isinstance(n, Function):
-            # a function definition is equivalent to an assignment to a 
-            # variable with the same name as the function
-            # No need to recurse into the Function since the intent of the function
-            # is to only find assigments for the local scope
-            return set([n.name])
-        elif isinstance(n, (Add,UnarySub,CallFunc,Const,Name,Or,And,IfExp,List,Dict,Compare,Not,Subscript,Lambda)):
-            # these are all expressions, so no assignments
-            return set([])
-        else:
-            raise Exception('Unhandled expression: "%s"' % n)
-
 
     def assignVar(self, varname):
         if varname not in self.vardict:
@@ -87,7 +48,7 @@ class P2UniquifyVars:
 
     def visit_Module(self, node):
         # figure out the set of variables that are assigned to in this scope.
-        localvars = self.getLocalAssigns(node)
+        localvars = getLocalAssigns(node)
         # Create an assignment for each of these variables
         for var in localvars:
             self.assignVar(var)
@@ -159,7 +120,7 @@ class P2UniquifyVars:
         # the function name gets this value, which is incorrect.
         funcname = self.getCurrent(node.name)
         # figure out the set of variables that are assigned to in this scope.
-        localvars = self.getLocalAssigns(node.code)
+        localvars = getLocalAssigns(node.code)
         # add the parameters to the Function to this set
         localvars = localvars | set(node.argnames)
         # Create an assignment for each of these variables
@@ -176,7 +137,7 @@ class P2UniquifyVars:
 
     def visit_Lambda(self, node):
         # figure out the set of variables that are assigned to in this scope.
-        localvars = self.getLocalAssigns(node.code)
+        localvars = getLocalAssigns(node.code)
         # add the parameters to the Lambda to this set
         localvars = localvars | set(node.argnames)
         # Create an assignment for each of these variables
@@ -210,7 +171,6 @@ class P2UniquifyVars:
 if __name__ == "__main__":
     import sys, compiler
     import logging.config
-    from comp_util import *
     if len(sys.argv) < 2:
         sys.exit(1)
     # configure logging 

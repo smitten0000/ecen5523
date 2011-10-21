@@ -30,7 +30,16 @@ class P2InstructionSelector(P1InstructionSelector):
         return meth(node, *args, **kwargs)
 
     def visit_Function(self, node, *args, **kwargs):
-        return x86Function(node.name, node.argnames, self.visit(node.code), node.lineno)
+        # Have to move the parameters into local variables 
+        instructions = []
+        i = -3
+        for arg in node.argnames:
+            #varname = self.varalloc.get_next_var()
+            #var = Var(varname,True,storage=StackSlot(i))
+            instructions.append(Movl(StackSlot(i), Var(arg)))
+            i = i - 1
+        statements = [Statement(instructions,'param inits')] + self.visit(node.code)
+        return x86Function(node.name, node.argnames, statements, node.lineno)
 
     def visit_Return(self, node, *args, **kwargs):
         retvar, stmtlist = self.visit(node.value)
