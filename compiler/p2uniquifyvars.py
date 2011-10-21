@@ -113,6 +113,8 @@ class P2UniquifyVars:
         return UnarySub(self.visit(node.expr))
 
     def visit_CallFunc(self, node):
+        if node.node.name == 'input':
+            return node
         args = [self.visit(x) for x in node.args]
         return CallFunc(self.visit(node.node), args) 
 

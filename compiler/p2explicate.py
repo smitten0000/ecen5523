@@ -16,10 +16,11 @@ class P2Explicate(P1Explicate):
         #Lamba: argnames, defaults, flags, code
         #Assign([AssName(retvar,'OP_ASSIGN')], CallFunc(Name('set_subscript'),[expr,subexpr,valueexpr]))
         return Assign([AssName(node.name, 'OP_ASSIGN')], Lambda(node.argnames, node.defaults, node.flags, self.visit(node.code), node.name))
+
     def visit_CallFunc(self, node, *args, **kwargs):
         p1expl = P1Explicate.visit_CallFunc(self, node, *args, **kwargs)
         # convert the remaining CallFuncs to indirect since they are from a def or a lambda
-        if node.node.name == 'input':
+        if node.node.name == 'input_int':
             return p1expl
         #CallFunc and CallFuncIndirect: node, args, star_args = None, dstar_args = None, lineno=None
         # def f(x): x
@@ -29,10 +30,12 @@ class P2Explicate(P1Explicate):
         # all arguments should already be explicated at this point.
         return CallFuncIndirect(p1expl.node, p1expl.args, p1expl.star_args, p1expl.dstar_args, p1expl.lineno)
         
-        
     def visit_Lambda(self, node, *args, **kwargs):
         #Lamba: argnames, defaults, flags, code
         return Lambda(node.argnames, node.defaults, node.flags, Return(self.visit(node.code)), 'lambda')
+
+    def visit_Return(self, node, *args, **kwargs):
+        return Return(self.visit(node.value))
 
 
 if __name__ == "__main__":
