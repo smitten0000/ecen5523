@@ -20,7 +20,7 @@ class P2Explicate(P1Explicate):
     def visit_CallFunc(self, node, *args, **kwargs):
         p1expl = P1Explicate.visit_CallFunc(self, node, *args, **kwargs)
         # convert the remaining CallFuncs to indirect since they are from a def or a lambda
-        if node.node.name == 'input_int':
+        if isinstance(node.node, Name) and node.node.name == 'input_int':
             return p1expl
         #CallFunc and CallFuncIndirect: node, args, star_args = None, dstar_args = None, lineno=None
         # def f(x): x

@@ -71,14 +71,12 @@ class P2FreeVars(object):
         # list of tuples
         st_args = [self.visit(x) for x in node.nodes]
         # list of sets
-        free_vars = [free for (bounds, free) in st_args]
-        bound_vars = [bounds for (bounds, free) in st_args]
-        self.log.debug(free_vars)
-        self.log.debug(squash(free_vars))
-        free_vars = squash(free_vars)
-        bound_vars = squash(bound_vars)  
-        self.log.debug('Statement %s freeVars: %s'%(node, free_vars))
-        return (bound_vars, free_vars)
+        fvars = [free for (bounds, free) in st_args]
+        bvars = [bounds for (bounds, free) in st_args]
+        f = squash(fvars)
+        b = squash(bvars)  
+        self.log.info('Statement %s freeVars: %s'%(node, f))
+        return (b, f)
 
     def visit_IfExp(self, node, *args, **kwargs):
         test_b, test_f = self.visit(node.test)
@@ -98,8 +96,8 @@ class P2FreeVars(object):
         fv_key_args = [self.visit(e[0]) for e in node.items]
         fv_val_args = [self.visit(e[1]) for e in node.items]
         # list of sets
-        free_key = [x for (x,y) in fv_key_args]
-        free_val = [x for (x,y) in fv_val_args]
+        free_key = [free for (bound,free) in fv_key_args]
+        free_val = [free for (bound,free) in fv_val_args]
         return (set([]), squash(free_key) | squash(free_val))
 
     def visit_Compare(self, node, *args, **kwargs):
@@ -173,15 +171,16 @@ class P2FreeVars(object):
         # list of tuples
         fv_args = [self.visit(e) for e in node.args]
         # list of sets
-        free = [x for (x,y) in fv_args]
+        free = [f for (b,f) in fv_args]
         return (set([]),squash(free)) 
     
     def visit_CallFuncIndirect(self,node, *args, **kwargs):
         # list of tuples
         fv_args = [self.visit(e) for e in node.args]
         # list of sets
-        free = [x for (x,y) in fv_args]
+        free = [f for (b,f) in fv_args]
         expr_b, expr_f = self.visit(node.node)
+        self.log.info('visit_CallFuncIndirect: Free variables: %s', expr_f | squash(free))
         return (set([]),expr_f | squash(free)) 
     
     def visit_Lambda(self, node, *args, **kwargs):
@@ -209,7 +208,7 @@ class P2FreeVars(object):
     def visit_Let(self, node, *args, **kwargs):
         rhs_b, rhs_f = self.visit(node.rhs)
         body_b, body_f = self.visit(node.body)
-        return (set([node.var]), (body_f | rhs_f) - set([node.var]))
+        return (set([node.var.name]), (body_f | rhs_f) - set([node.var.name]))
 
     
 if __name__ == "__main__":

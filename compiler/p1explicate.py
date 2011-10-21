@@ -216,7 +216,7 @@ class P1Explicate(object):
         # CallFunc should always return a pyobj.  This is the case for most of the
         # functions in runtime.c, but for 'input', this isn't the case.  
         # Instead, we need to call 'input_int' 
-        if node.node.name == 'input':
+        if isinstance(node.node, Name) and node.node.name == 'input':
             node.node.name = 'input_int'
         return CallFunc(self.visit(node.node), expressions, None, node.lineno)
 

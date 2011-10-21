@@ -60,6 +60,15 @@ class P0SpillGenerator:
                 self.log.debug('Introducing variable: %s' % var)
                 # return true for 1st element in tuple, to indicate a spill has happened.
                 return (True, [Movl(src, var), Movl(var, dst)])
+        # the following is a special case for Function prologues
+        elif isinstance(src, StackSlot) and isinstance(dst, Var):
+            assert(dst.storage is not None)
+            if isinstance(dst.storage, StackSlot):
+                self.log.debug('Detected spill: %s' % node)
+                var = Var(self.varalloc.get_next_var(),False)  # 2nd arg False = unspillable
+                self.log.debug('Introducing variable: %s' % var)
+                # return true for 1st element in tuple, to indicate a spill has happened.
+                return (True, [Movl(src, var), Movl(var, dst)])
         return (False, [Movl(src,dst)])
         
     def visit_Pushl(self, node, *args, **kwargs):

@@ -144,10 +144,10 @@ class P2ClosureConversion(object):
         closurevar = Name(self.varalloc.get_next_var())
         ret = Let(
                 closurevar, 
-                node.node, 
+                self.visit(node.node),
                 CallFuncIndirect(
                   CallFunc(Name('get_fun_ptr'),[closurevar]),
-                  [CallFunc(Name('get_free_vars'),[closurevar])] + node.args
+                  [CallFunc(Name('get_free_vars'),[closurevar])] + [self.visit(x) for x in node.args]
                 )
               )
         return ret
