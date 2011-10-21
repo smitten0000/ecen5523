@@ -25,7 +25,7 @@ class P2SpillGenerator(P1SpillGenerator):
             spill, stmt = self.visit(x)
             stmts.append(stmt)
             if spill: spilled = True
-        return (spilled, Program(stmts))
+        return (spilled, x86Function(node.name, node.argnames, stmts, node.lineno))
 
 
 if __name__ == "__main__":
