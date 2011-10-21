@@ -32,7 +32,7 @@ class P2InstructionSelector(P1InstructionSelector):
     def visit_Function(self, node, *args, **kwargs):
         # Have to move the parameters into local variables 
         instructions = []
-        i = -3
+        i = -2
         for arg in node.argnames:
             #varname = self.varalloc.get_next_var()
             #var = Var(varname,True,storage=StackSlot(i))

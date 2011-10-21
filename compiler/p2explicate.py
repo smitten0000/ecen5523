@@ -32,7 +32,7 @@ class P2Explicate(P1Explicate):
         
     def visit_Lambda(self, node, *args, **kwargs):
         #Lamba: argnames, defaults, flags, code
-        return Lambda(node.argnames, node.defaults, node.flags, Return(self.visit(node.code)), 'lambda')
+        return Lambda(node.argnames, node.defaults, node.flags, Stmt([Return(self.visit(node.code))]), 'lambda')
 
     def visit_Return(self, node, *args, **kwargs):
         return Return(self.visit(node.value))

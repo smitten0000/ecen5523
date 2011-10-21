@@ -100,17 +100,33 @@ class P2ClosureConversion(object):
         name = self.get_next_name(node.lineno)
         self.log.debug('Creating function definition for %s' % name)
         
+        # Add the function definition to the functions
+        # Function(decorators, name, argnames, defaults, flags, doc, code, lineno=None)
+
+        # get free variables in Lambda; returns a set
+        bound, free = self.freevars.visit(node)
+        fvars = list(free)
+
+        # add assignments
+        i = 0
+        assigns=[]
+        for fvar in fvars:
+            subscript = self.explicate.explicate(Subscript(Name('fvs'),'OP_APPLY',[Const(i)]))
+            self.log.debug('visit_Lambda: Subscript = %s' % subscript)
+            assigns.append(Assign([AssName(fvar,'OP_ASSIGN')],subscript))
+            i = i + 1
+
         # walk the body to perform closure conversion on any sub-lambdas
         # this could generate new closures as well, which get put in to the
         # global definition area
-        newcode = self.visit(node.code)
+        newcode = self.visit(Stmt(assigns + node.code.nodes))
 
-        # Add the function definition to the functions
-        # Function(decorators, name, argnames, defaults, flags, doc, code, lineno=None)
-        func = Function(None, name, node.argnames, [], 0, None, newcode, None)
+        func = Function(None, name, ['fvs'] + node.argnames, [], 0, None, newcode, None)
         self.functions.append(func)
-
-        fvs = self.explicate.explicate(List(()))
+        var_refs = []
+        
+        # remember to each free variable into our list
+        fvs = self.explicate.explicate(List([Name(fvar) for fvar in fvars]))
         return InjectFrom('big', CallFunc(Name('create_closure'), [Const(name), fvs], None, None))
 
         #self.log.debug(node)

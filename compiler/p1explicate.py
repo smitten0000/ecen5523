@@ -21,7 +21,7 @@ class InjectFrom(Node):
         self.typ = typ
         self.arg = arg
     def __str__(self):
-        return "InjectFrom('%s',%s)" % (self.typ, self.arg)
+        return "InjectFrom(%s,%s)" % (self.typ.__repr__(), self.arg)
     def __repr__(self):
         return self.__str__()
     def getChildren(self):
@@ -32,7 +32,7 @@ class ProjectTo(Node):
         self.typ = typ
         self.arg = arg
     def __str__(self):
-        return "ProjectTo('%s',%s)" % (self.typ, self.arg)
+        return "ProjectTo(%s,%s)" % (self.typ.__repr__(), self.arg)
     def __repr__(self):
         return self.__str__()
     def getChildren(self):
@@ -44,7 +44,7 @@ class Let(Node):
         self.rhs = rhs
         self.body = body
     def __str__(self):
-        return "Let('%s',%s,%s)" % (self.var, self.rhs, self.body)
+        return "Let(%s,%s,%s)" % (self.var, self.rhs, self.body)
     def __repr__(self):
         return self.__str__()
     def getChildren(self):

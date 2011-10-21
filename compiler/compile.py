@@ -28,8 +28,9 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         sys.exit(1)
 
-    # configure logging 
-    logging.config.fileConfig('logging.cfg')
+#    # configure logging 
+#    logging.config.fileConfig('logging.cfg')
+    logging.basicConfig(level=logging.ERROR)
     sys.setrecursionlimit(10000)
 
     testcases = sys.argv[1:]
