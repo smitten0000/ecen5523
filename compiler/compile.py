@@ -10,13 +10,15 @@ import logging.config
 import compiler
 
 from p0parser import P0Parser
-from p0stackallocator import P0StackAllocator
-from p1stackallocator import P1StackAllocator
+from p2uniquifyvars import P2UniquifyVars
+from p2explicate import P2Explicate
+from p2heapify import P2Heapify
+from p2closureconvert import P2ClosureConversion
 from p2flattener import P2Flattener
 from p2insselector import P2InstructionSelector
-from p1regallocator import P1RegAllocator
-from p1ifinsselector import P1IfInstructionSelector
-from p1generator import P1Generator
+from p2regallocator import P2RegAllocator
+from p2ifinsselector import P2IfInstructionSelector
+from p2generator import P2Generator
 from comp_util import *
 import time
 
@@ -28,42 +30,36 @@ if __name__ == "__main__":
 
     # configure logging 
     logging.config.fileConfig('logging.cfg')
-
     sys.setrecursionlimit(10000)
 
     testcases = sys.argv[1:]
     for testcase in testcases:
-        #parser = P0Parser()
-        #parser.build()
-        #ast = parser.parseFile(testcase)
         logger.info("Working on test case '%s'" % testcase)
-        
-        ast = compiler.parseFile(testcase)
-        
+
+        # instantiate all classes needed for our pipeline
         varalloc = VariableAllocator()
-        explicator = P1Explicate(varalloc)
+        uniquify = P2UniquifyVars()
+        explicator = P2Explicate(varalloc)
+        closer = P2ClosureConversion(explicator, varalloc)
+        flattener = P2Flattener(varalloc)
+        instruction_selector = P2InstructionSelector(varalloc)
+        ifinsselector = P2IfInstructionSelector(varalloc,instruction_selector.labelalloc)
+        generator = P2Generator(False)
+
+        # send the AST through the pipeline
+        ast = compiler.parseFile(testcase)
+        ast = uniquify.transform(ast)
         ast = explicator.explicate(ast)
-        flattener = P1Flattener(varalloc)
-        stmtlist = flattener.flatten(ast)
-        #code = '%s' % stmtlist
-        #eval(compile(code,'test.txt','exec'))
-        instruction_selector = P1InstructionSelector(varalloc)
-        program = instruction_selector.visit(stmtlist)
-        #regallocator = P1RegAllocator(program)
-        #start = time.time()
-        #program = regallocator.substitute()
-        #end = time.time()
-        #logger.debug("P0RegAllocator.substitute() took %.02fs" % (end - start))
-        #stackallocator = P0StackAllocator(program)
-        #program = stackallocator.substitute()
-        #stackallocator = P1StackAllocator(program)
-        #program = stackallocator.substitute()
-        allocator = P1RegAllocator(program, varalloc)
-        program = allocator.substitute()
-        ifinsselector = P1IfInstructionSelector(varalloc,instruction_selector.labelalloc)
-        program = ifinsselector.visit(program)
-        generator = P1Generator(False)
-        output = generator.generate(program)
+        astlist = closer.transform(ast)
+        output = ''
+        for ast in astlist:
+            flatast = flattener.flatten(ast)
+            program = instruction_selector.visit(flatast)
+            #allocator = P1StackAllocator(program)
+            allocator = P2RegAllocator(program, varalloc)
+            program = allocator.substitute()
+            program = ifinsselector.visit(program)
+            output = output + generator.generate(program)
         outputfile = '%s.s' % testcase[:testcase.rfind('.')]
         f = open(outputfile, 'w')
         print >> f, output
