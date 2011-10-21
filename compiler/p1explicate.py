@@ -146,7 +146,7 @@ class P1Explicate(object):
         return ret
 
     def visit_Dict(self, node):
-        pyobj_dict = self.visit(InjectFrom('big',CallFunc(Name('create_dict'),[])))
+        pyobj_dict = InjectFrom('big',CallFunc(Name('create_dict'),[]))
         # allocate a temp var 
         varname = Name(self.varalloc.get_next_var())
         # we are going to create a tree of Let nodes to create a single expression
