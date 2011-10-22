@@ -41,13 +41,15 @@ class P2FreeVars(object):
             return set([])
         elif isinstance(n, Return):
             return set([])
+        elif isinstance(n, Function):
+            raise Exception('Functions should have been removed in explicate.')
         elif isinstance(n, Lambda):
             # a function definition is equivalent to an assignment to a 
             # variable with the same name as the function
             # No need to recurse into the Function since the intent of the function
             # is to only find assigments for the local scope
             return set([n.name])
-        elif isinstance(n, (Add,UnarySub,CallFunc,Const,Name,Or,And,IfExp,List,Dict,Compare,Not,Subscript,Lambda)):
+        elif isinstance(n, (Add,UnarySub,CallFunc,Const,Name,Or,And,IfExp,List,Dict,Compare,Not,Subscript)):
             # these are all expressions, so no assignments
             return set([])
         else:
@@ -65,17 +67,23 @@ class P2FreeVars(object):
         return meth(node, *args, **kwargs)
     
     def visit_Module(self,node, *args, **kwargs):
-        return (set([]),self.visit(node.node))
+        localassigns = self.getLocalAssigns(node.node)
+        bound, free = self.visit(node.node)
+        bound = localassigns.intersection(free)
+        free = free - bound
+        self.log.info('visit_Module: Module:          %s', node)
+        self.log.info('visit_Module: Free Variables:  %s', free)
+        self.log.info('visit_Module: Bound Variables: %s', bound)
+        return (bound,free)
     
     def visit_Stmt(self,node, *args, **kwargs):
         # list of tuples
         st_args = [self.visit(x) for x in node.nodes]
         # list of sets
-        fvars = [free for (bounds, free) in st_args]
-        bvars = [bounds for (bounds, free) in st_args]
-        f = squash(fvars)
-        b = squash(bvars)  
-        self.log.info('Statement %s freeVars: %s'%(node, f))
+        f = [free for (bounds, free) in st_args]
+        b = [bounds for (bounds, free) in st_args]
+        f = squash(f)
+        b = squash(b)  
         return (b, f)
 
     def visit_IfExp(self, node, *args, **kwargs):
@@ -184,17 +192,29 @@ class P2FreeVars(object):
         return (set([]),expr_f | squash(free)) 
     
     def visit_Lambda(self, node, *args, **kwargs):
-        self.log.debug('visit_Lambda: args: %s' % node.argnames)
         # this is the set of local assignments and parameters
         localassigns = self.getLocalAssigns(node.code) | set(node.argnames)
-        self.log.debug('visit_Lambda: Local assigns: %s'%localassigns)
         # bound, free variables in the children
-        self.log.debug("visit_Lambda: code: %s"%(node.code))
         bound, free = self.visit(node.code)
-        self.log.debug("visit_Lambda: bound %s, free: %s"%(bound, free))
-        free = free - localassigns
-        self.log.debug("visit_Lambda: free: %s"%(free))
-        return localassigns, free
+        # We say that a variable reference is bound with respect to a given expression
+        # or statement, let's call it P, if there is an function or lambda inside P
+        # that encloses the variable reference and that function or lambda has
+        # that variable as a parameter or local 
+        # translated --> bound is equivalent to the intersection between localassigns and free
+        bound = localassigns.intersection(free)
+        # We say that a variable is free with respect to an expression or 
+        # statement P if there is a reference to the variable inside P that 
+        # is not bound in P 
+        # translated --> free in P is equivalent to free in P's children minus (set difference)
+        #                the bound variables in P
+        free = free - bound
+        self.log.info('visit_Lambda: Module:          %s', node)
+        self.log.info('visit_Lambda: Free Variables:  %s', free)
+        self.log.info('visit_Lambda: Bound Variables: %s', bound)
+        # set some attributes on the node
+        node.free = free
+        node.bound = bound
+        return (bound, free)
 
     def visit_Printnl(self, node, *args, **kwargs):
         # list of sets

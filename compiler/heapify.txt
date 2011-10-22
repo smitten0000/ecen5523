@@ -1,0 +1,48 @@
+before heapify:
+===============
+f = lambda x: 
+    return y
+y=1
+print f(y)
+
+after heapify:
+===============
+y = [-1]
+f = lambda x:
+    return y[0]
+y[0] = 1
+print f(y[0])
+
+Steps:
+======
+  1. Determine free variables with respect to lambda 
+     -> y
+  2. Determine where y is locally bound 
+     -> main Module()
+  3. At beginning of scope where y is locally bound, allocate a list.  
+     -> First Statement in Module(Stmt([...])) is y=[-1]
+  4. Replace all variable accesses with a Subscript.
+     -> in lambda, return y becomes return y[0]
+     -> in main, print f(y) becomes print f(y[0])
+  5. Replace all variables assignments with a Subscript in Assign(...)
+
+
+Tricky Case:
+============
+f = lambda x:
+    return lambda: z
+    z = x
+a = f(1)
+print a()
+a = f(2)
+print a()
+
+============
+f = lambda x:
+    z = [0]
+    return lambda: z[0]
+    z[0] = x
+a = f(1)
+print a()
+a = f(2)
+print a()
