@@ -29,6 +29,7 @@ class P2Flattener(P1Flattener):
                 self.varalloc.add_var(x)
             return Function(node.decorators, node.name, node.argnames, node.defaults, node.flags, node.doc, code, node.lineno)
         elif isinstance(node, Return):
+            x = self.flatten(node.value)
             retvar, retstmtlist = self.flatten(node.value)
             return retstmtlist + [Return(retvar)]
         elif isinstance(node, CallFuncIndirect):
@@ -59,15 +60,15 @@ if __name__ == "__main__":
         p2unique = P2UniquifyVars()
         varalloc = VariableAllocator()
         p2explicator = P2Explicate(varalloc)
-        p2heap = P2Heapify()
+        p2heap = P2Heapify(p2explicator)
         p2closure = P2ClosureConversion(p2explicator, varalloc)
         p2flatten = P2Flattener(varalloc,True)
 
         ast = compiler.parseFile(testcase)
         unique = p2unique.transform(ast)        
         explicated = p2explicator.explicate(unique)
-        #heaped = p2heap.transform(explicated)
-        astlist = p2closure.transform(explicated)
+        heaped = p2heap.transform(explicated)
+        astlist = p2closure.transform(heaped)
         for ast in astlist:
             ast = p2flatten.flatten(ast)
             print ast

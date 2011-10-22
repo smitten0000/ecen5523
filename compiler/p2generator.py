@@ -10,11 +10,12 @@ class P2Generator(P1Generator):
 
     def visit_Ret(self, node, *args, **kwargs):
         return '''
-\tpopl %%ebx\n
-\tpopl %%edi\n
-\tpopl %%esi\n
-\tmovl %s,%%eax\n
-\tleave\n\tret
+\tpopl %%ebx
+\tpopl %%edi
+\tpopl %%esi
+\tmovl %s,%%eax
+\tleave
+\tret
 ''' %  self.visit(node.value)    
 
     def visit_x86Function(self, node, *args, **kwargs):
@@ -59,7 +60,7 @@ if __name__ == "__main__":
         varalloc = VariableAllocator()
         p2unique = P2UniquifyVars()
         p2explicator = P2Explicate(varalloc)
-        #p2heap = P2Heapify()
+        p2heap = P2Heapify(p2explicator)
         p2closure = P2ClosureConversion(p2explicator, varalloc)
         p2flatten = P2Flattener(varalloc)
         p2insselector = P2InstructionSelector(varalloc)
@@ -69,8 +70,8 @@ if __name__ == "__main__":
         ast = compiler.parseFile(testcase)
         unique = p2unique.transform(ast)        
         explicated = p2explicator.explicate(unique)
-        #heaped = p2heap.transform(explicated)
-        astlist = p2closure.transform(explicated)
+        heaped = p2heap.transform(explicated)
+        astlist = p2closure.transform(heaped)
         for ast in astlist:
             ast = p2flatten.flatten(ast)
             program = p2insselector.transform(ast)

@@ -165,14 +165,14 @@ if __name__ == "__main__":
         varalloc = VariableAllocator()
         p2unique = P2UniquifyVars()
         p2explicator = P2Explicate(varalloc)
-        p2heap = P2Heapify()
+        p2heap = P2Heapify(p2explicator)
         p2closure = P2ClosureConversion(p2explicator, varalloc)
 
         ast = compiler.parseFile(testcase)
         unique = p2unique.transform(ast)        
         explicated = p2explicator.explicate(unique)
-        #heaped = p2heap.transform(explicated)
-        astlist = p2closure.transform(explicated)
+        heaped = p2heap.transform(explicated)
+        astlist = p2closure.transform(heaped)
         for ast in astlist:
             print '\nFunction\n================='
             print prettyAST(ast)

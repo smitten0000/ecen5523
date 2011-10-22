@@ -41,6 +41,7 @@ if __name__ == "__main__":
         varalloc = VariableAllocator()
         uniquify = P2UniquifyVars()
         explicator = P2Explicate(varalloc)
+        heap = P2Heapify(explicator)
         closer = P2ClosureConversion(explicator, varalloc)
         flattener = P2Flattener(varalloc)
         instruction_selector = P2InstructionSelector(varalloc)
@@ -51,6 +52,7 @@ if __name__ == "__main__":
         ast = compiler.parseFile(testcase)
         ast = uniquify.transform(ast)
         ast = explicator.explicate(ast)
+        ast  = heap.transform(ast)
         astlist = closer.transform(ast)
         output = ''
         for ast in astlist:

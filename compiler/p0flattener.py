@@ -21,12 +21,19 @@ class P0Flattener:
         if isinstance(node, Module):
             return Module(None, self.flatten(node.node), None)
         elif isinstance(node, Stmt):
-            return Stmt(reduce(lambda x,y: x+y, [self.flatten(x) for x in node.nodes], []), None)
+            flat = [self.flatten(x) for x in node.nodes]
+            l=[]
+            for x in flat:
+                for y in x:
+                    self.log.debug('flatten_Stmt: %s', y)
+                l = l + x
+            return Stmt(reduce(lambda x,y: x+y, flat, []), None)
         elif isinstance(node, Printnl):
             if len(node.nodes) > 0:
                 var, stmtlist = self.flatten(node.nodes[0])
                 return stmtlist + [Printnl([var], node.dest)]
         elif isinstance(node, Assign):
+            self.log.debug('flatten_Assign: %s',node)
             if isinstance(node.nodes[0],Subscript):
                 self.varalloc.add_var(node.nodes[0].expr.name)
             else:

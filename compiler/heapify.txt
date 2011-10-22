@@ -29,20 +29,24 @@ Steps:
 
 Tricky Case:
 ============
-f = lambda x:
-    return lambda: z
+def f(x):
+    b = lambda: z
     z = x
+    return b
 a = f(1)
 print a()
 a = f(2)
 print a()
 
 ============
-f = lambda x:
+z = [0]
+def f(x):
     z = [0]
-    return lambda: z[0]
+    b = lambda: z[0]
     z[0] = x
+    return b
 a = f(1)
 print a()
 a = f(2)
 print a()
+a 

@@ -8,8 +8,9 @@ from p1explicate import P1Explicate
 
 
 class P2Explicate(P1Explicate):
-    def __init__(self, varalloc):
+    def __init__(self, varalloc, handleLambdas=True):
         P1Explicate.__init__(self, varalloc)
+        self.handleLambdas = handleLambdas
             
     def visit_Function(self, node, *args, **kwargs):
         #Function: decorators, name, argnames, defaults, flags, doc, code
@@ -31,8 +32,12 @@ class P2Explicate(P1Explicate):
         return CallFuncIndirect(p1expl.node, p1expl.args, p1expl.star_args, p1expl.dstar_args, p1expl.lineno)
         
     def visit_Lambda(self, node, *args, **kwargs):
-        #Lamba: argnames, defaults, flags, code
-        return Lambda(node.argnames, node.defaults, node.flags, Stmt([Return(self.visit(node.code))]), 'lambda')
+        if self.handleLambdas:
+            #Lamba: argnames, defaults, flags, code
+            return Lambda(node.argnames, node.defaults, node.flags, Stmt([Return(self.visit(node.code))]), 'lambda')
+        else:
+            return Lambda(node.argnames, node.defaults, node.flags, self.visit(node.code))
+        
 
     def visit_Return(self, node, *args, **kwargs):
         return Return(self.visit(node.value))

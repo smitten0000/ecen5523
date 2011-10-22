@@ -7,7 +7,6 @@ from p2uniquifyvars import P2UniquifyVars
 
 import logging
 
-squash = lambda fv_args: reduce(lambda a,b : a | b, fv_args, set([]))
 
 class P2FreeVars(object):
     '''Returns for each visited node return a set of variables not bound in that node'''

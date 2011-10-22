@@ -4,6 +4,8 @@ from compiler.ast import *
 import itertools,heapq
 from p1explicate import *
 
+squash = lambda fv_args: reduce(lambda a,b : a | b, fv_args, set([]))
+
 class VariableAllocator:
     """Provides context allocating variables by storing a set
     of currently used variables and the next variable number"""
