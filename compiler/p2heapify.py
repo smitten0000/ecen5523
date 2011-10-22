@@ -75,6 +75,7 @@ class P2Heapify(object):
         # we cannot blindly return the node itself, if there is no visit 
         # function for that type.  This is because the children of that node may need
         # to be recursed upon: ex.  Printnl(CallFuncIndirect(...))
+        self.log.debug('Visiting %s' % node.__class__)
         if not meth:
             raise Exception('Unknown node: %s method: %s' % (node.__class__, meth_name))
         return meth(node)
@@ -100,14 +101,21 @@ class P2Heapify(object):
 
     def visit_Assign(self, node):
         if isinstance(node.nodes[0], AssName) and node.nodes[0].name in self.heapvarset:
-            assign = Assign([Subscript(Name(node.nodes[0].name),'OP_APPLY',[Const(0)])], self.visit(node.expr))
-            assignexpl = self.explicate.explicate(assign)
-            self.log.debug('visit_Assign: %s', assignexpl)
-            return assignexpl
+            # XXX: this is wrong; can't explicate node.expr, since its already been explicated.
+            # end up getting nested InjectFrom(InjectFrom('int',Const(1))) for heapify.py test case
+            #assign = Assign([Subscript(Name(node.nodes[0].name),'OP_APPLY',[Const(0)])], self.visit(node.expr))
+            #assignexpl = self.explicate.explicate(assign)
+            #self.log.debug('visit_Assign: %s', assignexpl)
+            #return assignexpl
+            # resort to duplicating the logic of explication here.
+            expr = self.explicate.explicate(Name(node.nodes[0].name))
+            subexpr = self.explicate.explicate(Const(0))
+            valueexpr = self.visit(node.expr)
+            return Discard(CallFunc(Name('set_subscript'),[expr,subexpr,valueexpr]))
         elif isinstance(node.nodes[0], Subscript):
             raise Exception('wtf')
         else:
-            return node
+            return Assign(node.nodes, self.visit(node.expr))
 
     def visit_Discard(self, node):
         return Discard(self.visit(node.expr))
@@ -178,15 +186,39 @@ class P2Heapify(object):
         return Let(node.var, self.visit(node.rhs), self.visit(node.body))
 
     def visit_Lambda(self, node):
+        # First, get the variables to heapify and add them to the global set
         vars_to_heapify = self.getLambdaFreeVars(node.code) - node.free
         self.log.debug('visit_Lambda: (%-10.10s) Variables to Heapify: %s', node.lineno, vars_to_heapify)
         self.heapvarset = self.heapvarset | vars_to_heapify
-        heaplist = []
-        for fvar in vars_to_heapify:
-            listast = self.explicate.explicate(List([Const(-1)]))
-            heaplist.append(Assign([AssName(fvar,'OP_APPLY')],listast))
+        # Next, rename arguments in this Lambda that need to be heapified to new, unique argument names
+        args_to_heapify = [x for x in node.argnames if x in vars_to_heapify]
+        self.log.debug('visit_Lambda: (%-10.10s) Arguments to Heapify: %s', node.lineno, args_to_heapify)
+        argmap={}
+        for arg in args_to_heapify:
+            argmap[arg] = self.explicate.varalloc.get_next_var()
+        argnames = [argmap[arg] if arg in argmap else arg for arg in node.argnames]
+        self.log.debug('visit_Lambda: (%-10.10s) New Argument List: %s', node.lineno, argnames)
+        # Then, create our list of statements, paramAllocs, to heapify arguments 
+        paramAllocs = []
+        for arg in args_to_heapify:
+           listast = self.explicate.explicate(List([Const(-1)]))
+           paramAllocs.append(Assign([AssName(arg,'OP_APPLY')],listast))
+        # Now, create our list of statements, paramInits, which sets the first element of our heapified
+        # argument, to the corresponding renamed variable
+        paramInits = []
+        for arg in args_to_heapify:
+           paramInits.append(Discard(CallFunc(Name('set_subscript'),[Name(arg),InjectFrom('int',Const(0)),Name(argmap[arg])])))
+        # Finally, create our list of statements, localAllocs, to heapify local variables (that are not arguments)
+        locals_to_heapify = [x for x in vars_to_heapify if x not in node.argnames]
+        localAllocs = []
+        for local in locals_to_heapify:
+           listast = self.explicate.explicate(List([Const(-1)]))
+           paramAllocs.append(Assign([AssName(local,'OP_APPLY')],listast))
+        # Visit all the darling little children
         v = self.visit(node.code)
-        return Lambda(node.argnames, node.defaults, node.flags, Stmt(heaplist + v.nodes))
+        # Return our new lambda with the new set of argument names, and paramAllocs, paramInits, and localAllocs
+        # prepended to the list of statements.
+        return Lambda(argnames, node.defaults, node.flags, Stmt(paramAllocs + paramInits + localAllocs + v.nodes))
 
     def visit_CallFuncIndirect(self, node):
         return CallFuncIndirect(self.visit(node.node), [self.visit(x) for x in node.args])

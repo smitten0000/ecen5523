@@ -14,6 +14,8 @@ libruntime.a: $(OBJS)
 	gcc -c $<
 
 clean:
-	rm -f $(OBJS) libruntime.a *.pyc parser.out parsetab.py test/*.s test/*.c test/*.warn test/*.expected test/*.out alltests/*.warn alltests/*.out alltests/*.s our_tests/*.warn our_tests/*.s our_tests/*.warn our_tests/*.out our_tests/*.expected
-	find test -type f -perm 0755 -exec rm -f {} \;
-	find our_tests -type f -perm 0755 -exec rm -f {} \;
+	rm -f $(OBJS) libruntime.a *.pyc parser.out parsetab.py
+	for i in test alltests our_tests our_hw5_tests hw5_test ; do \
+		rm -f $$i/*.c $$i/*.s $$i/*.expected $$i/*.out $$i/*.warn ; \
+		find $$i -type f -perm 0755 -exec rm -f {} \; ; \
+	done
