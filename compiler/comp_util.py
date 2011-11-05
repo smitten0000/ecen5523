@@ -262,7 +262,7 @@ def getLocalAssigns(n):
         # No need to recurse into the Function since the intent of the function
         # is to only find assigments for the local scope
         return set([n.name])
-    elif isinstance(n, (Add,UnarySub,CallFunc,Const,Name,Or,And,IfExp,List,Dict,Compare,Not,Subscript,Lambda)):
+    elif isinstance(n, (Add,UnarySub,CallFunc,Const,Name,Or,And,IfExp,List,Dict,Compare,Not,Subscript,Lambda, While)):
         # these are all expressions, so no assignments
         return set([])
     else:

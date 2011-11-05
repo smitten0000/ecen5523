@@ -9,6 +9,9 @@ class P3UniquifyVars(P2UniquifyVars):
     def __init__(self):
         P2UniquifyVars.__init__(self)
 
+    def visit_While(self, node):
+        return While(self.visit(node.test), self.visit(node.body), None, node.lineno)
+
 
 if __name__ == "__main__":
     import sys, compiler
