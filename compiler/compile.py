@@ -10,15 +10,15 @@ import logging.config
 import compiler
 
 from p0parser import P0Parser
-from p2uniquifyvars import P2UniquifyVars
-from p2explicate import P2Explicate
-from p2heapify import P2Heapify
-from p2closureconvert import P2ClosureConversion
-from p2flattener import P2Flattener
-from p2insselector import P2InstructionSelector
-from p2regallocator import P2RegAllocator
-from p2ifinsselector import P2IfInstructionSelector
-from p2generator import P2Generator
+from p3uniquifyvars import P3UniquifyVars
+from p3explicate import P3Explicate
+from p3heapify import P3Heapify
+from p3closureconvert import P3ClosureConversion
+from p3flattener import P3Flattener
+from p3insselector import P3InstructionSelector
+from p3regallocator import P3RegAllocator
+from p3ifinsselector import P3IfInstructionSelector
+from p3generator import P3Generator
 from comp_util import *
 import time
 
@@ -39,14 +39,14 @@ if __name__ == "__main__":
 
         # instantiate all classes needed for our pipeline
         varalloc = VariableAllocator()
-        uniquify = P2UniquifyVars()
-        explicator = P2Explicate(varalloc)
-        heap = P2Heapify(explicator)
-        closer = P2ClosureConversion(explicator, varalloc)
-        flattener = P2Flattener(varalloc)
-        instruction_selector = P2InstructionSelector(varalloc)
-        ifinsselector = P2IfInstructionSelector(varalloc,instruction_selector.labelalloc)
-        generator = P2Generator(False)
+        uniquify = P3UniquifyVars()
+        explicator = P3Explicate(varalloc)
+        heap = P3Heapify(explicator)
+        closer = P3ClosureConversion(explicator, varalloc)
+        flattener = P3Flattener(varalloc)
+        instruction_selector = P3InstructionSelector(varalloc)
+        ifinsselector = P3IfInstructionSelector(varalloc,instruction_selector.labelalloc)
+        generator = P3Generator(False)
 
         # send the AST through the pipeline
         ast = compiler.parseFile(testcase)
@@ -59,7 +59,7 @@ if __name__ == "__main__":
             flatast = flattener.flatten(ast)
             program = instruction_selector.visit(flatast)
             #allocator = P1StackAllocator(program)
-            allocator = P2RegAllocator(program, varalloc)
+            allocator = P3RegAllocator(program, varalloc)
             program = allocator.substitute()
             program = ifinsselector.visit(program)
             output = output + generator.generate(program)
