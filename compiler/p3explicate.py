@@ -15,19 +15,9 @@ class P3Explicate(P2Explicate):
     def visit_While(self, node, *args, **kwargs):
         test  = self.visit(node.test)
         body  = self.visit(node.body)
-        testvar = Name(self.varalloc.get_next_var())
-        exp = While(CallFunc(Name('is_true'),[testvar]), body, [], node.lineno) 
-#        ifexp = IfExp(isIntOrBoolExp(testvar),
-#                      IfExp(Compare(ProjectTo('int',testvar), [('==',Const(0))]), 
-#                            else_,
-#                            then
-#                           ),
-#                      IfExp(Compare(ProjectTo('int',CallFunc(Name('is_true'),[testvar])), [('==',InjectFrom('int',Const(0)))]),
-#                            else_,
-#                            then
-#                           )
-#                     )
-        return Let(testvar, test, exp)
+        var = Name(self.varalloc.get_next_var())
+        # explicate the test so we can compare it to 0
+        return  While(Let(var, test, Compare(ProjectTo('int',CallFunc(Name('is_true'),[var])), [('!=',InjectFrom('int',Const(0)))])),body, [], node.lineno)
 
 if __name__ == "__main__":
     import sys, compiler

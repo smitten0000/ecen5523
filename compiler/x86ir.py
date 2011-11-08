@@ -351,6 +351,31 @@ class x86Function(Node):
                 instructions.append(instr)
         return instructions
 
+class x86While(Node):
+    def __init__(self, test, body, else_, lineno=None):
+        self.test = test
+        self.body = body
+        self.else_ = else_
+        self.lineno = lineno
+
+    def getChildren(self):
+        children = []
+        children.append(self.test)
+        children.append(self.body)
+        children.append(self.else_)
+        return tuple(children)
+
+    def getChildNodes(self):
+        nodelist = []
+        nodelist.append(self.test)
+        nodelist.append(self.body)
+        if self.else_ is not None:
+            nodelist.append(self.else_)
+        return tuple(nodelist)
+
+    def __repr__(self):
+        return "x86While(%s, %s, %s)" % (repr(self.test), repr(self.body), repr(self.else_))
+
 class CallAddress(Instruction):
     def __init__(self, address):
         self.address = address

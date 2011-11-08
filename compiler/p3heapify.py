@@ -12,9 +12,20 @@ from p2heapify import P2Heapify
 
 class P3Heapify(P2Heapify):
     def __init__(self, explicate):
-        P2Heapify.__init__(self, explicate)
+        self.log = logging.getLogger('compiler.heapify')
+        self.explicate = P3Explicate(explicate.varalloc,False)
+        self.freevars = P3FreeVars()
+        self.heapvarset = set([])
 
-        
+    def getLambdaFreeVars(self, n):
+        if isinstance(n, (While)):
+            return super(P3Heapify, self).getLambdaFreeVars(n.body)
+        else:
+            return super(P3Heapify, self).getLambdaFreeVars(n)
+    
+    def visit_While(self, node):
+        return While(self.visit(node.test), self.visit(node.body), [], node.lineno)
+
 if __name__ == "__main__":
     import sys, compiler
     import logging.config
