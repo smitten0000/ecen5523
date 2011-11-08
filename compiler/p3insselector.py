@@ -23,7 +23,7 @@ class P3InstructionSelector(P2InstructionSelector):
         
         self.log.debug('visit_While: test instructions %s', teststmts)
         
-        instructions.extend(tests   )
+        instructions.extend(tests)
 
         bodies = [self.visit(x) for x in node.body]
                

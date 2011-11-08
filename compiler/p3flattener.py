@@ -29,7 +29,7 @@ class P3Flattener(P2Flattener):
             #expression
             var, flattest = self.flatten(node.test) 
              
-            return [x86While((var,flattest), flatbody, [], node.lineno)]   
+            return [x86While((var,flattest) , flatbody, [], node.lineno)]   
         else:
             return P2Flattener.flatten(self, node)
 
