@@ -17,20 +17,18 @@ class P3Heapify(P2Heapify):
 
     def getLambdaFreeVars(self, n):
         if isinstance(n, (While)):
-            test_fv = super(P3Heapify, self).getLambdaFreeVars(n.test)
-            body_fv = super(P3Heapify, self).getLambdaFreeVars(n.body)
+            test_fv = self.getLambdaFreeVars(n.test)
+            body_fv = self.getLambdaFreeVars(n.body)
             return test_fv | body_fv
         elif isinstance(n, If):
-            #test_fv = super(P3Heapify, self).getLambdaFreeVars(n.tests[0][0])
-            #then_fv = super(P3Heapify, self).getLambdaFreeVars(n.tests[0][1])
-            #else_fv = super(P3Heapify, self).getLambdaFreeVars(n.else_)
-            test_fv = P2Heapify.getLambdaFreeVars(self, n.tests[0][0])
-            then_fv = P2Heapify.getLambdaFreeVars(self, n.tests[0][1])
-            else_fv = P2Heapify.getLambdaFreeVars(self, n.else_)
+            test_fv = self.getLambdaFreeVars(n.tests[0][0])
+            then_fv = self.getLambdaFreeVars(n.tests[0][1])
+            else_fv = self.getLambdaFreeVars(n.else_)
             # ignore n.else_ for now
             return test_fv | then_fv | else_fv
         else:
-            return super(P3Heapify, self).getLambdaFreeVars(n)
+            return P2Heapify.getLambdaFreeVars(self,n)
+            #return super(P3Heapify, self).getLambdaFreeVars(n)
     
     def visit_While(self, node):
         return While(self.visit(node.test), self.visit(node.body), [], node.lineno)

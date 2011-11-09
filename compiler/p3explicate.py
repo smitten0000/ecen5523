@@ -14,7 +14,12 @@ class P3Explicate(P2Explicate):
         body  = self.visit(node.body)
         var = Name(self.varalloc.get_next_var())
         # explicate the test so we can compare it to 0
-        return  While(Let(var, test, Compare(ProjectTo('int',CallFunc(Name('is_true'),[var])), [('!=',Const(0))])),body, [], node.lineno)
+        ifexp = IfExp(
+                  isIntOrBoolExp(var), 
+                  ProjectTo('bool',var),
+                  ProjectTo('bool',CallFunc(Name('is_true'),[var]))
+                )
+        return  While(Let(var, test, ifexp), body, [], node.lineno)
 
     def visit_If(self, node, *args, **kwargs):
         if len(node.tests) > 1:
@@ -23,14 +28,12 @@ class P3Explicate(P2Explicate):
         then  = self.visit(node.tests[0][1])
         else_ = self.visit(node.else_)
         testvar = Name(self.varalloc.get_next_var())
-        ifstmt = If(
-                   [(isIntOrBoolExp(testvar), If([(ProjectTo('bool',testvar), then)], else_))],
-                   If(
-                     [(ProjectTo('bool',CallFunc(Name('is_true'),[testvar])), then)], 
-                     else_
-                   )
-                 )
-        return Let(testvar, test, ifstmt)
+        ifexp = IfExp(
+                  isIntOrBoolExp(testvar), 
+                  ProjectTo('bool',testvar),
+                  ProjectTo('bool',CallFunc(Name('is_true'),[testvar]))
+                )
+        return If([(Let(testvar, test, ifexp),then)],else_)
 
 
 if __name__ == "__main__":

@@ -35,12 +35,15 @@ class P1StackAllocator(P0StackAllocator):
 
 if __name__ == "__main__":
     import sys, compiler
+    import logging, logging.config
     from comp_util import *
     from p0parser import P0Parser
     from p1flattener import P1Flattener
     from p1insselector import P1InstructionSelector
     if len(sys.argv) < 2:
         sys.exit(1)
+    # configure logging 
+    logging.config.fileConfig('logging.cfg')
     testcases = sys.argv[1:]
     for testcase in testcases:
         #parser = P0Parser()

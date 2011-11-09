@@ -24,8 +24,23 @@ class P3Flattener(P2Flattener):
             flatbody = self.flatten(node.body)
             #expression
             var, flattest = self.flatten(node.test) 
-             
             return [While((var,Stmt(flattest)), flatbody, [], node.lineno)]   
+        elif isinstance(node, If):
+            # flatten the "test" expression
+            vartes, test = self.flatten(node.tests[0][0])
+            # flatten the "then" and "else" statements
+            then = self.flatten(node.tests[0][1])
+            else_ = self.flatten(node.else_)
+            
+            # NOTE: The If node has two attributes: "tests" and "else_".  The tests attribute is
+            # a list of tuples, where the first element in the tuple is the test expression and the
+            # second element in the tuple is a Stmt object.  Each tuple in the list corresponds to
+            # an "if" or "elif" clause.  The else_ attribute is a Stmt object corresponding to the 
+            # "else" clause.
+            self.log.debug('then=%s' % then)
+            self.log.debug('else_=%s' % then)
+            return test + [If([(vartes, then)], else_)]
+
         else:
             return P2Flattener.flatten(self, node)
 

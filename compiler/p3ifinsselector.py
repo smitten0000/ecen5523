@@ -14,12 +14,15 @@ class P3IfInstructionSelector(P2IfInstructionSelector):
     # same as visit_Statement in P1IfInstructionSelector
     def visit_x86While(self, node, *args, **kwargs):
         label = self.labelalloc.get_next_label()
+        # test and body are lists of instructions, so we need to visit each of these
+        test = [self.visit(x) for x in node.test[1] if x is not None]
+        body = [self.visit(x) for x in node.body if x is not None]
         stmts = []
         stmts.append(Label('while_start%s' % label))
-        stmts.extend(self.visit(node.test[1]))
-        stmts.extend([Cmp(Imm32(1),node.test[0]),
+        stmts.extend(self.visit(test))
+        stmts.extend([Cmp(Imm32(0),node.test[0]),
                       JumpEquals('while_end%s' % label)])
-        stmts.extend(self.visit(node.body))
+        stmts.extend(self.visit(body))
         stmts.append(Jump('while_start%s' % label))
         stmts.append(Label('while_end%s' % label))
         return stmts
@@ -38,6 +41,8 @@ if __name__ == "__main__":
     from p3ifinsselector import P3IfInstructionSelector
     if len(sys.argv) < 2:
         sys.exit(1)
+    # configure logging 
+    logging.config.fileConfig('logging.cfg')
     testcases = sys.argv[1:]
     for testcase in testcases:
         varalloc = VariableAllocator()

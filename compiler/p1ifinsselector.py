@@ -4,19 +4,26 @@ from comp_util import *
 from x86ir import *
 # to flatten nested lists into a flat list
 from compiler.ast import flatten
+import logging
 
 # Concept borrowed from http://peter-hoffmann.com/2010/extrinsic-visitor-pattern-python-inheritance.html
 class P1IfInstructionSelector(object):
     def __init__(self, varalloc, labelalloc):
         self.varalloc = varalloc
         self.labelalloc = labelalloc
+        self.log = logging.getLogger('compiler.ifinsselect')
 
     def visit(self, node, *args, **kwargs):
         meth = None
         meth_name = 'visit_'+node.__class__.__name__
         meth = getattr(self, meth_name, None)
-        # return the node if there is no visit method
-        if not meth: return node
+        # we cannot blindly return the node itself, if there is no visit 
+        # function for that type.  This is because the children of that node may need
+        # to be recursed upon: ex.  Printnl(CallFuncIndirect(...))
+        self.log.warn(node)
+        if not meth:
+            return node
+#            raise Exception('Unknown node: %s method: %s' % (node.__class__, meth_name))
         return meth(node, *args, **kwargs)
 
     def visit_Program(self, node):

@@ -20,7 +20,7 @@ class P3ClosureConversion(P2ClosureConversion):
         return While(node.test, self.visit(node.body), [], node.lineno)
 
     def visit_If(self, node, *args, **kwargs):
-        return If([(self.visit(node.test[0]),self.visit(node.test[1]))], self.visit(node.body), [], node.lineno)
+        return If([(self.visit(node.tests[0][0]),self.visit(node.tests[0][1]))], self.visit(node.else_))
 
     
 if __name__ == "__main__":

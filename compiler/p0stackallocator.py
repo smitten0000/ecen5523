@@ -1,6 +1,7 @@
 # vim: set ts=4 sw=4 expandtab:
 
 from x86ir import *
+import logging
 
 class P0StackAllocator(object):
     """ Class whose sole purpose is to replace Var instances with
@@ -9,6 +10,7 @@ class P0StackAllocator(object):
         self.program = program
         self.numvars = 0
         self.varmap = {}
+        self.log = logging.getLogger('compiler.stackalloc')
 
     def allocate_var(self, varname):
         if self.is_allocated(varname):
@@ -38,6 +40,7 @@ class P0StackAllocator(object):
         meth = getattr(self, meth_name, None)
         if not meth:
             raise Exception('Unknown node: %s method: %s' % (node.__class__, meth_name))
+        self.log.debug(node)
         return meth(node, *args, **kwargs)
 
     def visit_Program(self, node, *args, **kwargs):
@@ -72,7 +75,19 @@ class P0StackAllocator(object):
     def visit_Var(self, node, *args, **kwargs):
         if not self.is_allocated(node.name):
             raise Exception("Attempt to access an undefined variable '%s'" % node.name)
-        return StackSlot(self.get_location(node.name))
+        # it's possible for a Variable to appear twice in the list of instructions:
+        # E.g., 
+        # 1. Movl(Var('tmp1'),...)
+        # 2. Movl(...,Var('tmp1'))
+        # So if the storage location is already assigned, do nothing.
+        # If we wanted to be extra careful, we could just make sure the storage location
+        # is the same as what is returned from get_location()
+        if node.storage is None:
+            node.storage = StackSlot(self.get_location(node.name))
+        elif isinstance(node.storage, StackSlot):
+            assert (node.storage == StackSlot(self.get_location(node.name)))
+        else:
+            raise Exception('Variable %s has unknown storage: %s ' % (node,node.storage))
 
 
 if __name__ == "__main__":
