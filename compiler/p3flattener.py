@@ -20,16 +20,11 @@ class P3Flattener(P2Flattener):
 
         if isinstance(node, While):
             #statement
-            print
-            print
-            print
-            print self.flatten(node.body)   
-            print
             flatbody = self.flatten(node.body)
             #expression
             var, flattest = self.flatten(node.test) 
              
-            return [x86While((var,flattest) , flatbody, [], node.lineno)]   
+            return [While((var,Stmt(flattest)), flatbody, [], node.lineno)]   
         else:
             return P2Flattener.flatten(self, node)
 

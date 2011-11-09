@@ -152,6 +152,8 @@ def pretty(node):
         return 'Not(%s)' % node.expr
     elif isinstance(node, If):
         return 'If(%s) %s Else %s' % (node.tests[0][0], node.tests[0][1], node.else_)
+    elif isinstance(node, While):
+        return 'While(%s) %s Else %s' % (node.test[1], node.body, node.else_)
     elif isinstance(node, ProjectTo):
         return 'ProjectTo(%s,%s)' % (node.typ, pretty(node.arg))
     elif isinstance(node, InjectFrom):

@@ -373,8 +373,10 @@ class x86While(Node):
             nodelist.append(self.else_)
         return tuple(nodelist)
 
+    def __str__(self):
+        return "x86While(%s, %s, %s)" % (self.test, self.body, self.else_)
     def __repr__(self):
-        return "x86While(%s, %s, %s)" % (repr(self.test), repr(self.body), repr(self.else_))
+        return self.__str__()
 
 class CallAddress(Instruction):
     def __init__(self, address):

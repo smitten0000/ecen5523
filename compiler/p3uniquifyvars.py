@@ -1,3 +1,4 @@
+# vim: set ts=4 sw=4 expandtab:
 from compiler.ast import *
 from comp_util import *
 
@@ -12,6 +13,11 @@ class P3UniquifyVars(P2UniquifyVars):
     def visit_While(self, node):
         return While(self.visit(node.test), self.visit(node.body), None, node.lineno)
 
+    def visit_If(self, node):
+        tests = [self.visit(x[0]) for x in node.tests]
+        thens = [self.visit(x[1]) for x in node.tests]
+        return If(zip(tests, thens), self.visit(node.else_))
+
 
 if __name__ == "__main__":
     import sys, compiler
@@ -23,7 +29,10 @@ if __name__ == "__main__":
     testcases = sys.argv[1:]
     for testcase in testcases:
         ast = compiler.parseFile(testcase)
+        varalloc = VariableAllocator()
+        declassify = P3Declassify(varalloc)
         uniquify = P3UniquifyVars()
+        ast = declassify.transform(ast)
         ast = uniquify.transform(ast)
         print ast
         print prettyAST(ast)

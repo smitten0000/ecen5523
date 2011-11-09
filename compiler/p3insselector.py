@@ -11,28 +11,18 @@ class P3InstructionSelector(P2InstructionSelector):
     def __init__(self, varalloc):
         P2InstructionSelector.__init__(self, varalloc)
 
-    def visit_x86While(self, node, *args, **kwargs):
+    def visit_While(self, node, *args, **kwargs):
         # need to create a temporary variable here to store the result.
-        varname = self.varalloc.get_next_var()
-        instructions = []
-        
-        var, tests = node.test
-        teststmts = [self.visit(x) for x in tests]
-        
-        #var, teststmts = self.visit(node.test)
-        
-        self.log.debug('visit_While: test instructions %s', teststmts)
-        
-        instructions.extend(tests)
+        # test[0] has type Name()
+        # test[1] has type Stmt()
+        # body has type Stmt()
+        testvar, dummy = self.visit(node.test[0])
+        teststmts = self.visit(node.test[1])
+        bodystmts = self.visit(node.body)
+        teststmts = reduce(lambda x,y: x+y, [x.instructions for x in teststmts], [])
+        bodystmts = reduce(lambda x,y: x+y, [x.instructions for x in bodystmts], [])
+        return [x86While((testvar,teststmts),bodystmts,[],node.lineno)]
 
-        bodies = [self.visit(x) for x in node.body]
-               
-        self.log.debug('visit_While: body instructions %s', bodies)
-        
-        instructions.extend(bodies  )
-        
-        return (Var(varname), instructions)
-    
 
 if __name__ == "__main__":
     import sys

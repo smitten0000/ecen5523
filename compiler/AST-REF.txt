@@ -1,19 +1,19 @@
 Python AST: (from compiler.parse(...))
 ======================================================
 S = Statement, E = Expression
-P0:           P1:          P2:
-============= ============ ===========
-Module     S  Or        E  Function S
-Stmt       S  And       E  Lambda   E
-Printnl    S  IfExp     E  Return   S
-Assign     S  List      E
-Discard    S  Dict      E
+P0:           P1:          P2:         P3:
+============= ============ =========== ============
+Module     S  Or        E  Function S  While      S
+Stmt       S  And       E  Lambda   E  If         S
+Printnl    S  IfExp     E  Return   S  Class      S
+Assign     S  List      E              Getattr    E
+Discard    S  Dict      E              AssAttr    ?
 Add        E  Compare   E
 UnarySub   E  Not       E
 CallFunc   E  Subscript E
 Const      E
 Name       E
-AssName
+AssName    ?
 
 compiler.ast reference: http://docs.python.org/library/compiler.html#module-compiler.ast
 
