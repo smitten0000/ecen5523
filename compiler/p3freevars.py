@@ -30,6 +30,14 @@ class P3FreeVars(P2FreeVars):
         test_b, test_f = self.visit(node.test)
         then_b, then_f = self.visit(node.body)
         return (set([]), test_f | then_f )
+
+    def visit_If(self, node, *args, **kwargs):
+        self.log.debug('visit_If %s'%node)
+        test_b, test_f = self.visit(node.tests[0][0])
+        then_b, then_f = self.visit(node.tests[0][1])
+        else_b, else_f = self.visit(node.else_)
+        return (set([]), test_f | then_f | else_f)
+
     
 if __name__ == "__main__":
     # create logger

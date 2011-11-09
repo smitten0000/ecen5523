@@ -2,6 +2,7 @@
 from compiler.ast import *
 from comp_util import *
 from p2flattener import P2Flattener
+from p3declassify import P3Declassify
 from p3explicate import P3Explicate
 from p3uniquifyvars import P3UniquifyVars
 from p3heapify import P3Heapify
@@ -40,22 +41,24 @@ if __name__ == "__main__":
 
     testcases = sys.argv[1:]
     for testcase in testcases:
-        p3unique = P3UniquifyVars()
         varalloc = VariableAllocator()
-        p3explicator = P3Explicate(varalloc)
-        p3heap = P3Heapify(p3explicator)
-        p3closure = P3ClosureConversion(p3explicator, varalloc)
-        p3flatten = P3Flattener(varalloc,True)
+        declassify = P3Declassify(varalloc)
+        unique = P3UniquifyVars()
+        explicator = P3Explicate(varalloc)
+        heap = P3Heapify(explicator)
+        closure = P3ClosureConversion(explicator, varalloc)
+        flatten = P3Flattener(varalloc,True)
 
         ast = compiler.parseFile(testcase)
-        unique = p3unique.transform(ast)        
-        explicated = p3explicator.explicate(unique)
-        heaped = p3heap.transform(explicated)
-        astlist = p3closure.transform(heaped)
+        ast = declassify.transform(ast)
+        ast = unique.transform(ast)        
+        ast = explicator.explicate(ast)
+        ast = heap.transform(ast)
+        astlist = closure.transform(ast)
         print astlist   
         for ast in astlist:
             print ast
-            ast = p3flatten.flatten(ast)
+            ast = flatten.flatten(ast)
             print prettyAST(ast)
 
 

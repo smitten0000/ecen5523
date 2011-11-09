@@ -10,6 +10,7 @@ import logging.config
 import compiler
 
 from p0parser import P0Parser
+from p3declassify import P3Declassify
 from p3uniquifyvars import P3UniquifyVars
 from p3explicate import P3Explicate
 from p3heapify import P3Heapify
@@ -39,6 +40,7 @@ if __name__ == "__main__":
 
         # instantiate all classes needed for our pipeline
         varalloc = VariableAllocator()
+        declassify = P3Declassify(varalloc)
         uniquify = P3UniquifyVars()
         explicator = P3Explicate(varalloc)
         heap = P3Heapify(explicator)
@@ -50,6 +52,7 @@ if __name__ == "__main__":
 
         # send the AST through the pipeline
         ast = compiler.parseFile(testcase)
+        ast = declassify.transform(ast)
         ast = uniquify.transform(ast)
         ast = explicator.explicate(ast)
         ast  = heap.transform(ast)

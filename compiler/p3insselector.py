@@ -28,6 +28,7 @@ if __name__ == "__main__":
     import sys
     import logging.config
     
+    from p3declassify import P3Declassify
     from p3explicate import P3Explicate
     from p3uniquifyvars import P3UniquifyVars
     from p3heapify import P3Heapify
@@ -41,20 +42,22 @@ if __name__ == "__main__":
     testcases = sys.argv[1:]
     for testcase in testcases:
         varalloc = VariableAllocator()
-        p3unique = P3UniquifyVars()
-        p3explicator = P3Explicate(varalloc)
-        p3heap = P3Heapify(p3explicator)
-        p3closure = P3ClosureConversion(p3explicator, varalloc)
-        p3flatten = P3Flattener(varalloc)
-        p3insselector = P3InstructionSelector(varalloc)
+        declassify = P3Declassify(varalloc)
+        unique = P3UniquifyVars()
+        explicator = P3Explicate(varalloc)
+        heap = P3Heapify(explicator)
+        closure = P3ClosureConversion(explicator, varalloc)
+        flatten = P3Flattener(varalloc)
+        insselector = P3InstructionSelector(varalloc)
 
         ast = compiler.parseFile(testcase)
-        unique = p3unique.transform(ast)        
-        explicated = p3explicator.explicate(unique)
-        heaped = p3heap.transform(explicated)
-        astlist = p3closure.transform(heaped)
+        ast = declassify.transform(ast)
+        ast = unique.transform(ast)        
+        ast = explicator.explicate(ast)
+        ast = heap.transform(ast)
+        astlist = closure.transform(ast)
         for ast in astlist:
-            ast = p3flatten.flatten(ast)
-            ast = p3insselector.transform(ast)
+            ast = flatten.flatten(ast)
+            ast = insselector.transform(ast)
             print '\nFunction\n================='
             print prettyAST(ast)

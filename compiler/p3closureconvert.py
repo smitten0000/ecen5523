@@ -2,9 +2,6 @@ from compiler.ast import *
 from comp_util import *
 from x86ir import *
 
-from p3explicate import P3Explicate
-from p3uniquifyvars import P3UniquifyVars
-from p3heapify import P3Heapify
 from p3freevars import P3FreeVars
 from p2closureconvert import P2ClosureConversion
 
@@ -22,10 +19,17 @@ class P3ClosureConversion(P2ClosureConversion):
     def visit_While(self, node, *args, **kwargs):
         return While(node.test, self.visit(node.body), [], node.lineno)
 
+    def visit_If(self, node, *args, **kwargs):
+        return If([(self.visit(node.test[0]),self.visit(node.test[1]))], self.visit(node.body), [], node.lineno)
+
     
 if __name__ == "__main__":
     import sys, compiler
     import logging.config
+    from p3declassify import P3Declassify
+    from p3explicate import P3Explicate
+    from p3uniquifyvars import P3UniquifyVars
+    from p3heapify import P3Heapify
     if len(sys.argv) < 2:
         sys.exit(1)
     # configure logging 
@@ -33,16 +37,18 @@ if __name__ == "__main__":
     testcases = sys.argv[1:]
     for testcase in testcases:
         varalloc = VariableAllocator()
-        p3unique = P3UniquifyVars()
-        p3explicator = P3Explicate(varalloc)
-        p3heap = P3Heapify(p3explicator)
-        p3closure = P3ClosureConversion(p3explicator, varalloc)
+        declassify = P3Declassify(varalloc)
+        unique = P3UniquifyVars()
+        explicator = P3Explicate(varalloc)
+        heap = P3Heapify(explicator)
+        closure = P3ClosureConversion(explicator, varalloc)
 
         ast = compiler.parseFile(testcase)
-        unique = p3unique.transform(ast)        
-        explicated = p3explicator.explicate(unique)
-        heaped = p3heap.transform(explicated)
-        astlist = p3closure.transform(heaped)
+        ast = declassify.transform(ast)
+        ast = unique.transform(ast)        
+        ast = explicator.explicate(ast)
+        ast = heap.transform(ast)
+        astlist = closure.transform(ast)
         for ast in astlist:
             print '\nFunction\n================='
             print prettyAST(ast)

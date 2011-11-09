@@ -49,7 +49,7 @@ class P3Declassify:
         return UnarySub(self.visit(node.expr))
 
     def visit_CallFunc(self, node):
-        return CallFunc(self.visit(node.node), args) 
+        return CallFunc(self.visit(node.node), node.args) 
 
     def visit_Const(self, node):
         return node

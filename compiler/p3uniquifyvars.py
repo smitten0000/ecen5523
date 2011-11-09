@@ -22,6 +22,7 @@ class P3UniquifyVars(P2UniquifyVars):
 if __name__ == "__main__":
     import sys, compiler
     import logging.config
+    from p3declassify import P3Declassify
     if len(sys.argv) < 2:
         sys.exit(1)
     # configure logging 

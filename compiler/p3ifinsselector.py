@@ -27,6 +27,7 @@ class P3IfInstructionSelector(P2IfInstructionSelector):
 
 if __name__ == "__main__":
     import sys, compiler
+    from p3declassify import P3Declassify
     from p3uniquifyvars import P3UniquifyVars
     from p3explicate import P3Explicate
     from p3heapify import P3Heapify
@@ -40,6 +41,7 @@ if __name__ == "__main__":
     testcases = sys.argv[1:]
     for testcase in testcases:
         varalloc = VariableAllocator()
+        declassify = P3Declassify(varalloc)
         unique = P3UniquifyVars()
         explicator = P3Explicate(varalloc)
         heap = P3Heapify(explicator)
@@ -49,10 +51,11 @@ if __name__ == "__main__":
         ifinsselector = P3IfInstructionSelector(varalloc,insselector.labelalloc)
 
         ast = compiler.parseFile(testcase)
-        unique = unique.transform(ast)        
-        explicated = explicator.explicate(unique)
-        heaped = heap.transform(explicated)
-        astlist = closure.transform(heaped)
+        ast = declassify.transform(ast)
+        ast = unique.transform(ast)        
+        ast = explicator.explicate(ast)
+        ast = heap.transform(ast)
+        astlist = closure.transform(ast)
         for ast in astlist:
             ast = flatten.flatten(ast)
             program = insselector.transform(ast)

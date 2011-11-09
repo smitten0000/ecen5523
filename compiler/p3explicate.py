@@ -3,9 +3,7 @@ from comp_util import *
 from x86ir import *
 import logging
 
-from p3uniquifyvars import P3UniquifyVars
 from p2explicate import P2Explicate
-
 
 class P3Explicate(P2Explicate):
     def __init__(self, varalloc, handleLambdas=True):
@@ -25,29 +23,32 @@ class P3Explicate(P2Explicate):
         then  = self.visit(node.tests[0][1])
         else_ = self.visit(node.else_)
         testvar = Name(self.varalloc.get_next_var())
-        ifexp = IfExp(
-                  isIntOrBoolExp(testvar),
-                  IfExp(ProjectTo('bool',testvar), then, else_),
-                  IfExp(ProjectTo('bool',CallFunc(Name('is_true'),[testvar])), then, else_)
-                )
-        return If(zip(tests, thens), self.visit(node.else_))
+        ifstmt = If(
+                   [(isIntOrBoolExp(testvar), If([(ProjectTo('bool',testvar), then)], else_))],
+                   If(
+                     [(ProjectTo('bool',CallFunc(Name('is_true'),[testvar])), then)], 
+                     else_
+                   )
+                 )
+        return Let(testvar, test, ifstmt)
 
 
 if __name__ == "__main__":
     import sys, compiler
     import logging.config
-    from p0parser import P0Parser
+    from p3declassify import P3Declassify
+    from p3uniquifyvars import P3UniquifyVars
     if len(sys.argv) < 2:
         sys.exit(1)
     # configure logging 
     logging.config.fileConfig('logging.cfg')
     testcases = sys.argv[1:]
     for testcase in testcases:
-        #parser = P0Parser()
-        #parser.build()
         ast = compiler.parseFile(testcase)
-        #ast = parser.parseFile(testcase)
-        p3unique = P3UniquifyVars()
-        unique = p3unique.transform(ast)        
-        p3explicator = P3Explicate(VariableAllocator())
-        print prettyAST(p3explicator.transform(unique))
+        varalloc = VariableAllocator()
+        declassify = P3Declassify(varalloc)
+        ast = declassify.transform(ast)
+        uniquify  = P3UniquifyVars()
+        ast = uniquify.transform(ast)        
+        explicator = P3Explicate(VariableAllocator())
+        print prettyAST(explicator.transform(ast))
