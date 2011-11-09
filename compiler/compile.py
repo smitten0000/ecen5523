@@ -17,6 +17,7 @@ from p3heapify import P3Heapify
 from p3closureconvert import P3ClosureConversion
 from p3flattener import P3Flattener
 from p3insselector import P3InstructionSelector
+from p3stackallocator import P3StackAllocator
 from p3regallocator import P3RegAllocator
 from p3ifinsselector import P3IfInstructionSelector
 from p3generator import P3Generator
@@ -48,7 +49,7 @@ if __name__ == "__main__":
         flattener = P3Flattener(varalloc)
         instruction_selector = P3InstructionSelector(varalloc)
         ifinsselector = P3IfInstructionSelector(varalloc,instruction_selector.labelalloc)
-        generator = P3Generator(False)
+        generator = P3Generator(allowMem2Mem=True)
 
         # send the AST through the pipeline
         ast = compiler.parseFile(testcase)
@@ -61,8 +62,8 @@ if __name__ == "__main__":
         for ast in astlist:
             flatast = flattener.flatten(ast)
             program = instruction_selector.visit(flatast)
-            #allocator = P1StackAllocator(program)
-            allocator = P3RegAllocator(program, varalloc)
+            allocator = P3StackAllocator(program)
+            #allocator = P3RegAllocator(program, varalloc)
             program = allocator.substitute()
             program = ifinsselector.visit(program)
             output = output + generator.generate(program)

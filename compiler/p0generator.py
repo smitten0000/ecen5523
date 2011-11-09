@@ -55,8 +55,20 @@ main:
             if node.src.storage.__class__ == node.dst.storage.__class__ and node.src.storage == node.dst.storage:
                 self.log.debug('Removing unnecessary assignment: %s (%s)' % (Movl(node.src,node.dst), Movl(node.src.storage, node.dst.storage)))
                 return None
-        # handle memory to memory moves
-        if isinstance(node.src,StackSlot) and isinstance(node.dst, StackSlot):
+            # handle memory to memory moves
+            if isinstance(node.src.storage,StackSlot) and isinstance(node.dst.storage, StackSlot):
+                if self.allowMem2Mem:
+                    stmtlist.append('\tmovl %s, %s' % (self.visit(node.src), self.visit(Register('eax'))))
+                    node.src = Register('eax')
+                else:
+                    raise Exception ('Detected memory to memory during %s"' % node.__class__.__name__)
+        if isinstance(node.src,Var) and isinstance(node.src.storage, StackSlot) and isinstance(node.dst, StackSlot):
+            if self.allowMem2Mem:
+                stmtlist.append('\tmovl %s, %s' % (self.visit(node.src), self.visit(Register('eax'))))
+                node.src = Register('eax')
+            else:
+                raise Exception ('Detected memory to memory during %s"' % node.__class__.__name__)
+        if isinstance(node.src,StackSlot) and isinstance(node.dst, Var) and isinstance(node.dst.storage, StackSlot):
             if self.allowMem2Mem:
                 stmtlist.append('\tmovl %s, %s' % (self.visit(node.src), self.visit(Register('eax'))))
                 node.src = Register('eax')
@@ -71,12 +83,13 @@ main:
     def visit_Addl(self, node, *args, **kwargs):
         stmtlist=[]
         # handle memory to memory moves
-        if isinstance(node.src,StackSlot) and isinstance(node.dst, StackSlot):
-            if self.allowMem2Mem:
-                stmtlist.append('\tmovl %s, %s' % (self.visit(node.src), self.visit(Register('eax'))))
-                node.src = Register('eax')
-            else:
-                raise Exception ('Detected memory to memory during %s"' % node.__class__.__name__)
+        if isinstance(node.src,Var) and isinstance (node.dst,Var):
+            if isinstance(node.src.storage,StackSlot) and isinstance(node.dst.storage, StackSlot):
+                if self.allowMem2Mem:
+                    stmtlist.append('\tmovl %s, %s' % (self.visit(node.src), self.visit(Register('eax'))))
+                    node.src = Register('eax')
+                else:
+                    raise Exception ('Detected memory to memory during %s"' % node.__class__.__name__)
         stmtlist.append('\taddl %s, %s' % (self.visit(node.src), self.visit(node.dst)))
         return "\n".join(stmtlist)
 

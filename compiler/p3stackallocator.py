@@ -1,13 +1,23 @@
-from x86ir import *
-from p2generator import P2Generator 
+# vim: set ts=4 sw=4 expandtab:
 
-class P3Generator(P2Generator):
-    def __init__(self, allowMem2Mem=True):
-        P2Generator.__init__(self, allowMem2Mem)
-    
+from p2stackallocator import *
+from x86ir import *
+
+class P3StackAllocator(P2StackAllocator):
+    def __init__(self, program):
+        P2StackAllocator.__init__(self, program)
+
+    def visit_x86While(self, node, *args, **kwargs):
+        test = [self.visit(x) for x in node.test[1]]
+        test = [x for x in test if x is not None]
+        body = [self.visit(x) for x in node.body]
+        body = [x for x in body if x is not None]
+        return x86While((self.visit(node.test[0]),test), body, [], node.lineno)
+
+
 if __name__ == "__main__":
     import sys, compiler
-    import logging.config
+    import logging, logging.config
     from comp_util import *
     from p3declassify import P3Declassify
     from p3uniquifyvars import P3UniquifyVars
@@ -16,9 +26,6 @@ if __name__ == "__main__":
     from p3closureconvert import P3ClosureConversion
     from p3flattener import P3Flattener
     from p3insselector import P3InstructionSelector
-    from p2stackallocator import P2StackAllocator
-    from p3regallocator import P3RegAllocator
-    from p3ifinsselector import P3IfInstructionSelector
     if len(sys.argv) < 2:
         sys.exit(1)
     # configure logging 
@@ -33,20 +40,17 @@ if __name__ == "__main__":
         closure = P3ClosureConversion(explicator, varalloc)
         flatten = P3Flattener(varalloc)
         insselector = P3InstructionSelector(varalloc)
-        ifinsselector = P3IfInstructionSelector(varalloc,insselector.labelalloc)
-        generator = P3Generator(False)
 
         ast = compiler.parseFile(testcase)
         ast = declassify.transform(ast)
-        ast = unique.transform(ast)
-        ast = explicator.explicate(ast)
-        ast = heap.transform(ast)
-        astlist = closure.transform(ast)
+        unique = unique.transform(ast)        
+        explicated = explicator.explicate(unique)
+        heaped = heap.transform(explicated)
+        astlist = closure.transform(heaped)
         for ast in astlist:
             ast = flatten.flatten(ast)
             program = insselector.transform(ast)
-            allocator = P2StackAllocator(program)
-#            allocator = P3RegAllocator(program, varalloc)
+            allocator = P3StackAllocator(program)
             program = allocator.substitute()
-            program = ifinsselector.visit(program)
-            print generator.generate(program)
+            print '\nFunction\n================='
+            print prettyAST(program)

@@ -88,6 +88,7 @@ class P0StackAllocator(object):
             assert (node.storage == StackSlot(self.get_location(node.name)))
         else:
             raise Exception('Variable %s has unknown storage: %s ' % (node,node.storage))
+        return node
 
 
 if __name__ == "__main__":

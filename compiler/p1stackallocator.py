@@ -24,6 +24,11 @@ class P1StackAllocator(P0StackAllocator):
     def visit_BitShift(self, node):
         return BitShift(self.visit(node.src), self.visit(node.dst), node.dir)
 
+    def visit_x86If(self, node):
+        then = [self.visit(x) for x in node.then if x is not None]
+        else_ = [self.visit(x) for x in node.else_ if x is not None]
+        return x86If(self.visit(node.test), then, else_)
+
     def visit_Label(self, node):
         return node
 
@@ -32,6 +37,7 @@ class P1StackAllocator(P0StackAllocator):
 
     def visit_JumpEquals(self, node):
         return node
+
 
 if __name__ == "__main__":
     import sys, compiler
@@ -51,11 +57,12 @@ if __name__ == "__main__":
         ast = compiler.parseFile(testcase)
         #ast = parser.parseFile(testcase)
         varalloc = VariableAllocator()
-        p1explicator = P1Explicate(varalloc)
-        ast = p1explicator.explicate(ast)
-        p1flattener = P1Flattener(varalloc)
-        stmtlist = p1flattener.flatten(ast)
+        explicator = P1Explicate(varalloc)
+        flattener = P1Flattener(varalloc)
         instruction_selector = P1InstructionSelector(varalloc)
-        program = instruction_selector.visit(stmtlist)
-        stackallocator = P1StackAllocator(program)
-        print stackallocator.substitute()
+        ast = explicator.explicate(ast)
+        ast = flattener.flatten(ast)
+        ast = instruction_selector.visit(ast)
+        stackallocator = P1StackAllocator(ast)
+        ast = stackallocator.substitute()
+        print prettyAST(ast)
