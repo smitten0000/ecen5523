@@ -17,7 +17,7 @@ class P3IfInstructionSelector(P2IfInstructionSelector):
         stmts = []
         stmts.append(Label('while_start%s' % label))
         stmts.extend(self.visit(node.test[1]))
-        stmts.extend([Cmp(Imm32(0),node.test[0]),
+        stmts.extend([Cmp(Imm32(1),node.test[0]),
                       JumpEquals('while_end%s' % label)])
         stmts.extend(self.visit(node.body))
         stmts.append(Jump('while_start%s' % label))
