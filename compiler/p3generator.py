@@ -4,7 +4,44 @@ from p2generator import P2Generator
 class P3Generator(P2Generator):
     def __init__(self, allowMem2Mem=True):
         P2Generator.__init__(self, allowMem2Mem)
+        self.labelcnt = 1
+        self.labelstrlist = []
+
+    def get_next_str_label(self, string):
+        label = '.str%s' % self.labelcnt
+        self.labelstrlist.append((label,string))
+        self.labelcnt = self.labelcnt + 1
+        return label
+
+    def get_string_decls(self):
+        decls=[]
+        for label, string in self.labelstrlist:
+            decls.append('%s:\n\t.string "%s"' % (label, string))
+        # this is kind of nasty to introduce a side effect like this,
+        # but we don't want to print out duplicate strings if this
+        # generator is used again (for example to print out top-level
+        # function definitions)
+        self.labelstrlist=[]
+        return "\n".join(decls)
+
+    # override to handle string constants
+    def visit_Imm32(self, node, *args, **kwargs):
+        if isinstance(node.value,str):
+            return '$%s' % self.get_next_str_label(node.value)
+        else:
+            return '$%s' % node.value
+
+    # overridden to add string constants at beginning
+    def visit_Program(self, node, *args, **kwargs):
+        programbody = P2Generator.visit_Program(self,node)
+        return self.get_string_decls() + programbody
+
+    # overridden to add string constants at beginning
+    def visit_x86Function(self, node, *args, **kwargs):
+        funcbody = P2Generator.visit_x86Function(self,node)
+        return self.get_string_decls() + funcbody
     
+
 if __name__ == "__main__":
     import sys, compiler
     import logging.config
@@ -34,7 +71,7 @@ if __name__ == "__main__":
         flatten = P3Flattener(varalloc)
         insselector = P3InstructionSelector(varalloc)
         ifinsselector = P3IfInstructionSelector(varalloc,insselector.labelalloc)
-        generator = P3Generator(False)
+        generator = P3Generator(True)
 
         ast = compiler.parseFile(testcase)
         ast = declassify.transform(ast)

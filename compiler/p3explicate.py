@@ -35,6 +35,13 @@ class P3Explicate(P2Explicate):
                 )
         return If([(Let(testvar, test, ifexp),then)],else_)
 
+    # override visit_Const to handle string constants (don't need inject)
+    def visit_Const(self, node):
+        if isinstance(node.value,str):
+            return node
+        else:
+            return InjectFrom('int', node)    
+
 
 if __name__ == "__main__":
     import sys, compiler
