@@ -2,19 +2,12 @@
 from compiler.ast import *
 from comp_util import *
 import logging
-from p3classtransform import *
 
-class P3Declassify:
-    def __init__(self, varalloc):
-        self.varalloc = varalloc
-        self.log = logging.getLogger('compiler.declassify')
-
-    def transform(self, node):
-        self.log.info ('Starting declassify')
-        ret = self.visit(node)
-        self.log.info ('Finished declassify')
-        return ret
-
+class P3ClassTransform(object):
+    def __init__(self, classtmpvar, localassigns):
+        self.classtmpvar = classtmpvar
+        self.localassigns = localassigns
+        
     def visit(self, node, *args, **kwargs):
         meth = None
         meth_name = 'visit_'+node.__class__.__name__
@@ -36,13 +29,19 @@ class P3Declassify:
         return Stmt(stmts,None)
 
     def visit_Printnl(self, node):
-        return [Printnl([self.visit(node.nodes[0])], node.dest)]
+        return Printnl([self.visit(node.nodes[0])], node.dest)
 
     def visit_Assign(self, node):
-        return [Assign([self.visit(node.nodes[0])], self.visit(node.expr))]
+        # check to see if this is a typical assignment
+        if isinstance(node.nodes[0], AssName):
+            # if this is an assignment to a local variable, convert it to an
+            # assignment to a class attribute
+            return Assign([AssAttr(Name(self.classtmpvar), node.nodes[0].name, 'OP_ASSIGN')],node.expr)
+        else:
+            raise Exception('Need to handle this case: %s' % node.nodes[0])
 
     def visit_Discard(self, node):
-        return [Discard(self.visit(node.expr))]
+        return Discard(self.visit(node.expr))
 
     def visit_Add(self, node):
         return Add((self.visit(node.left), self.visit(node.right)))
@@ -64,7 +63,15 @@ class P3Declassify:
         return node
 
     def visit_Name(self, node):
-        return node
+        if node.name in self.localassigns:
+            # XXX: We need a way to figure out if this variable is available in the outside
+            # scope as well.
+#            if node.name in self.outsidescope:
+                return Getattr(Name(self.classtmpvar), node.name)
+#            else:
+#                return IfExp(InjectFrom('int',CallFunc(Name('has_attr'),[Name(self.classtmpvar),Const(node.name)])), Getattr(Name(self.classtmpvar), node.name), node)
+        else:
+            return node
 
     def visit_AssName(self, node):
         return node
@@ -104,11 +111,11 @@ class P3Declassify:
     # P2
     # ================================================================================
     def visit_Return(self, node):
-        return [Return(self.visit(node.value))]
+        return Return(self.visit(node.value))
 
     def visit_Function(self, node):
         code = self.visit(node.code)
-        return [Function(node.decorators, node.name, node.argnames, node.defaults, node.flags, node.doc, code)]
+        return Function(node.decorators, node.name, node.argnames, node.defaults, node.flags, node.doc, code)
 
     def visit_Lambda(self, node):
         code = self.visit(node.code)
@@ -117,31 +124,17 @@ class P3Declassify:
     # P3
     # ================================================================================
     def visit_While(self, node):
-        return [While(self.visit(node.test), self.visit(node.body), None)]
+        return While(self.visit(node.test), self.visit(node.body), None)
 
     def visit_If(self, node):
         tests = [self.visit(x[0]) for x in node.tests]
         thens = [self.visit(x[1]) for x in node.tests]
-        return [If(zip(tests, thens), self.visit(node.else_))]
+        return If(zip(tests, thens), self.visit(node.else_))
 
+    # do not handle visit_Class, as all class definitions
+    # should have been removed by declassify
     def visit_Class(self, node):
-        # Before doing anything else, declassify the class body to handle
-        # nested class definitions
-        code = self.visit(node.code)
-        # allocate a temporary to hold the return value from create_class
-        classvar = self.varalloc.get_next_var()
-        # create a transformer for this class
-        localassigns = getLocalAssigns(node.code)
-        self.log.debug('getLocalAssigns = %s' % localassigns)
-        classtransform = P3ClassTransform(classvar,localassigns)
-        stmts = []
-        # assignment to temp class variable
-        stmts.append(Assign([AssName(classvar,'OP_ASSIGN')],InjectFrom('big',CallFunc(Name('create_class'),[List(node.bases)]))))
-        # class body goes here
-        stmts.extend([classtransform.visit(x) for x in code.nodes])
-        # assignment to real class variable from temp class variable
-        stmts.append(Assign([AssName(node.name,'OP_ASSIGN')],Name(classvar)))
-        return stmts
+        raise Exception('All class definitions should have been removed by declassify!')
 
     def visit_Getattr(self, node):
         return Getattr(self.visit(node.expr), node.attrname)
@@ -149,18 +142,3 @@ class P3Declassify:
     def visit_AssAttr(self, node):
         return AssAttr(self.visit(node.expr), node.attrname, node.flags)
 
-
-if __name__ == "__main__":
-    import sys, compiler
-    import logging.config
-    if len(sys.argv) < 2:
-        sys.exit(1)
-    # configure logging 
-    logging.config.fileConfig('logging.cfg')
-    testcases = sys.argv[1:]
-    for testcase in testcases:
-        ast = compiler.parseFile(testcase)
-        varalloc = VariableAllocator()
-        declassify = P3Declassify(varalloc)
-        ast = declassify.transform(ast)
-        print prettyAST(ast)
