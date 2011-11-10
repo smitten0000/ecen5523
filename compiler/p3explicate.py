@@ -94,7 +94,15 @@ class P3Explicate(P2Explicate):
                       objvar
                     )
                   ),
-                  CallFuncIndirect(nodevar, argvars)
+                  IfExp(
+                    CallFunc(Name('is_bound_method'),[nodevar]),
+                    CallFuncIndirect(InjectFrom('big',CallFunc(Name('get_function'),[nodevar])), [InjectFrom('big',CallFunc(Name('get_receiver'),[nodevar]))]+argvars),
+                    IfExp(
+                      CallFunc(Name('is_unbound_method'),[nodevar]),
+                      CallFuncIndirect(InjectFrom('big',CallFunc(Name('get_function'),[nodevar])), argvars),
+                      CallFuncIndirect(nodevar, argvars)
+                    )
+                  )
                 )
         let.body = ifexp
         return ret
