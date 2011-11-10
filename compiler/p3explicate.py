@@ -44,20 +44,32 @@ class P3Explicate(P2Explicate):
 
     # New for p3
     def visit_CallFuncIndirect(self, node):
-        elsecase = P2Explicate.visit_CallFunc(self, node)
-        var1 = Name(self.varalloc.get_next_var())
-        var2 = Name(self.varalloc.get_next_var())
+        # explicate the arguments
+        args = [self.visit(x) for x in node.args]
+        # CallFunc should always return a pyobj.  This is the case for most of the
+        # functions in runtime.c, but for 'input', this isn't the case.  
+        # Instead, we need to call 'input_int' 
+        if isinstance(node.node, Name) and node.node.name == 'input':
+            node.node.name = 'input_int'
+            return CallFunc(node.node, expressions, None, node.lineno)
+
+        # explicate the node
+        node = self.visit(node.node)
+        # variable corresponding to node expression
+        nodevar = Name(self.varalloc.get_next_var())
+        # variable corresponding to the returned object
+        objvar = Name(self.varalloc.get_next_var())
         ifexp = Let(
-                  var1,
-                  self.visit(node.node),
+                  nodevar,
+                  node,
                   IfExp(
-                    CallFunc(Name('is_class'),[var1]),
+                    CallFunc(Name('is_class'),[nodevar]),
                     Let(
-                      var2,
-                      CallFunc(Name('create_object'),[var1]),
-                      var2
+                      objvar,
+                      CallFunc(Name('create_object'),[nodevar]),
+                      objvar 
                     ),
-                    elsecase
+                    CallFuncIndirect(nodevar, args)
                   )
                 )
         return ifexp
