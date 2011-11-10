@@ -29,19 +29,22 @@ class P3ClassTransform(object):
         return Stmt(stmts,None)
 
     def visit_Printnl(self, node):
-        return Printnl([self.visit(node.nodes[0])], node.dest)
+        return [Printnl([self.visit(node.nodes[0])], node.dest)]
 
     def visit_Assign(self, node):
         # check to see if this is a typical assignment
         if isinstance(node.nodes[0], AssName):
             # if this is an assignment to a local variable, convert it to an
             # assignment to a class attribute
-            return Assign([AssAttr(Name(self.classtmpvar), node.nodes[0].name, 'OP_ASSIGN')],node.expr)
+            return [Assign([AssAttr(Name(self.classtmpvar), node.nodes[0].name, 'OP_ASSIGN')],node.expr)]
+        elif isinstance(node.nodes[0], Subscript):
+            sub = node.nodes[0]
+            return [Assign([Subscript(self.visit(sub.expr), sub.flags, [self.visit(sub.subs[0])])],node.expr)]
         else:
             raise Exception('Need to handle this case: %s' % node.nodes[0])
 
     def visit_Discard(self, node):
-        return Discard(self.visit(node.expr))
+        return [Discard(self.visit(node.expr))]
 
     def visit_Add(self, node):
         return Add((self.visit(node.left), self.visit(node.right)))
@@ -67,9 +70,9 @@ class P3ClassTransform(object):
             # XXX: We need a way to figure out if this variable is available in the outside
             # scope as well.
 #            if node.name in self.outsidescope:
-                return Getattr(Name(self.classtmpvar), node.name)
-#            else:
 #                return IfExp(InjectFrom('int',CallFunc(Name('has_attr'),[Name(self.classtmpvar),Const(node.name)])), Getattr(Name(self.classtmpvar), node.name), node)
+#            else:
+                return Getattr(Name(self.classtmpvar), node.name)
         else:
             return node
 
@@ -111,25 +114,28 @@ class P3ClassTransform(object):
     # P2
     # ================================================================================
     def visit_Return(self, node):
-        return Return(self.visit(node.value))
+        return [Return(self.visit(node.value))]
 
     def visit_Function(self, node):
-        code = self.visit(node.code)
-        return Function(node.decorators, node.name, node.argnames, node.defaults, node.flags, node.doc, code)
+        # Do not recurse into the function as we don't need to transform its contents.
+        # Generate a new function name
+        tmpname = '__' + node.name
+        return [Function(node.decorators, tmpname, node.argnames, node.defaults, node.flags, node.doc, node.code),
+                Assign([AssAttr(Name(self.classtmpvar), node.name, 'OP_ASSIGN')], Name(tmpname))]
 
     def visit_Lambda(self, node):
-        code = self.visit(node.code)
-        return Lambda(node.argnames, node.defaults, node.flags, code)
+        # Do not recurse into the function as we don't need to transform its contents.
+        return Lambda(node.argnames, node.defaults, node.flags, node.code)
 
     # P3
     # ================================================================================
     def visit_While(self, node):
-        return While(self.visit(node.test), self.visit(node.body), None)
+        return [While(self.visit(node.test), self.visit(node.body), None)]
 
     def visit_If(self, node):
         tests = [self.visit(x[0]) for x in node.tests]
         thens = [self.visit(x[1]) for x in node.tests]
-        return If(zip(tests, thens), self.visit(node.else_))
+        return [If(zip(tests, thens), self.visit(node.else_))]
 
     # do not handle visit_Class, as all class definitions
     # should have been removed by declassify

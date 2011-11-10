@@ -57,23 +57,47 @@ class P3Explicate(P2Explicate):
         node = self.visit(node.node)
         # variable corresponding to node expression
         nodevar = Name(self.varalloc.get_next_var())
+
+        # need to create variables for each of the arguments, and encapsulate each
+        # argument in a Let() statement
+        ret = Let(nodevar, node, None)
+        let = ret
+        argvars=[]
+        for i in range(0,len(args)):
+            argvars.append(Name(self.varalloc.get_next_var()))
+            let.body = Let(argvars[i], args[i], None)
+            let = let.body
+
         # variable corresponding to the returned object
         objvar = Name(self.varalloc.get_next_var())
-        ifexp = Let(
-                  nodevar,
-                  node,
-                  IfExp(
-                    CallFunc(Name('is_class'),[nodevar]),
-                    Let(
-                      objvar,
-                      InjectFrom('big',CallFunc(Name('create_object'),[nodevar])),
-                      objvar 
-                    ),
-                    CallFuncIndirect(nodevar, args)
-                  )
+        # variable corresponding to __init__ constructor, if it exists
+        initvar = Name(self.varalloc.get_next_var())
+        # dummy, to allow __init__ constructor to be called, but objvar to be returned
+        dummyvar = Name(self.varalloc.get_next_var())
+
+        ifexp = IfExp(
+                  CallFunc(Name('is_class'),[nodevar]),
+                  Let(
+                    objvar,
+                    InjectFrom('big',CallFunc(Name('create_object'),[nodevar])),
+                    IfExp(
+                      CallFunc(Name('has_attr'),[nodevar,Const('__init__')]),
+                      Let(
+                        initvar,
+                        InjectFrom('big',CallFunc(Name('get_function'),[CallFunc(Name('get_attr'),[nodevar,Const('__init__')])])),
+                        Let(
+                          dummyvar,
+                          CallFuncIndirect(initvar, [objvar] + argvars),
+                          objvar
+                        ),
+                      ),
+                      objvar
+                    )
+                  ),
+                  CallFuncIndirect(nodevar, argvars)
                 )
-        return ifexp
-               
+        let.body = ifexp
+        return ret
 
     def visit_CallFunc(self, node):
         expressions = [self.visit(x) for x in node.args]

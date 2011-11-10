@@ -138,7 +138,8 @@ class P3Declassify:
         # assignment to temp class variable
         stmts.append(Assign([AssName(classvar,'OP_ASSIGN')],InjectFrom('big',CallFunc(Name('create_class'),[List(node.bases)]))))
         # class body goes here
-        stmts.extend([classtransform.visit(x) for x in code.nodes])
+        codestmt = classtransform.visit(code)
+        stmts.extend(codestmt.nodes)
         # assignment to real class variable from temp class variable
         stmts.append(Assign([AssName(node.name,'OP_ASSIGN')],Name(classvar)))
         return stmts
