@@ -42,6 +42,40 @@ class P3Explicate(P2Explicate):
         else:
             return InjectFrom('int', node)    
 
+    # New for p3
+    def visit_CallFuncIndirect(self, node):
+        elsecase = P2Explicate.visit_CallFunc(self, node)
+        var1 = Name(self.varalloc.get_next_var())
+        var2 = Name(self.varalloc.get_next_var())
+        ifexp = Let(
+                  var1,
+                  self.visit(node.node),
+                  IfExp(
+                    CallFunc(Name('is_class'),[var1]),
+                    Let(
+                      var2,
+                      CallFunc(Name('create_object'),[var1]),
+                      var2
+                    ),
+                    elsecase
+                  )
+                )
+        return ifexp
+               
+
+    def visit_CallFunc(self, node):
+        expressions = [self.visit(x) for x in node.args]
+        # CallFunc should always return a pyobj.  This is the case for most of the
+        # functions in runtime.c, but for 'input', this isn't the case.  
+        # Instead, we need to call 'input_int' 
+        if isinstance(node.node, Name) and node.node.name == 'input':
+            node.node.name = 'input_int'
+        return CallFunc(node.node, expressions, None, node.lineno)
+
+    # We use InjectFrom in declassify, so we need to handle it in explicate now
+    def visit_InjectFrom(self, node):
+        return InjectFrom(node.typ, self.visit(node.arg))
+
 
 if __name__ == "__main__":
     import sys, compiler

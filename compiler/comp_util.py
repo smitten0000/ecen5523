@@ -274,7 +274,7 @@ def getLocalAssigns(n):
         bodyset = getLocalAssigns(n.body)
         elseset = getLocalAssigns(n.else_) if n.else_ is not None else set()
         return testset | bodyset | elseset
-    elif isinstance(n, (Add,UnarySub,CallFunc,Const,Name,Or,And,IfExp,List,Dict,Compare,Not,Subscript,Lambda)):
+    elif isinstance(n, (Add,UnarySub,CallFunc,Const,Name,Or,And,IfExp,List,Dict,Compare,Not,Subscript,Lambda,CallFuncIndirect)):
         # these are all expressions, so no assignments
         return set([])
     else:

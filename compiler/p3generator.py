@@ -26,7 +26,7 @@ class P3Generator(P2Generator):
 
     # override to handle string constants
     def visit_Imm32(self, node, *args, **kwargs):
-        if isinstance(node.value,str):
+        if isinstance(node.value,str) and not node.value.startswith('glob_fun'):
             return '$%s' % self.get_next_str_label(node.value)
         else:
             return '$%s' % node.value

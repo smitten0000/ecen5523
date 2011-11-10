@@ -18,6 +18,17 @@ class P3UniquifyVars(P2UniquifyVars):
         thens = [self.visit(x[1]) for x in node.tests]
         return If(zip(tests, thens), self.visit(node.else_))
 
+    def visit_CallFunc(self, node):
+        args = [self.visit(x) for x in node.args]
+        return CallFunc(node.node, args) 
+
+    def visit_CallFuncIndirect(self, node):
+        args = [self.visit(x) for x in node.args]
+        return CallFuncIndirect(self.visit(node.node), args) 
+
+    def visit_InjectFrom(self, node):
+        return InjectFrom(node.typ, self.visit(node.arg))
+
 
 if __name__ == "__main__":
     import sys, compiler

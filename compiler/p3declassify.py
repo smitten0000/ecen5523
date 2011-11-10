@@ -49,7 +49,14 @@ class P3Declassify:
         return UnarySub(self.visit(node.expr))
 
     def visit_CallFunc(self, node):
-        return CallFunc(self.visit(node.node), node.args) 
+        expressions = [self.visit(x) for x in node.args]
+        # CallFunc should always return a pyobj.  This is the case for most of the
+        # functions in runtime.c, but for 'input', this isn't the case.  
+        # Instead, we need to call 'input_int' 
+        if isinstance(node.node, Name) and node.node.name == 'input':
+            node.node.name = 'input_int'
+            return node
+        return CallFuncIndirect(self.visit(node.node), expressions, None, node.lineno)
 
     def visit_Const(self, node):
         return node
@@ -116,8 +123,8 @@ class P3Declassify:
         return If(zip(tests, thens), self.visit(node.else_))
 
     def visit_Class(self, node):
-        # XXX: declassify by explicating...
-        return None
+        assign = Assign([AssName(node.name,'OP_ASSIGN')],InjectFrom('big',CallFunc(Name('create_class'),[List(node.bases)])))
+        return assign
 
     def visit_Getattr(self, node):
         return Getattr(self.visit(node.expr), node.attrname)

@@ -43,7 +43,7 @@ class P2UniquifyVars:
         meth_name = 'visit_'+node.__class__.__name__
         meth = getattr(self, meth_name, None)
         if not meth:
-            raise Exception('Unknown node: %s method: %s' % (node.__class__, meth))
+            raise Exception('Unknown node: %s method: %s' % (node.__class__, meth_name))
         return meth(node, *args, **kwargs)
 
     def visit_Module(self, node):
