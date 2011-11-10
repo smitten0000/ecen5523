@@ -5,23 +5,26 @@ class P3Generator(P2Generator):
     def __init__(self, allowMem2Mem=True):
         P2Generator.__init__(self, allowMem2Mem)
         self.labelcnt = 1
-        self.labelstrlist = []
+        self.strlabeldict = {}
 
     def get_next_str_label(self, string):
-        label = '.str%s' % self.labelcnt
-        self.labelstrlist.append((label,string))
-        self.labelcnt = self.labelcnt + 1
-        return label
+        if string in self.strlabeldict:
+            return self.strlabeldict[string]
+        else:
+            label = '.str%s' % self.labelcnt
+            self.strlabeldict[string] = label
+            self.labelcnt = self.labelcnt + 1
+            return label
 
     def get_string_decls(self):
         decls=[]
-        for label, string in self.labelstrlist:
+        for string,label in self.strlabeldict.items():
             decls.append('%s:\n\t.string "%s"' % (label, string))
         # this is kind of nasty to introduce a side effect like this,
         # but we don't want to print out duplicate strings if this
         # generator is used again (for example to print out top-level
         # function definitions)
-        self.labelstrlist=[]
+        self.strlabeldict = {}
         return "\n".join(decls)
 
     # override to handle string constants

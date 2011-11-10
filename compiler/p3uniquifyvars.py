@@ -29,6 +29,12 @@ class P3UniquifyVars(P2UniquifyVars):
     def visit_InjectFrom(self, node):
         return InjectFrom(node.typ, self.visit(node.arg))
 
+    def visit_Getattr(self, node):
+        return Getattr(self.visit(node.expr), node.attrname)
+
+    def visit_AssAttr(self, node):
+        return AssAttr(self.visit(node.expr), node.attrname, node.flags)
+
 
 if __name__ == "__main__":
     import sys, compiler

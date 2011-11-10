@@ -66,7 +66,7 @@ class P3Explicate(P2Explicate):
                     CallFunc(Name('is_class'),[nodevar]),
                     Let(
                       objvar,
-                      CallFunc(Name('create_object'),[nodevar]),
+                      InjectFrom('big',CallFunc(Name('create_object'),[nodevar])),
                       objvar 
                     ),
                     CallFuncIndirect(nodevar, args)
@@ -87,6 +87,22 @@ class P3Explicate(P2Explicate):
     # We use InjectFrom in declassify, so we need to handle it in explicate now
     def visit_InjectFrom(self, node):
         return InjectFrom(node.typ, self.visit(node.arg))
+
+    def visit_Getattr(self, node):
+        # explicate the expression
+        expr = self.visit(node.expr)
+        return CallFunc(Name('get_attr'),[expr, Const(node.attrname)])
+
+    # overridden from p1explicate
+    def visit_Assign(self, node):
+        if isinstance(node.nodes[0], AssAttr):
+            # explicate the expression on the assign
+            expr = self.visit(node.expr)
+            # explicate the expression on assignment attribute
+            attrexpr = self.visit(node.nodes[0].expr)
+            return Discard(CallFunc(Name('set_attr'),[attrexpr, Const(node.nodes[0].attrname), expr]))
+        else:
+            return P2Explicate.visit_Assign(self, node)
 
 
 if __name__ == "__main__":
