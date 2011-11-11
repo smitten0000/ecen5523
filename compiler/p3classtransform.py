@@ -42,6 +42,9 @@ class P3ClassTransform(object):
         elif isinstance(node.nodes[0], Subscript):
             sub = node.nodes[0]
             return [Assign([Subscript(self.visit(sub.expr), sub.flags, [self.visit(sub.subs[0])])],node.expr)]
+        elif isinstance(node.nodes[0], AssAttr):
+            assattr = node.nodes[0]
+            return [Assign([AssAttr(self.visit(assattr.expr),assattr.attrname,assattr.flags)],node.expr)]
         else:
             raise Exception('Need to handle this case: %s' % node.nodes[0])
 
