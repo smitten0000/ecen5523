@@ -203,7 +203,7 @@ def free_vars(n):
         return free_vars(n.expr)
     elif isinstance(n, CallFunc):
         # the name of the function being called should be considered "free" (n.node)
-        return free_vars(n.node) | reduce(lambda x,y: x+y, [free_vars(x) for x in n.args], set([]))
+        return free_vars(n.node) | reduce(lambda x,y: x|y, [free_vars(x) for x in n.args], set([]))
     elif isinstance(n, Const):
         return set([])
     elif isinstance(n, Name):
@@ -238,6 +238,10 @@ def free_vars(n):
         return free_vars(n.expr)
     elif isinstance(n, Return):
         return free_vars(n.value)
+    elif isinstance(n, Getattr):
+        return set([])
+    elif isinstance(n, AssAttr):
+        return set([])
     elif isinstance(n, Function):
         return set([n.name]) | set(n.argnames) | reduce(lambda x,y:x|y, [free_vars(x) for x in n.code], set([]))
     elif isinstance(n, Assign):
@@ -292,6 +296,8 @@ def getLocalAssigns(n):
     elif isinstance(n, (Add,UnarySub,CallFunc,Const,Name,Or,And,IfExp,List,Dict,Compare,Not,Subscript,Lambda,CallFuncIndirect)):
         # these are all expressions, so no assignments
         return set([])
+    elif isinstance(n, Class):
+        return set([n.name])
     else:
         raise Exception('Unhandled expression: "%s"' % n)
 
