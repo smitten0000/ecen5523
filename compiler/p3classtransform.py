@@ -4,9 +4,10 @@ from comp_util import *
 import logging
 
 class P3ClassTransform(object):
-    def __init__(self, classtmpvar, localassigns):
+    def __init__(self, classtmpvar, localassigns, freevars):
         self.classtmpvar = classtmpvar
         self.localassigns = localassigns
+        self.freevars = freevars
         
     def visit(self, node, *args, **kwargs):
         meth = None
@@ -36,6 +37,7 @@ class P3ClassTransform(object):
         if isinstance(node.nodes[0], AssName):
             # if this is an assignment to a local variable, convert it to an
             # assignment to a class attribute
+            self.freevars = self.freevars - set([node.nodes[0].name])
             return [Assign([AssAttr(Name(self.classtmpvar), node.nodes[0].name, 'OP_ASSIGN')],node.expr)]
         elif isinstance(node.nodes[0], Subscript):
             sub = node.nodes[0]
@@ -69,9 +71,10 @@ class P3ClassTransform(object):
         if node.name in self.localassigns:
             # XXX: We need a way to figure out if this variable is available in the outside
             # scope as well.
-#            if node.name in self.outsidescope:
-#                return IfExp(InjectFrom('int',CallFunc(Name('has_attr'),[Name(self.classtmpvar),Const(node.name)])), Getattr(Name(self.classtmpvar), node.name), node)
-#            else:
+            if node.name in self.freevars:
+                return node
+                #return IfExp(InjectFrom('int',CallFunc(Name('has_attr'),[Name(self.classtmpvar),Const(node.name)])), Getattr(Name(self.classtmpvar), node.name), Name(node.name))
+            else:
                 return Getattr(Name(self.classtmpvar), node.name)
         else:
             return node

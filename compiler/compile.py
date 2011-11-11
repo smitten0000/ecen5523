@@ -33,6 +33,7 @@ if __name__ == "__main__":
 #    # configure logging 
 #    logging.config.fileConfig('logging.cfg')
     logging.basicConfig(level=logging.ERROR)
+    logging.disable(logging.ERROR)
     sys.setrecursionlimit(10000)
 
     testcases = sys.argv[1:]

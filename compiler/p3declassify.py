@@ -130,10 +130,14 @@ class P3Declassify:
         code = self.visit(node.code)
         # allocate a temporary to hold the return value from create_class
         classvar = self.varalloc.get_next_var()
+        
+        # figure out what variables are free in this node
+        freevars = free_vars(node)
+        
         # create a transformer for this class
         localassigns = getLocalAssigns(node.code)
         self.log.debug('getLocalAssigns = %s' % localassigns)
-        classtransform = P3ClassTransform(classvar,localassigns)
+        classtransform = P3ClassTransform(classvar,localassigns, freevars)
         stmts = []
         # assignment to temp class variable
         stmts.append(Assign([AssName(classvar,'OP_ASSIGN')],InjectFrom('big',CallFunc(Name('create_class'),[List(node.bases)]))))

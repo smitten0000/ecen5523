@@ -228,6 +228,20 @@ def free_vars(n):
         return free_vars(n.expr) | free_vars(n.subs[0])
     elif isinstance(n, Lambda):
         return free_vars(n.code) - set(n.argnames)
+    elif isinstance(n, Class):
+        return free_vars(n.code)
+    elif isinstance(n, Stmt):        
+        return reduce(lambda x,y:x|y, [free_vars(x) for x in n.nodes], set([]))
+    elif isinstance(n, Printnl):
+        return reduce(lambda x,y:x|y, [free_vars(x) for x in n.nodes], set([]))
+    elif isinstance(n, Discard):
+        return free_vars(n.expr)
+    elif isinstance(n, Return):
+        return free_vars(n.value)
+    elif isinstance(n, Function):
+        return set([n.name]) | set(n.argnames) | reduce(lambda x,y:x|y, [free_vars(x) for x in n.code], set([]))
+    elif isinstance(n, Assign):
+        return free_vars(n.expr)
     else:
         raise Exception('Unhandled expression: "%s"' % n)
 
