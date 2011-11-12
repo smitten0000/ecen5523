@@ -4,10 +4,10 @@ from comp_util import *
 import logging
 
 class P3ClassTransform(object):
-    def __init__(self, classtmpvar, localassigns, freevars):
+    def __init__(self, classtmpvar, localassigns, outsidescope):
         self.classtmpvar = classtmpvar
         self.localassigns = localassigns
-        self.freevars = freevars
+        self.outsidescope = outsidescope
         
     def visit(self, node, *args, **kwargs):
         meth = None
@@ -37,14 +37,13 @@ class P3ClassTransform(object):
         if isinstance(node.nodes[0], AssName):
             # if this is an assignment to a local variable, convert it to an
             # assignment to a class attribute
-            self.freevars = self.freevars - set([node.nodes[0].name])
-            return [Assign([AssAttr(Name(self.classtmpvar), node.nodes[0].name, 'OP_ASSIGN')],node.expr)]
+            return [Assign([AssAttr(Name(self.classtmpvar), node.nodes[0].name, 'OP_ASSIGN')],self.visit(node.expr))]
         elif isinstance(node.nodes[0], Subscript):
             sub = node.nodes[0]
-            return [Assign([Subscript(self.visit(sub.expr), sub.flags, [self.visit(sub.subs[0])])],node.expr)]
+            return [Assign([Subscript(self.visit(sub.expr), sub.flags, [self.visit(sub.subs[0])])],self.visit(node.expr))]
         elif isinstance(node.nodes[0], AssAttr):
             assattr = node.nodes[0]
-            return [Assign([AssAttr(self.visit(assattr.expr),assattr.attrname,assattr.flags)],node.expr)]
+            return [Assign([AssAttr(self.visit(assattr.expr),assattr.attrname,assattr.flags)],self.visit(node.expr))]
         else:
             raise Exception('Need to handle this case: %s' % node.nodes[0])
 
@@ -59,12 +58,10 @@ class P3ClassTransform(object):
 
     def visit_CallFunc(self, node):
         expressions = [self.visit(x) for x in node.args]
-        # CallFunc should always return a pyobj.  This is the case for most of the
-        # functions in runtime.c, but for 'input', this isn't the case.  
-        # Instead, we need to call 'input_int' 
-        if isinstance(node.node, Name) and node.node.name == 'input':
-            node.node.name = 'input_int'
-            return node
+        return CallFunc(node.node, expressions, None, node.lineno)
+
+    def visit_CallFuncIndirect(self, node):
+        expressions = [self.visit(x) for x in node.args]
         return CallFuncIndirect(self.visit(node.node), expressions, None, node.lineno)
 
     def visit_Const(self, node):
@@ -74,9 +71,8 @@ class P3ClassTransform(object):
         if node.name in self.localassigns:
             # XXX: We need a way to figure out if this variable is available in the outside
             # scope as well.
-            if node.name in self.freevars:
-                return node
-                #return IfExp(InjectFrom('int',CallFunc(Name('has_attr'),[Name(self.classtmpvar),Const(node.name)])), Getattr(Name(self.classtmpvar), node.name), Name(node.name))
+            if node.name in self.outsidescope:
+                return IfExp(InjectFrom('int',CallFunc(Name('has_attr'),[Name(self.classtmpvar),Const(node.name)])), Getattr(Name(self.classtmpvar), node.name), Name(node.name))
             else:
                 return Getattr(Name(self.classtmpvar), node.name)
         else:
@@ -116,6 +112,9 @@ class P3ClassTransform(object):
     def visit_Subscript(self, node):
         subs = [self.visit(node.subs[0])]
         return Subscript(self.visit(node.expr), node.flags, subs)
+
+    def visit_InjectFrom(self, node):
+        return InjectFrom(node.typ, self.visit(node.arg))
 
     # P2
     # ================================================================================

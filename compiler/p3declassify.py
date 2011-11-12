@@ -8,6 +8,7 @@ class P3Declassify:
     def __init__(self, varalloc):
         self.varalloc = varalloc
         self.log = logging.getLogger('compiler.declassify')
+        self.assignstack=[]
 
     def transform(self, node):
         self.log.info ('Starting declassify')
@@ -29,6 +30,9 @@ class P3Declassify:
     # P0
     # ================================================================================
     def visit_Module(self, node):
+        l = getLocalAssigns(node)
+        self.assignstack.append(l)
+        self.log.debug(self.assignstack)
         return Module(None, self.visit(node.node), None)
 
     def visit_Stmt(self, node):
@@ -107,11 +111,17 @@ class P3Declassify:
         return [Return(self.visit(node.value))]
 
     def visit_Function(self, node):
+        l = getLocalAssigns(node.code)
+        self.assignstack.append(l)
         code = self.visit(node.code)
+        self.assignstack.pop()
         return [Function(node.decorators, node.name, node.argnames, node.defaults, node.flags, node.doc, code)]
 
     def visit_Lambda(self, node):
+        l = getLocalAssigns(node.code)
+        self.assignstack.append(l)
         code = self.visit(node.code)
+        self.assignstack.pop()
         return Lambda(node.argnames, node.defaults, node.flags, code)
 
     # P3
@@ -128,16 +138,19 @@ class P3Declassify:
         # Before doing anything else, declassify the class body to handle
         # nested class definitions
         code = self.visit(node.code)
+        self.log.debug('class %s: code = %s' % (node.name,code))
         # allocate a temporary to hold the return value from create_class
         classvar = self.varalloc.get_next_var()
-        
-        # figure out what variables are free in this node
-        freevars = free_vars(node)
+
+        # get the variables assigned in the current scope
+        self.log.debug(self.assignstack)
+        currentscope = self.assignstack[-1]
         
         # create a transformer for this class
-        localassigns = getLocalAssigns(node.code)
+        localassigns = getLocalAssigns(code)
         self.log.debug('getLocalAssigns = %s' % localassigns)
-        classtransform = P3ClassTransform(classvar,localassigns, freevars)
+        self.log.debug('current scope   = %s' % currentscope)
+        classtransform = P3ClassTransform(classvar,localassigns, currentscope)
         stmts = []
         # assignment to temp class variable
         stmts.append(Assign([AssName(classvar,'OP_ASSIGN')],InjectFrom('big',CallFunc(Name('create_class'),[List(node.bases)]))))

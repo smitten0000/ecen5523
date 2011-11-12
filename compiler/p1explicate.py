@@ -105,7 +105,7 @@ class P1Explicate(object):
         ifexp = IfExp(
                   isIntOrBoolExp(testvar),
                   IfExp(ProjectTo('bool',testvar), then, else_),
-                  IfExp(ProjectTo('bool',CallFunc(Name('is_true'),[testvar])), then, else_)
+                  IfExp(CallFunc(Name('is_true'),[testvar]), then, else_)
                 )
 #        ifexp = IfExp(isIntOrBoolExp(testvar),
 #                      IfExp(Compare(ProjectTo('int',testvar), [('==',Const(0))]), 
