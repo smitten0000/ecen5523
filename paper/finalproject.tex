@@ -1,0 +1,114 @@
+%-----------------------------------------------------------------------------
+%               CSCI5525 Final Project LaTeX file.
+%-----------------------------------------------------------------------------
+
+\documentclass[preprint]{sigplanconf}
+
+% The following \documentclass options may be useful:
+%
+% 10pt          To set in 10-point type instead of 9-point.
+% 11pt          To set in 11-point type instead of 9-point.
+% authoryear    To obtain author/year citation style instead of numeric.
+
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{verbatim}
+\usepackage{amsmath}
+\usepackage[pdfborder={0 0 0}]{hyperref}
+
+\lstset{
+basicstyle=\small,
+numberstyle=\small,
+commentstyle=\textit
+stepnumber=1
+}
+
+\begin{document}
+
+\conferenceinfo{CSCI5525 '11}{November 16th, 2011, Boulder,CO.} 
+\copyrightyear{2011} 
+\copyrightdata{[Like a Boss.]} 
+
+\titlebanner{Reference Counting in P3}        % These are ignored unless
+\preprintfooter{An implementation of reference counting for P3}   % 'preprint' option specified.
+
+\title{Reference Counting in P3}
+%\subtitle{Subtitle Text, if any}
+
+\authorinfo{Rob Elsner}
+           {University of Colorado, Boulder}
+           {rob.elsner@colorado.edu}
+\authorinfo{Brent Smith}
+           {University of Colorado, Boulder}
+           {brent.m.smith@colorado.edu}
+
+\maketitle
+
+\begin{abstract}
+Automatic memory management is a common feature in modern languages, eliminating the need to
+manually allocate and deallocate memory at the proper program points.  This feature helps to
+eliminate costly errors that may go undetected in short lived programs, but cause long running 
+programs to eventually fail. 
+In this paper, we will discuss the implementation of a reference counting
+garbage collector for a subset of the Python programming language.
+\end{abstract}
+
+\category{CR-number}{subcategory}{third-level}
+
+\terms
+memory management, garbage collector
+
+\keywords
+keyword1, keyword2
+
+\section{Introduction}
+
+There are currently two widely used strategies to perform automatic memory management.  We will
+discuss both strategies briefly, consider the tradeoffs associated with each, and then discuss
+how the reference counting scheme fits in to the current architecture of our compiler.
+
+Tracing garbage collection is ....
+%ref{mccarthy}
+Tracing garbage collection is commonly associated with the garbage collector implementation  
+provided by the Java programming language, but many languages have libraries that provide GC 
+implementations 
+%\ref{c++ implementations}
+or allow the user the option of manual memory management or a tracing GC.
+%\ref{Apple's objective C framework}
+
+Reference counting \cite{Collins:1960} is way cooler since you don't suffer long pause times, but 
+may not achieve equivalent throughput to tracing garbage collection.  It's also wicked hard 
+to get right on multi-threaded contexts.  You have to be an evil genious to get this shit right,
+and use atomic compare and swap operations, whatever those are.
+
+\begin{figure}
+\normalsize % use normal font size in the figure
+\input{slot_runtime.tex}
+\caption{Benchmark results on Local Cluster}
+\label{fig:slot_runtime}
+\end{figure}
+
+
+\appendix
+\section{Appendix of Appendices}
+
+Here we list the categories of topics discussing different types of thingies 
+and such as, whatnot and therefore. Thank you.
+
+\acks
+
+I'd like to thank all the beautiful children.
+
+% We recommend abbrvnat bibliography style.
+\bibliographystyle{abbrvnat}
+% Use bibtex instead of the other crap
+\bibliography{finalproject}
+
+% The bibliography should be embedded for final submission.
+%\begin{thebibliography}{}
+%\softraggedright
+%\bibitem[Smith et~al.(2009)Smith, Jones]{smith02}
+%P. Q. Smith, and X. Y. Jones. ...reference text...
+%\end{thebibliography}
+
+\end{document}
