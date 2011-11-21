@@ -188,6 +188,7 @@ static big_pyobj* list_to_big(list l) {
   big_pyobj* v = (big_pyobj*)malloc(sizeof(big_pyobj));
   v->tag = LIST;
   v->u.l = l;
+  v->ref_ctr = 0;
   return v;
 }
 
@@ -490,6 +491,7 @@ big_pyobj* create_dict()
   big_pyobj* v = (big_pyobj*)malloc(sizeof(big_pyobj));
   v->tag = DICT;
   v->u.d = create_hashtable(4, hash_any, equal_any);
+  v->ref_ctr = 0;
   return v;
 }
 
@@ -761,6 +763,7 @@ static big_pyobj* closure_to_big(function f) {
   big_pyobj* v = (big_pyobj*)malloc(sizeof(big_pyobj));
   v->tag = FUN;
   v->u.f = f;
+  v->ref_ctr = 0;
   return v;
 }
 
@@ -813,6 +816,7 @@ big_pyobj* create_class(pyobj bases)
   big_pyobj* ret = (big_pyobj*)malloc(sizeof(big_pyobj));
   ret->tag = CLASS;
   ret->u.cl.attrs = create_hashtable(2, attrname_hash, attrname_equal);
+  ret->ref_ctr = 0;
 
   big_pyobj* basesp = project_big(bases);
   switch (basesp->tag) {
@@ -839,6 +843,7 @@ big_pyobj* create_class(pyobj bases)
 big_pyobj* create_object(pyobj cl) {
   big_pyobj* ret = (big_pyobj*)malloc(sizeof(big_pyobj));
   ret->tag = OBJECT;
+  ret->ref_ctr = 0;
   big_pyobj* clp = project_big(cl);
   if (clp->tag == CLASS)
     ret->u.obj.cl = clp->u.cl;
@@ -879,6 +884,7 @@ static big_pyobj* create_bound_method(object receiver, function f) {
   big_pyobj* ret = (big_pyobj*)malloc(sizeof(big_pyobj));
   ret->tag = BMETHOD;
   ret->u.bm.fun = f;
+  ret->ref_ctr = 0;
   ret->u.bm.receiver = receiver;
   return ret;
 }
@@ -886,6 +892,7 @@ static big_pyobj* create_bound_method(object receiver, function f) {
 static big_pyobj* create_unbound_method(class cl, function f) {
   big_pyobj* ret = (big_pyobj*)malloc(sizeof(big_pyobj));
   ret->tag = UBMETHOD;
+  ret->ref_ctr = 0;
   ret->u.ubm.fun = f;
   ret->u.ubm.cl = cl;
   return ret;
@@ -939,7 +946,7 @@ big_pyobj* get_class(pyobj o)
 {
   big_pyobj* ret = (big_pyobj*)malloc(sizeof(big_pyobj));
   ret->tag = CLASS;
-
+  ret->ref_ctr = 0;
   big_pyobj* b = project_big(o);
   switch (b->tag) {
   case OBJECT:
@@ -959,6 +966,7 @@ big_pyobj* get_receiver(pyobj o)
 {
   big_pyobj* ret = (big_pyobj*)malloc(sizeof(big_pyobj));
   ret->tag = OBJECT;
+  ret->ref_ctr = 0;
   big_pyobj* b = project_big(o);
   switch (b->tag) {
   case BMETHOD:
@@ -975,6 +983,7 @@ big_pyobj* get_function(pyobj o)
 {
   big_pyobj* ret = (big_pyobj*)malloc(sizeof(big_pyobj));
   ret->tag = FUN;
+  ret->ref_ctr = 0;
   big_pyobj* b = project_big(o);
   switch (b->tag) {
   case BMETHOD:
@@ -1056,4 +1065,16 @@ pyobj set_attr(pyobj obj, char* attr, pyobj val)
 pyobj error_pyobj(char* string) {
   printf(string);
   exit(-1);
+}
+
+void inc_ref_ctr(big_pyobj* v) {
+    v->ref_ctr ++;
+}
+void dec_ref_ctr(big_pyobj* v) {
+    v->ref_ctr --;
+    if ( v->ref_ctr < 0 ) {
+        printf("too many dec_ref on big_pyobj\n");
+        print_any(inject_big(v));
+        v->ref_ctr = 0;
+    }
 }

@@ -85,6 +85,7 @@ struct pyobj_struct {
     unbound_method ubm;
     bound_method bm;
   } u;
+  int ref_ctr;
 };
 typedef struct pyobj_struct big_pyobj;
 
@@ -138,5 +139,8 @@ pyobj get_attr(pyobj c, char* attr);
 pyobj set_attr(pyobj obj, char* attr, pyobj val);
 
 pyobj error_pyobj(char* string);
+
+void inc_ref_ctr(big_pyobj* v);
+void dec_ref_ctr(big_pyobj* v);
 
 #endif /* RUNTIME_H */
