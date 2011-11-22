@@ -1,0 +1,43 @@
+Compile: 
+$ gcc -o pymem_test pymem.c pymem_test.c -g
+
+Test:
+$ ./pymem_test
+
+Sample output:
+Allocations by type
+===========================================
+Type 1: 1
+Type 2: 1
+Type 3: 1
+Type 4: 1
+Type 5: 1
+
+History of allocations (since pymem_init())
+===========================================
+Allocation 1: type=1, size_req=8, freed=1, loc=0x8164008, alloc_tv=2011-11-21 20:59:44.268636, free_tv=2011-11-21 20:59:44.268636
+Allocation 2: type=2, size_req=16, freed=0, loc=0x8164048, alloc_tv=2011-11-21 20:59:44.268636, free_tv=2011-11-21 20:59:44.268636
+Allocation 3: type=3, size_req=24, freed=1, loc=0x8164090, alloc_tv=2011-11-21 20:59:44.268637, free_tv=2011-11-21 20:59:44.268637
+Allocation 4: type=4, size_req=32, freed=0, loc=0x81640e0, alloc_tv=2011-11-21 20:59:44.268637, free_tv=2011-11-21 20:59:44.268637
+Allocation 5: type=5, size_req=40, freed=1, loc=0x8164138, alloc_tv=2011-11-21 20:59:44.268638, free_tv=2011-11-21 20:59:44.268638
+WARNING: memory leak detected for allocation 2 at 0x8164048
+WARNING: memory leak detected for allocation 4 at 0x81640e0
+
+Allocations by type
+===========================================
+Type 6: 3
+Type 7: 1
+Type 8: 1
+
+History of allocations (since pymem_init())
+===========================================
+Allocation 1: type=6, size_req=4, freed=0, loc=0x81641a8, alloc_tv=2011-11-21 20:59:44.268820, free_tv=2011-11-21 20:59:44.268820
+Allocation 2: type=7, size_req=4, freed=0, loc=0x81641b8, alloc_tv=2011-11-21 20:59:44.268821, free_tv=2011-11-21 20:59:44.268821
+Allocation 3: type=6, size_req=4, freed=0, loc=0x81641c8, alloc_tv=2011-11-21 20:59:44.269114, free_tv=2011-11-21 20:59:44.269114
+Allocation 4: type=8, size_req=4, freed=0, loc=0x81641d8, alloc_tv=2011-11-21 20:59:44.269114, free_tv=2011-11-21 20:59:44.269114
+Allocation 5: type=6, size_req=4, freed=0, loc=0x81641e8, alloc_tv=2011-11-21 20:59:44.269115, free_tv=2011-11-21 20:59:44.269115
+WARNING: memory leak detected for allocation 1 at 0x81641a8
+WARNING: memory leak detected for allocation 2 at 0x81641b8
+WARNING: memory leak detected for allocation 3 at 0x81641c8
+WARNING: memory leak detected for allocation 4 at 0x81641d8
+WARNING: memory leak detected for allocation 5 at 0x81641e8
