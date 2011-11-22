@@ -29,6 +29,8 @@ static node_t *cur_ptr = NULL;
 
 static int bytype[MAX_TYPES];
 
+static char *types[8] = { "LIST", "DICT", "FUN", "CLASS", "OBJECT", "UBMETHOD", "BMETHOD", };
+
 /* forward declarations for static functions */
 static char *format_tv (const struct timeval *tv);
 
@@ -148,15 +150,15 @@ void pymem_print_stats()
     printf ("===========================================\n");
     for (i=0; i < MAX_TYPES; i++)
         if (bytype[i] > 0)
-            printf ("Type %d: %d\n", i, bytype[i]);
+            printf ("Type %s: %d\n", types[i], bytype[i]);
     
     printf ("\nHistory of allocations (since pymem_init())\n");
     printf ("===========================================\n");
     i = 0;
     while (p != NULL) {
-        printf ("Allocation %d: type=%d, size_req=%d, freed=%d, loc=%p, "
+        printf ("Allocation %d: type=%s, size_req=%d, freed=%d, loc=%p, "
                 "alloc_tv=%s, free_tv=%s\n", 
-                ++i, p->type, p->size_req, p->freed, p->loc, 
+                ++i, types[p->type], p->size_req, p->freed, p->loc, 
                 format_tv(&p->alloc_tv), format_tv(&p->free_tv));
         p = p->next;
     }

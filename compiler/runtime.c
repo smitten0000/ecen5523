@@ -185,7 +185,7 @@ pyobj input_int() {
 */
 
 static big_pyobj* list_to_big(list l) {
-  big_pyobj* v = (big_pyobj*)malloc(sizeof(big_pyobj));
+  big_pyobj* v = (big_pyobj*)pymem_new(LIST, sizeof(big_pyobj));
   v->tag = LIST;
   v->u.l = l;
   v->ref_ctr = 0;
@@ -195,7 +195,7 @@ static big_pyobj* list_to_big(list l) {
 big_pyobj* create_list(pyobj length) {
   list l;
   l.len = project_int(length); /* this should be checked */
-  l.data = (pyobj*)malloc(sizeof(pyobj) * l.len);
+  l.data = (pyobj*)pymem_new(LIST, sizeof(pyobj) * l.len);
   return list_to_big(l);
 }
 
@@ -268,7 +268,7 @@ static void print_dict(pyobj dict)
                 /* tally this dictionary in our list of printing dicts */
 	      list a;
 	      a.len = 1;
-	      a.data = (pyobj*)malloc(sizeof(pyobj) * a.len);
+	      a.data = (pyobj*)pymem_new(LIST, sizeof(pyobj) * a.len);
 	      a.data[0] = dict;
 	      /* Yuk, concatenating (adding) lists is slow! */
 	      printing_list = list_add(printing_list, a);
@@ -488,7 +488,7 @@ static int equal_any(void* a, void* b)
 
 big_pyobj* create_dict()
 {
-  big_pyobj* v = (big_pyobj*)malloc(sizeof(big_pyobj));
+  big_pyobj* v = (big_pyobj*)pymem_new(DICT, sizeof(big_pyobj));
   v->tag = DICT;
   v->u.d = create_hashtable(4, hash_any, equal_any);
   v->ref_ctr = 0;
@@ -503,9 +503,9 @@ static pyobj* dict_subscript(dict d, pyobj key)
   if (p)
     return (pyobj*)p;
   else {
-    pyobj* k = (pyobj*) malloc(sizeof(pyobj));
+    pyobj* k = (pyobj*) pymem_new(DICT, sizeof(pyobj));
     *k = key;
-    pyobj* v = (pyobj*) malloc(sizeof(pyobj));
+    pyobj* v = (pyobj*) pymem_new(DICT, sizeof(pyobj));
     *v = inject_int(444);
     hashtable_insert(d, k, v);
     return v;
@@ -613,7 +613,7 @@ static list list_add(list a, list b)
 {
   list c;
   c.len = a.len + b.len;
-  c.data = (pyobj*)malloc(sizeof(pyobj) * c.len);
+  c.data = (pyobj*)pymem_new(LIST, sizeof(pyobj) * c.len);
   int i;
   for (i = 0; i != a.len; ++i)
     c.data[i] = a.data[i];
@@ -672,8 +672,10 @@ static pyobj subscript_assign(big_pyobj* c, pyobj key, pyobj val)
 {
   switch (c->tag) {
   case LIST:
+    // XXX: inc ref count
     return *list_subscript(c->u.l, key) = val;
   case DICT:
+    // XXX: inc ref count
     return *dict_subscript(c->u.d, key) = val;
   default:
     printf("error in set subscript, not a list or dictionary\n");
@@ -760,7 +762,7 @@ int is_true(pyobj v)
 /* Support for Functions */
 
 static big_pyobj* closure_to_big(function f) {
-  big_pyobj* v = (big_pyobj*)malloc(sizeof(big_pyobj));
+  big_pyobj* v = (big_pyobj*)pymem_new(FUN, sizeof(big_pyobj));
   v->tag = FUN;
   v->u.f = f;
   v->ref_ctr = 0;
@@ -813,7 +815,7 @@ static int attrname_equal(void *a, void *b)
 
 big_pyobj* create_class(pyobj bases)
 {
-  big_pyobj* ret = (big_pyobj*)malloc(sizeof(big_pyobj));
+  big_pyobj* ret = (big_pyobj*)pymem_new(CLASS, sizeof(big_pyobj));
   ret->tag = CLASS;
   ret->u.cl.attrs = create_hashtable(2, attrname_hash, attrname_equal);
   ret->ref_ctr = 0;
@@ -823,7 +825,7 @@ big_pyobj* create_class(pyobj bases)
   case LIST: {
       int i;
       ret->u.cl.nparents = basesp->u.l.len;
-      ret->u.cl.parents = (class*)malloc(sizeof(class) * ret->u.cl.nparents);
+      ret->u.cl.parents = (class*)pymem_new(CLASS, sizeof(class) * ret->u.cl.nparents);
       for (i = 0; i != ret->u.cl.nparents; ++i) {
 	  pyobj* parent = &basesp->u.l.data[i];
 	  if (tag(*parent) == BIG_TAG && project_big(*parent)->tag == CLASS)
@@ -841,7 +843,7 @@ big_pyobj* create_class(pyobj bases)
 
 /* we leave calling the __init__ function for a separate step. */
 big_pyobj* create_object(pyobj cl) {
-  big_pyobj* ret = (big_pyobj*)malloc(sizeof(big_pyobj));
+  big_pyobj* ret = (big_pyobj*)pymem_new(OBJECT, sizeof(big_pyobj));
   ret->tag = OBJECT;
   ret->ref_ctr = 0;
   big_pyobj* clp = project_big(cl);
@@ -881,7 +883,7 @@ static pyobj* attrsearch(class cl, char* attr) {
 }
 
 static big_pyobj* create_bound_method(object receiver, function f) {
-  big_pyobj* ret = (big_pyobj*)malloc(sizeof(big_pyobj));
+  big_pyobj* ret = (big_pyobj*)pymem_new(BMETHOD, sizeof(big_pyobj));
   ret->tag = BMETHOD;
   ret->u.bm.fun = f;
   ret->ref_ctr = 0;
@@ -890,7 +892,7 @@ static big_pyobj* create_bound_method(object receiver, function f) {
 }
 
 static big_pyobj* create_unbound_method(class cl, function f) {
-  big_pyobj* ret = (big_pyobj*)malloc(sizeof(big_pyobj));
+  big_pyobj* ret = (big_pyobj*)pymem_new(UBMETHOD, sizeof(big_pyobj));
   ret->tag = UBMETHOD;
   ret->ref_ctr = 0;
   ret->u.ubm.fun = f;
@@ -944,7 +946,7 @@ int inherits(pyobj c1, pyobj c2) {
 
 big_pyobj* get_class(pyobj o)
 {
-  big_pyobj* ret = (big_pyobj*)malloc(sizeof(big_pyobj));
+  big_pyobj* ret = (big_pyobj*)pymem_new(CLASS, sizeof(big_pyobj));
   ret->tag = CLASS;
   ret->ref_ctr = 0;
   big_pyobj* b = project_big(o);
@@ -964,7 +966,7 @@ big_pyobj* get_class(pyobj o)
 
 big_pyobj* get_receiver(pyobj o)
 {
-  big_pyobj* ret = (big_pyobj*)malloc(sizeof(big_pyobj));
+  big_pyobj* ret = (big_pyobj*)pymem_new(OBJECT, sizeof(big_pyobj));
   ret->tag = OBJECT;
   ret->ref_ctr = 0;
   big_pyobj* b = project_big(o);
@@ -981,7 +983,7 @@ big_pyobj* get_receiver(pyobj o)
 
 big_pyobj* get_function(pyobj o)
 {
-  big_pyobj* ret = (big_pyobj*)malloc(sizeof(big_pyobj));
+  big_pyobj* ret = (big_pyobj*)pymem_new(FUN, sizeof(big_pyobj));
   ret->tag = FUN;
   ret->ref_ctr = 0;
   big_pyobj* b = project_big(o);
@@ -1037,6 +1039,7 @@ pyobj set_attr(pyobj obj, char* attr, pyobj val)
     k = (char *)malloc(strlen(attr)+1);
     v = (pyobj *)malloc(sizeof(pyobj));
     strcpy(k, attr);
+    // XXX: increment reference count here?
     *v = val;
     
     struct hashtable* attrs;
