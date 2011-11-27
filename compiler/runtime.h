@@ -35,57 +35,57 @@ typedef long int pyobj;
 struct pyobj_struct;
 
 struct list_struct {
-  pyobj* data;
-  unsigned int len;
+    pyobj* data;
+    unsigned int len;
 };
 typedef struct list_struct list;
 
 typedef struct hashtable* dict;
 
 struct fun_struct {
-  void* function_ptr;
-  pyobj free_vars;
+    void* function_ptr;
+    pyobj free_vars;
 };
 typedef struct fun_struct function;
 
 struct class_struct {
-  struct hashtable *attrs;
-  int nparents;
-  struct class_struct *parents;
+    struct hashtable *attrs;
+    int nparents;
+    struct class_struct *parents;
 };
 typedef struct class_struct class;
 
 struct object_struct {
-  struct hashtable *attrs;
-  class cl;
+    struct hashtable *attrs;
+    class cl;
 };
 typedef struct object_struct object;
 
 struct unbound_method_struct {
-  function fun;
-  class cl;
+    function fun;
+    class cl;
 };
 typedef struct unbound_method_struct unbound_method;
 
 struct bound_method_struct {
-  function fun;
-  object receiver;
+    function fun;
+    object receiver;
 };
 typedef struct bound_method_struct bound_method;
 
 
 struct pyobj_struct {
-  enum big_type_tag tag;
-  union {
-    dict d;
-    list l;
-    function f;
-    class cl;
-    object obj;
-    unbound_method ubm;
-    bound_method bm;
-  } u;
-  int ref_ctr;
+    enum big_type_tag tag;
+    union {
+        dict d;
+        list l;
+        function f;
+        class cl;
+        object obj;
+        unbound_method ubm;
+        bound_method bm;
+    } u;
+    int ref_ctr;
 };
 typedef struct pyobj_struct big_pyobj;
 

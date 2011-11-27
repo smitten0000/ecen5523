@@ -51,7 +51,7 @@ class P3Explicate(P2Explicate):
         # Instead, we need to call 'input_int' 
         if isinstance(node.node, Name) and node.node.name == 'input':
             node.node.name = 'input_int'
-            return CallFunc(node.node, expressions, None, node.lineno)
+            return CallFunc(node.node, node.args, None, node.lineno)
 
         # explicate the node
         node = self.visit(node.node)

@@ -52,7 +52,7 @@ void pymem_shutdown()
     node_t *next;
     int i;
 
-    /* free our linked list of facts, and free any user memory that 
+    /* free our linked list of facts, and free any user memory that
      * failed to be free()'d and emit a warning */
     if (head_ptr != NULL) {
         ptr = head_ptr;
@@ -145,20 +145,20 @@ void pymem_print_stats()
 {
     node_t *p = head_ptr;
     int i;
-    
+
     printf ("\nAllocations by type\n");
     printf ("===========================================\n");
     for (i=0; i < MAX_TYPES; i++)
         if (bytype[i] > 0)
             printf ("Type %s: %d\n", types[i], bytype[i]);
-    
+
     printf ("\nHistory of allocations (since pymem_init())\n");
     printf ("===========================================\n");
     i = 0;
     while (p != NULL) {
         printf ("Allocation %d: type=%s, size_req=%d, freed=%d, loc=%p, "
-                "alloc_tv=%s, free_tv=%s\n", 
-                ++i, types[p->type], p->size_req, p->freed, p->loc, 
+                "alloc_tv=%s, free_tv=%s\n",
+                ++i, types[p->type], p->size_req, p->freed, p->loc,
                 format_tv(&p->alloc_tv), format_tv(&p->free_tv));
         p = p->next;
     }
@@ -174,6 +174,6 @@ static char *format_tv (const struct timeval *tv)
     tm = localtime(&tv->tv_sec);
     strftime(buf, 4096, "%Y-%m-%d %H:%M:%S", tm);
     snprintf(timestr, 4096, "%s.%03ld", buf, tv->tv_usec);
-    
+
     return timestr;
 }

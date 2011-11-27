@@ -13,7 +13,7 @@ hashtable_iterator(struct hashtable *h)
 {
     unsigned int i, tablelength;
     struct hashtable_itr *itr = (struct hashtable_itr *)
-        malloc(sizeof(struct hashtable_itr));
+                                malloc(sizeof(struct hashtable_itr));
     if (NULL == itr) return NULL;
     itr->h = h;
     itr->e = NULL;
@@ -40,11 +40,15 @@ hashtable_iterator(struct hashtable *h)
 
 void *
 hashtable_iterator_key(struct hashtable_itr *i)
-{ return i->e->k; }
+{
+    return i->e->k;
+}
 
 void *
 hashtable_iterator_value(struct hashtable_itr *i)
-{ return i->e->v; }
+{
+    return i->e->v;
+}
 
 /*****************************************************************************/
 /* advance - advance the iterator to the next element
@@ -118,7 +122,9 @@ hashtable_iterator_remove(struct hashtable_itr *itr)
     /* Advance the iterator, correcting the parent */
     remember_parent = itr->parent;
     ret = hashtable_iterator_advance(itr);
-    if (itr->parent == remember_e) { itr->parent = remember_parent; }
+    if (itr->parent == remember_e) {
+        itr->parent = remember_parent;
+    }
     free(remember_e);
     return ret;
 }
@@ -157,23 +163,23 @@ hashtable_iterator_search(struct hashtable_itr *itr,
 /*
  * Copyright (c) 2002, 2004, Christopher Clark
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
- * 
+ *
  * * Redistributions of source code must retain the above copyright
  * notice, this list of conditions and the following disclaimer.
- * 
+ *
  * * Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer in the
  * documentation and/or other materials provided with the distribution.
- * 
+ *
  * * Neither the name of the original author; nor the names of any contributors
  * may be used to endorse or promote products derived from this software
  * without specific prior written permission.
- * 
- * 
+ *
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
