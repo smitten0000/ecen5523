@@ -22,6 +22,7 @@ from p3stackallocator import P3StackAllocator
 from p3regallocator import P3RegAllocator
 from p3ifinsselector import P3IfInstructionSelector
 from p3generator import P3Generator
+from gcflattener import GCFlattener
 from comp_util import *
 import time
 
@@ -49,6 +50,7 @@ if __name__ == "__main__":
         explicator = P3Explicate(varalloc)
         heap = P3Heapify(explicator)
         closer = P3ClosureConversion(explicator, varalloc)
+        gcflattener = GCFlattener(varalloc)
         flattener = P3Flattener(varalloc)
         instruction_selector = P3InstructionSelector(varalloc)
         ifinsselector = P3IfInstructionSelector(varalloc,instruction_selector.labelalloc)
@@ -59,6 +61,7 @@ if __name__ == "__main__":
         ast = declassify.transform(ast)
         ast = wrapper.transform(ast)
         ast = uniquify.transform(ast)
+        ast = gcflattener.transform(ast)
         ast = explicator.explicate(ast)
         ast  = heap.transform(ast)
         astlist = closer.transform(ast)

@@ -8,6 +8,7 @@ from p3uniquifyvars import P3UniquifyVars
 from p3heapify import P3Heapify
 from p3freevars import P3FreeVars
 from p3closureconvert import P3ClosureConversion
+from gcflattener import GCFlattener
 import operator
 
 class P3Flattener(P2Flattener):
@@ -62,11 +63,13 @@ if __name__ == "__main__":
         explicator = P3Explicate(varalloc)
         heap = P3Heapify(explicator)
         closure = P3ClosureConversion(explicator, varalloc)
+        gcflatten = GCFlattener(varalloc, True)
         flatten = P3Flattener(varalloc,True)
 
         ast = compiler.parseFile(testcase)
         ast = declassify.transform(ast)
-        ast = unique.transform(ast)        
+        ast = unique.transform(ast)
+        ast = gcflatten.transform(ast)        
         ast = explicator.explicate(ast)
         ast = heap.transform(ast)
         astlist = closure.transform(ast)
