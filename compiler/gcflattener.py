@@ -46,7 +46,8 @@ class GCFlattener:
         return stmtlist + [Assign(node.nodes, var)]
     def visit_Discard(self, node, *args, **kwargs):
         var, stmtlist = self.visit(node.expr)
-        return stmtlist 
+        varname = self.varalloc.get_next_var()
+        return stmtlist + [Assign([AssName(varname, 'OP_ASSIGN')], var)]
     def visit_Add(self, node, *args, **kwargs):
         left, stmtleft = self.visit(node.left)
         right, stmtright = self.visit(node.right)
@@ -143,7 +144,7 @@ class GCFlattener:
     def visit_Not(self, node, *args, **kwargs):
         var, stmtlist = self.visit(node.expr)
         tempvar = self.varalloc.get_next_var()            
-        return (Name(tempvar), stmtlist + [Assign([AssName(tempvar,'OP_ASSIGN')], var), Not(Name(tempvar))])
+        return (Name(tempvar), stmtlist + [Assign([AssName(tempvar,'OP_ASSIGN')], Not(var))])
     def visit_Subscript(self, node, *args, **kwargs):
         # We only need to handle one subscript per the grammar, e.g, a[1,2] is invalid P1
             # (a[1,2] is the only case where you get len(node.subs) > 1)
@@ -238,8 +239,6 @@ if __name__ == "__main__":
         declassify = P3Declassify(varalloc)
         unique = P3UniquifyVars()
         explicator = P3Explicate(varalloc)
-        heap = P3Heapify(explicator)
-        closure = P3ClosureConversion(explicator, varalloc)
         flatten = GCFlattener(varalloc,True)
 
         ast = compiler.parseFile(testcase)
