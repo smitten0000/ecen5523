@@ -17,12 +17,12 @@ int main (int argc, char *argv[])
     pymem_shutdown();
 
     pymem_init();
-    ptr1 = pymem_new(6, 4);
-    ptr2 = pymem_new(7, 4);
+    ptr1 = pymem_new(1, 4);
+    ptr2 = pymem_new(2, 4);
     for (i=0; i < 100000; i++) ;
-    ptr3 = pymem_new(6, 4);
-    ptr4 = pymem_new(8, 4);
-    ptr5 = pymem_new(6, 4);
+    ptr3 = pymem_new(1, 4);
+    ptr4 = pymem_new(3, 4);
+    ptr5 = pymem_new(1, 4);
     pymem_print_stats();
     pymem_shutdown();
 }

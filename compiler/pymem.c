@@ -34,20 +34,47 @@ static char *types[8] = { "LIST", "DICT", "FUN", "CLASS", "OBJECT", "UBMETHOD", 
 /* forward declarations for static functions */
 static char *format_tv (const struct timeval *tv);
 
+static FILE *output_fd = NULL;
+static char *cmdline = NULL;
+
 /* functions */
 void pymem_init()
 {
+    FILE *fp;
+    struct timeval tv;
+    char c;
     int i;
 
+    /* This reads in the program name from the /proc filesystem on linux. */
+    if (cmdline == NULL) {
+        cmdline = (char *)malloc(1024);
+        fp = fopen("/proc/self/cmdline", "r");
+        i = 0;
+        while (fread(&c, 1, 1, fp) && (i < 1023))
+            cmdline[i++] = c;
+        cmdline[i]='\0';
+    }
+
+    /* if previously initialized, shut it down */
     if (head_ptr != NULL)
         pymem_shutdown();
 
+    /* open the log file */
+    output_fd = fopen("pymem.log", "a");
+
+    /* print a message to the log that pymem_shutdown was called */
+    int ret = gettimeofday(&tv, NULL);
+    assert (ret > -1);
+    fprintf (output_fd, "\n---> %s: pymem_init: %s\n", format_tv(&tv), cmdline);
+
+    /* initialize the type array */
     for (i=0; i < MAX_TYPES; i++)
         bytype[i]=0;
 }
 
 void pymem_shutdown()
 {
+    struct timeval tv;
     node_t *ptr;
     node_t *next;
     int i;
@@ -60,7 +87,7 @@ void pymem_shutdown()
         while (ptr != NULL) {
             i++;
             if (!ptr->freed) {
-                printf ("WARNING: memory leak detected for allocation %d at %p\n", i, ptr->loc);
+                fprintf (output_fd, "WARNING: memory leak detected for allocation %d at %p\n", i, ptr->loc);
                 free(ptr->loc);
             }
             next = ptr->next;
@@ -71,6 +98,16 @@ void pymem_shutdown()
 
     head_ptr = NULL;
     cur_ptr = NULL;
+
+    /* print a message to the log that pymem_shutdown was called */
+    int ret = gettimeofday(&tv, NULL);
+    assert (ret > -1);
+    fprintf (output_fd, "<--- %s: pymem_shutdown: %s\n", format_tv(&tv), cmdline);
+
+
+    /* now we can close the output file */
+    if (output_fd != NULL)
+        fclose(output_fd);
 }
 
 
@@ -146,17 +183,17 @@ void pymem_print_stats()
     node_t *p = head_ptr;
     int i;
 
-    printf ("\nAllocations by type\n");
-    printf ("===========================================\n");
+    fprintf (output_fd, "\nAllocations by type\n");
+    fprintf (output_fd, "===========================================\n");
     for (i=0; i < MAX_TYPES; i++)
         if (bytype[i] > 0)
-            printf ("Type %s: %d\n", types[i], bytype[i]);
+            fprintf (output_fd, "Type %s: %d\n", types[i], bytype[i]);
 
-    printf ("\nHistory of allocations (since pymem_init())\n");
-    printf ("===========================================\n");
+    fprintf (output_fd, "\nHistory of allocations (since pymem_init())\n");
+    fprintf (output_fd, "===========================================\n");
     i = 0;
     while (p != NULL) {
-        printf ("Allocation %d: type=%s, size_req=%d, freed=%d, loc=%p, "
+        fprintf (output_fd, "Allocation %d: type=%s, size_req=%d, freed=%d, loc=%p, "
                 "alloc_tv=%s, free_tv=%s\n",
                 ++i, types[p->type], p->size_req, p->freed, p->loc,
                 format_tv(&p->alloc_tv), format_tv(&p->free_tv));
