@@ -142,6 +142,7 @@ if __name__ == "__main__":
     import logging.config
     from p3declassify import P3Declassify
     from p3uniquifyvars import P3UniquifyVars
+    from gcflattener import GCFlattener
     if len(sys.argv) < 2:
         sys.exit(1)
     # configure logging 
@@ -151,8 +152,10 @@ if __name__ == "__main__":
         ast = compiler.parseFile(testcase)
         varalloc = VariableAllocator()
         declassify = P3Declassify(varalloc)
+        gcflatten = GCFlattener(varalloc)
         ast = declassify.transform(ast)
         uniquify  = P3UniquifyVars()
-        ast = uniquify.transform(ast)        
+        ast = uniquify.transform(ast)
+        ast = gcflatten.transform(ast)         
         explicator = P3Explicate(VariableAllocator())
         print prettyAST(explicator.transform(ast))
