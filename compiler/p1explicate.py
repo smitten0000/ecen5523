@@ -347,7 +347,11 @@ class P1Explicate(object):
         # make the expression that the subscript operates on explicit
         expr = self.visit(node.expr)
         # make the subscript explicit (only support one subscript)
-        subexpr = self.visit(node.subs[0])
+        
+        if isinstance(node.subs, (Const,Name)):
+            subexpr = self.visit(node.subs)
+        else:
+            subexpr = self.visit(node.subs[0])
         # generate a temporary var to refer to the expression by
         exprvar = Name(self.varalloc.get_next_var())
         # generate a temporary var to refer to the subscript expression by
