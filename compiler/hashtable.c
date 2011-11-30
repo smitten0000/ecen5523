@@ -2,6 +2,7 @@
 
 #include "hashtable.h"
 #include "hashtable_private.h"
+#include "pymem.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -28,7 +29,8 @@ const float max_load_factor = 0.65;
 struct hashtable *
 create_hashtable(unsigned int minsize,
                  unsigned int (*hashf) (void*),
-                 int (*eqf) (void*,void*))
+                 int (*eqf) (void*,void*),
+                 int type)
 {
     struct hashtable *h;
     unsigned int pindex, size = primes[0];
@@ -41,11 +43,11 @@ create_hashtable(unsigned int minsize,
             break;
         }
     }
-    h = (struct hashtable *)malloc(sizeof(struct hashtable));
+    h = (struct hashtable *)pymem_new(type, sizeof(struct hashtable));
     if (NULL == h) return NULL; /*oom*/
-    h->table = (struct entry **)malloc(sizeof(struct entry*) * size);
+    h->table = (struct entry **)pymem_new(type, sizeof(struct entry*) * size);
     if (NULL == h->table) {
-        free(h);    /*oom*/
+        pymem_free(h);    /*oom*/
         return NULL;
     }
     memset(h->table, 0, size * sizeof(struct entry *));
@@ -74,7 +76,7 @@ hash(struct hashtable *h, void *k)
 
 /*****************************************************************************/
 static int
-hashtable_expand(struct hashtable *h)
+hashtable_expand(struct hashtable *h, int type)
 {
     /* Double the size of the table to accomodate more entries */
     struct entry **newtable;
@@ -85,7 +87,7 @@ hashtable_expand(struct hashtable *h)
     if (h->primeindex == (prime_table_length - 1)) return 0;
     newsize = primes[++(h->primeindex)];
 
-    newtable = (struct entry **)malloc(sizeof(struct entry*) * newsize);
+    newtable = (struct entry **)pymem_new(type, sizeof(struct entry*) * newsize);
     if (NULL != newtable)
     {
         memset(newtable, 0, newsize * sizeof(struct entry *));
@@ -99,7 +101,7 @@ hashtable_expand(struct hashtable *h)
                 newtable[index] = e;
             }
         }
-        free(h->table);
+        pymem_free(h->table);
         h->table = newtable;
     }
     /* Plan B: realloc instead */
@@ -143,7 +145,7 @@ hashtable_count(struct hashtable *h)
 
 /*****************************************************************************/
 int
-hashtable_insert(struct hashtable *h, void *k, void *v)
+hashtable_insert(struct hashtable *h, void *k, void *v, int type)
 {
     /* This method allows duplicate keys - but they shouldn't be used */
     unsigned int index;
@@ -154,9 +156,9 @@ hashtable_insert(struct hashtable *h, void *k, void *v)
          * still try cramming just this value into the existing table
          * -- we may not have memory for a larger table, but one more
          * element may be ok. Next time we insert, we'll try expanding again.*/
-        hashtable_expand(h);
+        hashtable_expand(h, type);
     }
-    e = (struct entry *)malloc(sizeof(struct entry));
+    e = (struct entry *)pymem_new(type, sizeof(struct entry));
     if (NULL == e) {
         --(h->entrycount);    /*oom*/
         return 0;
@@ -213,7 +215,7 @@ hashtable_remove(struct hashtable *h, void *k)
             h->entrycount--;
             v = e->v;
             freekey(e->k);
-            free(e);
+            pymem_free(e);
             return v;
         }
         pE = &(e->next);
@@ -240,8 +242,8 @@ hashtable_destroy(struct hashtable *h, int free_values)
                 f = e;
                 e = e->next;
                 freekey(f->k);
-                free(f->v);
-                free(f);
+                pymem_free(f->v);
+                pymem_free(f);
             }
         }
     }
@@ -255,12 +257,12 @@ hashtable_destroy(struct hashtable *h, int free_values)
                 f = e;
                 e = e->next;
                 freekey(f->k);
-                free(f);
+                pymem_free(f);
             }
         }
     }
-    free(h->table);
-    free(h);
+    pymem_free(h->table);
+    pymem_free(h);
 }
 
 /*

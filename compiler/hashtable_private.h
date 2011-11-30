@@ -43,7 +43,7 @@ indexFor(unsigned int tablelength, unsigned int hashvalue)
 */
 
 /*****************************************************************************/
-#define freekey(X) free(X)
+#define freekey(X) pymem_free(X)
 /*define freekey(X) ; */
 
 

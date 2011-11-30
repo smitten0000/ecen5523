@@ -492,7 +492,7 @@ big_pyobj* create_dict()
 {
     big_pyobj* v = (big_pyobj*)pymem_new(DICT, sizeof(big_pyobj));
     v->tag = DICT;
-    v->u.d = create_hashtable(4, hash_any, equal_any);
+    v->u.d = create_hashtable(4, hash_any, equal_any, DICT);
     v->ref_ctr = 0;
     return v;
 }
@@ -511,7 +511,7 @@ static pyobj* dict_subscript(dict d, pyobj key)
         *k = key;
         pyobj* v = (pyobj*) pymem_new(DICT, sizeof(pyobj));
         *v = inject_int(444);
-        hashtable_insert(d, k, v);
+        hashtable_insert(d, k, v, DICT);
         return v;
     }
 }
@@ -678,10 +678,16 @@ static pyobj subscript_assign(big_pyobj* c, pyobj key, pyobj val)
 {
     switch (c->tag) {
     case LIST:
-        // XXX: inc ref count
+        // XXX: inc ref count (for val only)
+        if (is_big(val))
+            inc_ref_ctr(project_big(val));
         return *list_subscript(c->u.l, key) = val;
     case DICT:
-        // XXX: inc ref count
+        // XXX: inc ref count (for key and val)
+        if (is_big(key)) 
+            inc_ref_ctr(project_big(key));
+        if (is_big(val)) 
+            inc_ref_ctr(project_big(val));
         return *dict_subscript(c->u.d, key) = val;
     default:
         printf("error in set subscript, not a list or dictionary\n");
@@ -823,7 +829,7 @@ big_pyobj* create_class(pyobj bases)
 {
     big_pyobj* ret = (big_pyobj*)pymem_new(CLASS, sizeof(big_pyobj));
     ret->tag = CLASS;
-    ret->u.cl.attrs = create_hashtable(2, attrname_hash, attrname_equal);
+    ret->u.cl.attrs = create_hashtable(2, attrname_hash, attrname_equal, CLASS);
     ret->ref_ctr = 0;
 
     big_pyobj* basesp = project_big(bases);
@@ -863,7 +869,7 @@ big_pyobj* create_object(pyobj cl) {
         printf("in make object, expected a class\n");
         exit(-1);
     }
-    ret->u.obj.attrs = create_hashtable(2, attrname_hash, attrname_equal);
+    ret->u.obj.attrs = create_hashtable(2, attrname_hash, attrname_equal, OBJECT);
     return ret;
 }
 
@@ -1046,15 +1052,16 @@ pyobj set_attr(pyobj obj, char* attr, pyobj val)
 {
     char* k;
     pyobj* v;
-    k = (char *)malloc(strlen(attr)+1);
-    v = (pyobj *)malloc(sizeof(pyobj));
+    big_pyobj* b = project_big(obj);
+    k = (char *)pymem_new(b->tag, strlen(attr)+1);
+    v = (pyobj *)pymem_new(b->tag, sizeof(pyobj));
     strcpy(k, attr);
-    // XXX: increment reference count here?
+    // XXX: increment reference count here for the referenced object
+    inc_ref_ctr(project_big(val));
     *v = val;
 
     struct hashtable* attrs;
 
-    big_pyobj* b = project_big(obj);
     switch (b->tag) {
     case CLASS:
         attrs = b->u.cl.attrs;
@@ -1068,7 +1075,7 @@ pyobj set_attr(pyobj obj, char* attr, pyobj val)
     }
 
     if(!hashtable_change(attrs, k, v))
-        if(!hashtable_insert(attrs, k, v)) {
+        if(!hashtable_insert(attrs, k, v, b->tag)) {
             printf("out of memory");
             exit(-1);
         }
@@ -1076,16 +1083,24 @@ pyobj set_attr(pyobj obj, char* attr, pyobj val)
 }
 
 pyobj error_pyobj(char* string) {
-    printf(string);
+    printf("%s\n", string);
     exit(-1);
 }
 
-void iterate_and_release_table(struct hashtable_itr* itr) {
+void iterate_and_release_table(struct hashtable* h, int dec_keys) {
+    struct hashtable_itr *itr;
+
+    // if there are no entries in the hash table, then there is
+    // nothing to do.
+    if (hashtable_count(h) == 0)
+        return;
+
+    itr = hashtable_iterator(h);
     do {
         pyobj k = *(pyobj *)hashtable_iterator_key(itr);
         pyobj v = *(pyobj *)hashtable_iterator_value(itr);
 
-        if ( is_big(k) ) {
+        if ( dec_keys && is_big(k) ) {
             dec_ref_ctr(project_big(k));
         }
 
@@ -1093,6 +1108,8 @@ void iterate_and_release_table(struct hashtable_itr* itr) {
             dec_ref_ctr(project_big(v));
         }
     } while (hashtable_iterator_advance(itr));
+    // none of the above functions which use iterators clean this up...
+    free(itr);
 }
 
 /**
@@ -1118,13 +1135,17 @@ void free_class(big_pyobj* o) {
             }
         }
     */
-    struct hashtable_itr *itr = hashtable_iterator(o->u.cl.attrs);
-    iterate_and_release_table(itr);
-    // none of the above functions which use iterators clean this up...
-    free(itr);
+    // decrement reference counts for all values in the attribute hash table  
+    // (but not keys since the keys are just strings that are not managed
+    //  by the runtime)
+    iterate_and_release_table(o->u.cl.attrs, 0);
 
     // release the hash table memory
-    pymem_free(o->u.cl.attrs);
+    // If you look at set_attr, it always allocates new memory for both the 
+    // keys and values, so we need to make sure to free it by passing a
+    // non-zero (true) value for the free_values argument
+    // (hashtable_destroy will always free the keys)
+    hashtable_destroy(o->u.cl.attrs, 1);
     // finally release the memory for the class
     pymem_free(o);
 }
@@ -1141,14 +1162,12 @@ void free_object(big_pyobj* o) {
     //big_pyobj* clp = project_big(o->u.cl);
     //dec_ref_ptr(clp);
 
-    // iterate the attr hashtable and release anything
-    struct hashtable_itr *itr = hashtable_iterator(o->u.obj.attrs);
-    iterate_and_release_table(itr);
-    // none of the above functions which use iterators clean this up...
-    free(itr);
+    // iterate the attr hashtable and release values (but not keys, since
+    // they are not pyobj)
+    iterate_and_release_table(o->u.obj.attrs, 0);
 
-    // release the hash table memory
-    pymem_free(o->u.obj.attrs);
+    // release the hash table memory, including keys and values
+    hashtable_destroy(o->u.obj.attrs, 1);
     // release the object
     pymem_free(o);
 }
@@ -1194,17 +1213,19 @@ void free_list(big_pyobj* o) {
             dec_ref_ctr(project_big(o->u.l.data[i]));
         }
     }
-    pymem_free(o);    
+    pymem_free(o->u.l.data);
+    pymem_free(o);
 }
 
 void free_dict(big_pyobj* o) {
 
-    // iterate the attr hashtable and release anything
-    struct hashtable_itr *itr = hashtable_iterator(o->u.d);
-    iterate_and_release_table(itr);
-    // none of the above functions which use iterators clean this up...
-    free(itr);
-    pymem_free(o->u.d);
+    // iterate the hashtable and release both keys AND values
+    // (in contrast to the attribute hashtable on classes/objects,
+    //  this is because a pyobj dict can keys of type pyobj, whereas
+    //  the attribute dictionary on classes/objects can only have 
+    //  C strings as the key)
+    iterate_and_release_table(o->u.d, 1);
+    hashtable_destroy(o->u.d, 1);
     pymem_free(o);
 }
 

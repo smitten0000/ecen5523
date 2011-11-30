@@ -68,13 +68,15 @@ struct hashtable;
  * @param   minsize         minimum initial size of hashtable
  * @param   hashfunction    function for hashing keys
  * @param   key_eq_fn       function for determining key equality
+ * @param   type            type of object this hashtable is being allocated for
  * @return                  newly created hashtable or NULL on failure
  */
 
 struct hashtable *
 create_hashtable(unsigned int minsize,
                  unsigned int (*hashfunction) (void*),
-                 int (*key_eq_fn) (void*,void*));
+                 int (*key_eq_fn) (void*,void*),
+                 int type);
 
 /*****************************************************************************
  * hashtable_insert
@@ -83,6 +85,7 @@ create_hashtable(unsigned int minsize,
  * @param   h   the hashtable to insert into
  * @param   k   the key - hashtable claims ownership and will free on removal
  * @param   v   the value - does not claim ownership
+ * @param   t   type of object this entry in the hashtable is allocated for
  * @return      non-zero for successful insertion
  *
  * This function will cause the table to expand if the insertion would take
@@ -96,12 +99,12 @@ create_hashtable(unsigned int minsize,
  */
 
 int
-hashtable_insert(struct hashtable *h, void *k, void *v);
+hashtable_insert(struct hashtable *h, void *k, void *v, int t);
 
 #define DEFINE_HASHTABLE_INSERT(fnname, keytype, valuetype) \
-int fnname (struct hashtable *h, keytype *k, valuetype *v) \
+int fnname (struct hashtable *h, keytype *k, valuetype *v, int t) \
 { \
-    return hashtable_insert(h,k,v); \
+    return hashtable_insert(h,k,v,t); \
 }
 
 /*****************************************************************************

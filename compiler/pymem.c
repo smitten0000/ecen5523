@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <time.h>
 #include <sys/time.h>
+#include <libgen.h>
 #include "pymem.h"
 
 
@@ -42,15 +43,16 @@ void pymem_init()
 {
     FILE *fp;
     struct timeval tv;
+    char logfile[4096];
     char c;
     int i;
 
     /* This reads in the program name from the /proc filesystem on linux. */
     if (cmdline == NULL) {
-        cmdline = (char *)malloc(1024);
+        cmdline = (char *)malloc(4096);
         fp = fopen("/proc/self/cmdline", "r");
         i = 0;
-        while (fread(&c, 1, 1, fp) && (i < 1023))
+        while (fread(&c, 1, 1, fp) && (i < 4095))
             cmdline[i++] = c;
         cmdline[i]='\0';
     }
@@ -60,7 +62,11 @@ void pymem_init()
         pymem_shutdown();
 
     /* open the log file */
-    output_fd = fopen("pymem.log", "a");
+    snprintf (logfile, 4096, "%s.pymem", basename(cmdline));
+    if ((output_fd = fopen(logfile, "a")) == NULL) {
+        perror("fopen");
+        exit(-1);
+    }
 
     /* print a message to the log that pymem_shutdown was called */
     int ret = gettimeofday(&tv, NULL);
