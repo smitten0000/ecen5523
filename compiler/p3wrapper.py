@@ -111,6 +111,7 @@ class P3Wrapper:
         return Function(node.decorators, node.name, node.argnames, node.defaults, node.flags, node.doc, code)
 
     def visit_Lambda(self, node):
+        code = self.visit(node.code)
         return Lambda(node.argnames, node.defaults, node.flags, code)
 
     # P3

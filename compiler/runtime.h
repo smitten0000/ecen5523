@@ -50,26 +50,37 @@ typedef struct fun_struct function;
 
 struct class_struct {
     struct hashtable *attrs;
-    int nparents;
-    struct class_struct *parents;
+    //int nparents;
+    //XXX: design change.  See comment before create_class in runtime.c
+    //struct class_struct *parents;
+    pyobj parents;
 };
 typedef struct class_struct class;
 
 struct object_struct {
     struct hashtable *attrs;
-    class cl;
+    pyobj clazz;
+    //XXX: similar design change for object as was done in class.
+    //class cl;
 };
 typedef struct object_struct object;
 
 struct unbound_method_struct {
-    function fun;
-    class cl;
+    //XXX: similar design change for ubmethod as was done in class.
+    //class cl;
+    //function fun;
+    //class cl;
+    pyobj fun;
+    pyobj clazz;
 };
 typedef struct unbound_method_struct unbound_method;
 
 struct bound_method_struct {
-    function fun;
-    object receiver;
+    //XXX: similar design change for ubmethod as was done in class.
+    //function fun;
+    //object receiver;
+    pyobj fun;
+    pyobj receiver;
 };
 typedef struct bound_method_struct bound_method;
 

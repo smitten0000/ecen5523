@@ -1,5 +1,5 @@
 
-TESTS=pymem_test list dict
+TESTS=pymem_test list dict closure class object ubmethod bmethod loop
 RUNTIME_DIR=..
 RUNTIME_SOURCE= \
 	$(RUNTIME_DIR)/hashtable.c \
@@ -14,14 +14,11 @@ LDFLAGS=-lm
 
 all: $(TESTS)
 
-pymem_test: pymem_test.c $(RUNTIME_SOURCE)
+%: %.c $(RUNTIME_SOURCE)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-list: list.c $(RUNTIME_SOURCE)
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
-
-dict: dict.c $(RUNTIME_SOURCE)
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+#pymem_test: pymem_test.c $(RUNTIME_SOURCE)
+#	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 clean:
 	rm -f $(TESTS) *.pymem

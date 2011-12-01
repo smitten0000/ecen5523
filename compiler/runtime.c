@@ -785,6 +785,9 @@ big_pyobj* create_closure(void* fun_ptr, pyobj free_vars) {
     function f;
     f.function_ptr = fun_ptr;
     f.free_vars = free_vars;
+    // XXX: increment ref counter to free_vars list
+    // Shouldn't we assert that free_vars is of type LIST?
+    inc_ref_ctr(project_big(free_vars));
     return closure_to_big(f);
 }
 
@@ -825,6 +828,27 @@ static int attrname_equal(void *a, void *b)
     return !strcmp( (char*)a, (char*)b );
 }
 
+// XXX: design change.
+// The original design used the code below to copy the parent classes
+// from the list pyobj passed in by the user, to the newly allocated
+// class pyobj.  The problem with this approach is that when we go
+// to deallocate this class pyobj, we no longer have a reference to
+// the original list pyobj, or the class pyobj(s) corresponding to the
+// base classes, therefore we cannot decrement the reference counts on
+// them.  We changed the design by changing the struct class_struct
+// definition in runtime.h to contain a single pyobj reference to the
+// list we are passed in (instead of struct class_struct *parents).  This
+// allows us to call decref on the list when this class is de-allocated,
+// and at the same time, simplifies our reference counting logic, since
+// we only have to manage the reference count for the list pyobj (we
+// don't have to manage the reference counts for each base class itself,
+// since the list owns these references).  The downside of this change
+// is that it requires some small changes to get_attr, and inherits_rec,
+// and attrsearch_rec...
+// We need to just test this well and make sure it doesn't break anything.
+// I think this design is more consistent with the rest of the runtime
+// design, so I believe its an improvement.
+/*
 big_pyobj* create_class(pyobj bases)
 {
     big_pyobj* ret = (big_pyobj*)pymem_new(CLASS, sizeof(big_pyobj));
@@ -856,6 +880,42 @@ big_pyobj* create_class(pyobj bases)
     }
     return ret;
 }
+*/
+big_pyobj* create_class(pyobj bases)
+{
+    big_pyobj* ret;
+    big_pyobj* basesp = project_big(bases);
+    pyobj parent;
+
+    // Do validation first to check that we were passed in a list of classes
+    // and not anything else.
+    switch (basesp->tag) {
+    case LIST: {
+        int i;
+        for (i = 0; i != basesp->u.l.len; ++i) {
+            parent = basesp->u.l.data[i];
+            if (tag(parent) != BIG_TAG || project_big(parent)->tag != CLASS) {
+                fprintf(stderr, "create_class: list must contain only classes");
+                exit(-1);
+            }
+        }
+        break;
+    }
+    default:
+        fprintf(stderr, "create_class: must pass list");
+        exit(-1);
+    }
+
+    // Create the class pyobj to return
+    ret = (big_pyobj*)pymem_new(CLASS, sizeof(big_pyobj));
+    ret->tag = CLASS;
+    ret->ref_ctr = 0;
+    ret->u.cl.attrs = create_hashtable(2, attrname_hash, attrname_equal, CLASS);
+    ret->u.cl.parents = bases;
+    // remember to increment the reference count on the list pyobj of base classes!
+    inc_ref_ctr(basesp);
+    return ret;
+}
 
 /* we leave calling the __init__ function for a separate step. */
 big_pyobj* create_object(pyobj cl) {
@@ -863,9 +923,10 @@ big_pyobj* create_object(pyobj cl) {
     ret->tag = OBJECT;
     ret->ref_ctr = 0;
     big_pyobj* clp = project_big(cl);
-    if (clp->tag == CLASS)
-        ret->u.obj.cl = clp->u.cl;
-    else {
+    if (clp->tag == CLASS) {
+        ret->u.obj.clazz = cl;
+        inc_ref_ctr(clp);
+    } else {
         printf("in make object, expected a class\n");
         exit(-1);
     }
@@ -874,13 +935,17 @@ big_pyobj* create_object(pyobj cl) {
 }
 
 static pyobj* attrsearch_rec(class cl, char* attr) {
+    big_pyobj* parents;
+    big_pyobj* parent;
     pyobj* ptr;
     int i;
     ptr = hashtable_search(cl.attrs, attr);
 
     if(ptr == NULL) {
-        for(i=0; i != cl.nparents; ++i) {
-            ptr = attrsearch_rec(cl.parents[i], attr);
+        parents = project_big(cl.parents);
+        for(i=0; i != parents->u.l.len; ++i) {
+            parent = project_big(parents->u.l.data[i]);
+            ptr = attrsearch_rec(parent->u.cl, attr);
             if (ptr != NULL)
                 return ptr;
         }
@@ -898,21 +963,25 @@ static pyobj* attrsearch(class cl, char* attr) {
     return ret;
 }
 
-static big_pyobj* create_bound_method(object receiver, function f) {
+static big_pyobj* create_bound_method(pyobj receiver, pyobj f) {
     big_pyobj* ret = (big_pyobj*)pymem_new(BMETHOD, sizeof(big_pyobj));
     ret->tag = BMETHOD;
-    ret->u.bm.fun = f;
     ret->ref_ctr = 0;
+    ret->u.bm.fun = f;
+    inc_ref_ctr(project_big(f));
     ret->u.bm.receiver = receiver;
+    inc_ref_ctr(project_big(receiver));
     return ret;
 }
 
-static big_pyobj* create_unbound_method(class cl, function f) {
+static big_pyobj* create_unbound_method(pyobj clazz, pyobj fun) {
     big_pyobj* ret = (big_pyobj*)pymem_new(UBMETHOD, sizeof(big_pyobj));
     ret->tag = UBMETHOD;
     ret->ref_ctr = 0;
-    ret->u.ubm.fun = f;
-    ret->u.ubm.cl = cl;
+    ret->u.ubm.fun = fun;
+    inc_ref_ctr(project_big(fun));
+    ret->u.ubm.clazz = clazz;
+    inc_ref_ctr(project_big(clazz));
     return ret;
 }
 
@@ -942,13 +1011,17 @@ int has_attr(pyobj o, char* attr)
 }
 
 static int inherits_rec(class c1, class c2) {
+    big_pyobj *parents;
+    big_pyobj *parent;
     int ret = 0;
     if (c1.attrs == c2.attrs) {
         ret = 1;
     } else {
         int i;
-        for(i=0; i != c1.nparents; ++i) {
-            ret = inherits_rec(c1.parents[i], c2);
+        parents = project_big(c1.parents);
+        for(i=0; i != parents->u.l.len; ++i) {
+            parent = project_big(parents->u.l.data[i]);
+            ret = inherits_rec(parent->u.cl, c2);
             if (ret)
                 break;
         }
@@ -962,59 +1035,50 @@ int inherits(pyobj c1, pyobj c2) {
 
 big_pyobj* get_class(pyobj o)
 {
-    big_pyobj* ret = (big_pyobj*)pymem_new(CLASS, sizeof(big_pyobj));
-    ret->tag = CLASS;
-    ret->ref_ctr = 0;
+    // XXX: caller is expected to incref on the return value
     big_pyobj* b = project_big(o);
     switch (b->tag) {
     case OBJECT:
-        ret->u.cl = b->u.obj.cl;
+        return project_big(b->u.obj.clazz);
         break;
     case UBMETHOD:
-        ret->u.cl = b->u.ubm.cl;
+        return project_big(b->u.ubm.clazz);
         break;
     default:
         printf("get_class expected object or unbound method\n");
         exit(-1);
     }
-    return ret;
 }
 
 big_pyobj* get_receiver(pyobj o)
 {
-    big_pyobj* ret = (big_pyobj*)pymem_new(OBJECT, sizeof(big_pyobj));
-    ret->tag = OBJECT;
-    ret->ref_ctr = 0;
+    // XXX: caller is expected to incref the return value.
     big_pyobj* b = project_big(o);
     switch (b->tag) {
     case BMETHOD:
-        ret->u.obj = b->u.bm.receiver;
+        return project_big(b->u.bm.receiver);
         break;
     default:
         printf("get_receiver expected bound method\n");
         exit(-1);
     }
-    return ret;
 }
 
 big_pyobj* get_function(pyobj o)
 {
-    big_pyobj* ret = (big_pyobj*)pymem_new(FUN, sizeof(big_pyobj));
-    ret->tag = FUN;
-    ret->ref_ctr = 0;
+    // XXX: caller is expected to incref the return value.
     big_pyobj* b = project_big(o);
     switch (b->tag) {
     case BMETHOD:
-        ret->u.f = b->u.bm.fun;
+        return project_big(b->u.bm.fun);
         break;
     case UBMETHOD:
-        ret->u.f = b->u.ubm.fun;
+        return project_big(b->u.ubm.fun);
         break;
     default:
         printf("get_function expected a method\n");
         exit(-1);
     }
-    return ret;
 }
 
 pyobj get_attr(pyobj c, char* attr)
@@ -1024,17 +1088,18 @@ pyobj get_attr(pyobj c, char* attr)
     case CLASS: {
         pyobj* attribute = attrsearch(b->u.cl, attr);
         if (is_function(*attribute)) {
-            return inject_big(create_unbound_method(b->u.cl, project_function(*attribute)));
+            return inject_big(create_unbound_method(c, *attribute));
         } else {
             return *attribute;
         }
     }
     case OBJECT: {
         pyobj* attribute = hashtable_search(b->u.obj.attrs, attr);
+        big_pyobj* clazz = project_big(b->u.obj.clazz);
         if (attribute == NULL) {
-            attribute = attrsearch(b->u.obj.cl, attr);
+            attribute = attrsearch(clazz->u.cl, attr);
             if (is_function(*attribute)) {
-                return inject_big(create_bound_method(b->u.obj, project_function(*attribute)));
+                return inject_big(create_bound_method(c, *attribute));
             } else {
                 return *attribute;
             }
@@ -1119,22 +1184,19 @@ void iterate_and_release_table(struct hashtable* h, int dec_keys) {
  */
 void free_class(big_pyobj* o) {
     /* o->u.cl.attrs is a hashtable which should be freed
-       o.cl.nparents is the number of parent classes and
        o.cl.parents is a list of parent classes
-       -> should calling free here call dec_ref on the parent class reference?
-       -> that means create_class needs to call inc_ref on the parent class?
+       -> should calling free here call dec_ref on the parent class reference? 
+          B.S. just the _list_ of parent classes (after design change).
+       -> that means create_class needs to call inc_ref on the parent class? 
+          B.S. yes, but just the list; the list owns the references to the parent
+               classes themselves.  By incrementing the reference count for the list,
+               we guarantee that the reference counts for the elements in the list
+               will never reach zero, since the list will always own a reference to
+               its elements.
      */
     unsigned int i=0;
-    // XXX: we have only a list of class_struct here in the parents list but need the big_pyobj reference to dec_ref on
-    /*    if ( o->u.cl.nparents > 0 ) {
-            for(i=0; i < o->u.cl.nparents; i++) {
-                pyobj* parent = o->u.cl.parents[i];
-              	if (tag(*parent) == BIG_TAG && project_big(*parent)->tag == CLASS) {
-                    dec_ref_ctr(project_big(*parent));
-                }
-            }
-        }
-    */
+    // decrement reference count for list of parent classes
+    dec_ref_ctr(project_big(o->u.cl.parents));
     // decrement reference counts for all values in the attribute hash table  
     // (but not keys since the keys are just strings that are not managed
     //  by the runtime)
@@ -1157,10 +1219,8 @@ void free_class(big_pyobj* o) {
  * so we simply undo each step
  */
 void free_object(big_pyobj* o) {
-    // free the class reference
-    // XXX: again, we only have the class_struct pointer
-    //big_pyobj* clp = project_big(o->u.cl);
-    //dec_ref_ptr(clp);
+    // decrement the class reference
+    dec_ref_ctr(project_big(o->u.obj.clazz));
 
     // iterate the attr hashtable and release values (but not keys, since
     // they are not pyobj)
@@ -1183,23 +1243,21 @@ void free_function(big_pyobj* o) {
         dec_ref_ctr(project_big(o->u.f.free_vars));
     }
     // The only other portion of a function is the pointer itself
-    
+    pymem_free(o);
 }
  
 void free_bound_method(big_pyobj* o) {
-    free_function(o);
-    // XXX: what does it mean to have a receiver which is an object, and how should we decrement such a reference?
-    // this is a reference to an object ...
-    // dec_ref_ctr(o->u.bm.receiver)
+    // decrement references to function (closure) and object (receiver).
+    dec_ref_ctr(project_big(o->u.bm.fun));
+    dec_ref_ctr(project_big(o->u.bm.receiver));
     
     pymem_free(o);
 }
 
 void free_unbound_method(big_pyobj* o) {
-    free_function(o);
-    
-    // XXX: again, the class reference
-    // dec_ref_ctr(o->u.ubm.cl)
+    // decrement references to function (closure) and class.
+    dec_ref_ctr(project_big(o->u.ubm.fun));
+    dec_ref_ctr(project_big(o->u.ubm.clazz));
     
     pymem_free(o);
 }

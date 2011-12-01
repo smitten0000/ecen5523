@@ -177,7 +177,7 @@ class GCFlattener:
         code = self.visit(node.code)
         for x in node.argnames:
             self.varalloc.add_var(x)
-        return Function(node.decorators, node.name, node.argnames, node.defaults, node.flags, node.doc, code, node.lineno)
+        return [Function(node.decorators, node.name, node.argnames, node.defaults, node.flags, node.doc, code, node.lineno)]
     def visit_While(self, node, *args, **kwargs):
         #statement
         flatbody = self.visit(node.body)
