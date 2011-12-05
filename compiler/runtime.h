@@ -151,7 +151,7 @@ pyobj set_attr(pyobj obj, char* attr, pyobj val);
 
 pyobj error_pyobj(char* string);
 
-void inc_ref_ctr(big_pyobj* v);
-void dec_ref_ctr(big_pyobj* v);
+void inc_ref_ctr(pyobj v);
+void dec_ref_ctr(pyobj v);
 
 #endif /* RUNTIME_H */

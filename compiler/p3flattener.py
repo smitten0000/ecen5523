@@ -9,6 +9,7 @@ from p3heapify import P3Heapify
 from p3freevars import P3FreeVars
 from p3closureconvert import P3ClosureConversion
 from gcflattener import GCFlattener
+from gcrefcount import GCRefCount
 import operator
 
 class P3Flattener(P2Flattener):
@@ -61,6 +62,7 @@ if __name__ == "__main__":
         declassify = P3Declassify(varalloc)
         unique = P3UniquifyVars()
         gcflatten = GCFlattener(varalloc, True)
+        gcrefcount = GCRefCount(varalloc)
         explicator = P3Explicate(varalloc, handleLambdas=False)
         heap = P3Heapify(explicator)
         closure = P3ClosureConversion(explicator, varalloc)
@@ -70,6 +72,7 @@ if __name__ == "__main__":
         ast = declassify.transform(ast)
         ast = unique.transform(ast)
         ast = gcflatten.transform(ast)        
+        ast = gcrefcount.transform(ast)        
         ast = explicator.explicate(ast)
         ast = heap.transform(ast)
         astlist = closure.transform(ast)

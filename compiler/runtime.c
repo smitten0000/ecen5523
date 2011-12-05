@@ -679,15 +679,12 @@ static pyobj subscript_assign(big_pyobj* c, pyobj key, pyobj val)
     switch (c->tag) {
     case LIST:
         // XXX: inc ref count (for val only)
-        if (is_big(val))
-            inc_ref_ctr(project_big(val));
+        inc_ref_ctr(val);
         return *list_subscript(c->u.l, key) = val;
     case DICT:
         // XXX: inc ref count (for key and val)
-        if (is_big(key)) 
-            inc_ref_ctr(project_big(key));
-        if (is_big(val)) 
-            inc_ref_ctr(project_big(val));
+        inc_ref_ctr(key);
+        inc_ref_ctr(val);
         return *dict_subscript(c->u.d, key) = val;
     default:
         printf("error in set subscript, not a list or dictionary\n");
@@ -788,7 +785,7 @@ big_pyobj* create_closure(void* fun_ptr, pyobj free_vars) {
     // XXX: increment ref counter to free_vars list
     // Shouldn't we assert that free_vars is of type LIST?
     assert(is_big(free_vars));
-    inc_ref_ctr(project_big(free_vars));
+    inc_ref_ctr(free_vars);
     return closure_to_big(f);
 }
 
@@ -914,7 +911,7 @@ big_pyobj* create_class(pyobj bases)
     ret->u.cl.attrs = create_hashtable(2, attrname_hash, attrname_equal, CLASS);
     ret->u.cl.parents = bases;
     // remember to increment the reference count on the list pyobj of base classes!
-    inc_ref_ctr(basesp);
+    inc_ref_ctr(bases);
     return ret;
 }
 
@@ -926,7 +923,7 @@ big_pyobj* create_object(pyobj cl) {
     big_pyobj* clp = project_big(cl);
     if (clp->tag == CLASS) {
         ret->u.obj.clazz = cl;
-        inc_ref_ctr(clp);
+        inc_ref_ctr(cl);
     } else {
         printf("in make object, expected a class\n");
         exit(-1);
@@ -969,9 +966,9 @@ static big_pyobj* create_bound_method(pyobj receiver, pyobj f) {
     ret->tag = BMETHOD;
     ret->ref_ctr = 0;
     ret->u.bm.fun = f;
-    inc_ref_ctr(project_big(f));
+    inc_ref_ctr(f);
     ret->u.bm.receiver = receiver;
-    inc_ref_ctr(project_big(receiver));
+    inc_ref_ctr(receiver);
     return ret;
 }
 
@@ -980,9 +977,9 @@ static big_pyobj* create_unbound_method(pyobj clazz, pyobj fun) {
     ret->tag = UBMETHOD;
     ret->ref_ctr = 0;
     ret->u.ubm.fun = fun;
-    inc_ref_ctr(project_big(fun));
+    inc_ref_ctr(fun);
     ret->u.ubm.clazz = clazz;
-    inc_ref_ctr(project_big(clazz));
+    inc_ref_ctr(clazz);
     return ret;
 }
 
@@ -1124,7 +1121,7 @@ pyobj set_attr(pyobj obj, char* attr, pyobj val)
     strcpy(k, attr);
     // XXX: increment reference count here for the referenced object
     if (is_big(val))
-        inc_ref_ctr(project_big(val));
+        inc_ref_ctr(val);
     *v = val;
 
     struct hashtable* attrs;
@@ -1167,13 +1164,11 @@ void iterate_and_release_table(struct hashtable* h, int dec_keys) {
         pyobj k = *(pyobj *)hashtable_iterator_key(itr);
         pyobj v = *(pyobj *)hashtable_iterator_value(itr);
 
-        if ( dec_keys && is_big(k) ) {
-            dec_ref_ctr(project_big(k));
+        if ( dec_keys ) {
+            dec_ref_ctr(k);
         }
 
-        if ( is_big(v) ) {
-            dec_ref_ctr(project_big(v));
-        }
+        dec_ref_ctr(v);
     } while (hashtable_iterator_advance(itr));
     // none of the above functions which use iterators clean this up...
     free(itr);
@@ -1198,7 +1193,7 @@ void free_class(big_pyobj* o) {
      */
     unsigned int i=0;
     // decrement reference count for list of parent classes
-    dec_ref_ctr(project_big(o->u.cl.parents));
+    dec_ref_ctr(o->u.cl.parents);
     // decrement reference counts for all values in the attribute hash table  
     // (but not keys since the keys are just strings that are not managed
     //  by the runtime)
@@ -1222,7 +1217,7 @@ void free_class(big_pyobj* o) {
  */
 void free_object(big_pyobj* o) {
     // decrement the class reference
-    dec_ref_ctr(project_big(o->u.obj.clazz));
+    dec_ref_ctr(o->u.obj.clazz);
 
     // iterate the attr hashtable and release values (but not keys, since
     // they are not pyobj)
@@ -1241,25 +1236,23 @@ void free_object(big_pyobj* o) {
  */
  
 void free_function(big_pyobj* o) {
-    if ( is_big(o->u.f.free_vars) ) {
-        dec_ref_ctr(project_big(o->u.f.free_vars));
-    }
+    dec_ref_ctr(o->u.f.free_vars);
     // The only other portion of a function is the pointer itself
     pymem_free(o);
 }
  
 void free_bound_method(big_pyobj* o) {
     // decrement references to function (closure) and object (receiver).
-    dec_ref_ctr(project_big(o->u.bm.fun));
-    dec_ref_ctr(project_big(o->u.bm.receiver));
+    dec_ref_ctr(o->u.bm.fun);
+    dec_ref_ctr(o->u.bm.receiver);
     
     pymem_free(o);
 }
 
 void free_unbound_method(big_pyobj* o) {
     // decrement references to function (closure) and class.
-    dec_ref_ctr(project_big(o->u.ubm.fun));
-    dec_ref_ctr(project_big(o->u.ubm.clazz));
+    dec_ref_ctr(o->u.ubm.fun);
+    dec_ref_ctr(o->u.ubm.clazz);
     
     pymem_free(o);
 }
@@ -1269,9 +1262,7 @@ void free_list(big_pyobj* o) {
     unsigned int i=0;
     
     for(i=0; i < o->u.l.len; i++) {
-        if ( is_big(o->u.l.data[i]) ) {
-            dec_ref_ctr(project_big(o->u.l.data[i]));
-        }
+        dec_ref_ctr(o->u.l.data[i]);
     }
     pymem_free(o->u.l.data);
     pymem_free(o);
@@ -1317,18 +1308,24 @@ void release(big_pyobj* o) {
     }
 }
 
-void inc_ref_ctr(big_pyobj* v) {
-    v->ref_ctr ++;
+void inc_ref_ctr(pyobj v) {
+    if (is_big(v)) {
+        big_pyobj *val = project_big(v);
+        val->ref_ctr ++;
+    }
 }
 
-void dec_ref_ctr(big_pyobj* v) {
-    v->ref_ctr --;
-    if ( v->ref_ctr < 0 ) {
-        printf("too many dec_ref on big_pyobj\n");
-        print_any(inject_big(v));
-        v->ref_ctr = 0;
-    }
-    if ( v->ref_ctr == 0 ) {
-        release(v);
+void dec_ref_ctr(pyobj v) {
+    if (is_big(v)) {
+        big_pyobj *val = project_big(v);
+        val->ref_ctr --;
+        if ( val->ref_ctr < 0 ) {
+            fprintf(stderr,"too many dec_ref on big_pyobj\n");
+            print_any(v);
+            val->ref_ctr = 0;
+        }
+        if ( val->ref_ctr == 0 ) {
+            release(val);
+        }
     }
 }

@@ -13,6 +13,8 @@ from p0parser import P0Parser
 from p3wrapper import P3Wrapper
 from p3declassify import P3Declassify
 from p3uniquifyvars import P3UniquifyVars
+from gcflattener import GCFlattener
+from gcrefcount import GCRefCount
 from p3explicate import P3Explicate
 from p3heapify import P3Heapify
 from p3closureconvert import P3ClosureConversion
@@ -22,7 +24,6 @@ from p3stackallocator import P3StackAllocator
 from p3regallocator import P3RegAllocator
 from p3ifinsselector import P3IfInstructionSelector
 from p3generator import P3Generator
-from gcflattener import GCFlattener
 from comp_util import *
 import time
 
@@ -48,6 +49,7 @@ if __name__ == "__main__":
         wrapper = P3Wrapper()
         uniquify = P3UniquifyVars()
         gcflattener = GCFlattener(varalloc)
+        gcrefcount = GCRefCount(varalloc)
         explicator = P3Explicate(varalloc,handleLambdas=False)
         heap = P3Heapify(explicator)
         closer = P3ClosureConversion(explicator, varalloc)
@@ -62,6 +64,7 @@ if __name__ == "__main__":
         ast = wrapper.transform(ast)
         ast = uniquify.transform(ast)
         ast = gcflattener.transform(ast)
+        ast = gcrefcount.transform(ast)
         ast = explicator.explicate(ast)
         ast  = heap.transform(ast)
         astlist = closer.transform(ast)

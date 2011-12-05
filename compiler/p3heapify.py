@@ -6,6 +6,7 @@ import logging
 
 from p3freevars import P3FreeVars
 from gcflattener import GCFlattener
+from gcrefcount import GCRefCount
 from p3wrapper import P3Wrapper
 from p3explicate import P3Explicate
 from p2heapify import P2Heapify
@@ -54,6 +55,7 @@ if __name__ == "__main__":
         wrapper = P3Wrapper()
         unique = P3UniquifyVars()
         gcflatten = GCFlattener(varalloc)
+        gcrefcount = GCRefCount(varalloc)
         explicator = P3Explicate(varalloc, handleLambdas=False)
         heap = P3Heapify(explicator)
 
@@ -62,7 +64,8 @@ if __name__ == "__main__":
         ast = wrapper.transform(ast)
         ast = unique.transform(ast)        
         ast = gcflatten.transform(ast)        
+        ast = gcrefcount.transform(ast)        
         ast = explicator.explicate(ast)
         ast = heap.transform(ast)
         print prettyAST(ast)
-        #print ast
+        print ast
