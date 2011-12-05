@@ -17,6 +17,18 @@ AssName    ?
 
 compiler.ast reference: http://docs.python.org/library/compiler.html#module-compiler.ast
 
+Notes:
+======
+1. The Function node is turned into a Lambda with a Return in the explicate phase.
+2. The Lambda node is turned into a Lambda with a Stmt([Return(...)]) in explicate.
+3. The P3Declassify phase has to introduce the InjectFrom node to convert a class
+   into the appropriate runtime calls.  This means all subsequent phases have to 
+   handle this node.
+4. GCFlattener needs to turn Lambda nodes into Lambda with a Stmt([Return(...)])
+   because the expression is flattened at this point.   To prevent explicate from
+   doing the same thing, we pass handleLambdas="False" to the constructor for 
+   P3Explicate
+
 
 Additional Nodes in Flatten but not part of python AST
 ======================================================

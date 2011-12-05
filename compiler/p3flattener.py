@@ -60,10 +60,10 @@ if __name__ == "__main__":
         varalloc = VariableAllocator()
         declassify = P3Declassify(varalloc)
         unique = P3UniquifyVars()
-        explicator = P3Explicate(varalloc)
+        gcflatten = GCFlattener(varalloc, True)
+        explicator = P3Explicate(varalloc, handleLambdas=False)
         heap = P3Heapify(explicator)
         closure = P3ClosureConversion(explicator, varalloc)
-        gcflatten = GCFlattener(varalloc, True)
         flatten = P3Flattener(varalloc,True)
 
         ast = compiler.parseFile(testcase)
@@ -78,5 +78,3 @@ if __name__ == "__main__":
             print ast
             ast = flatten.flatten(ast)
             print prettyAST(ast)
-
-

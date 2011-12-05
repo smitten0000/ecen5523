@@ -2,6 +2,7 @@
 from compiler.ast import *
 from comp_util import *
 from p3declassify import P3Declassify
+from p3wrapper import P3Wrapper
 from p3explicate import P3Explicate
 from p3uniquifyvars import P3UniquifyVars
 from p3closureconvert import P3ClosureConversion
@@ -38,12 +39,23 @@ class GCFlattener:
             var, stmtlist = self.visit(node.nodes[0])
             return stmtlist + [Printnl([var], node.dest)]
     def visit_Assign(self, node, *args, **kwargs):
-        if isinstance(node.nodes[0],Subscript):
-            self.varalloc.add_var(node.nodes[0].expr.name)
-        else:
-            self.varalloc.add_var(node.nodes[0].name)
+        assnode = node.nodes[0]
         var, stmtlist = self.visit(node.expr)
-        return stmtlist + [Assign(node.nodes, var)]
+        if isinstance(assnode,Subscript):
+            # have to flatten the expression in the subscript
+            exprvar, exprstmts = self.visit(assnode.expr)
+            # have to flatten the subscripts as well.
+            subvar, substmts = self.visit(assnode.subs[0])
+            return exprstmts + substmts + stmtlist + [Assign([Subscript(exprvar,assnode.flags,[subvar])], var)]
+        elif isinstance(assnode, AssAttr):
+            # have to flatten the expression the left of the dot
+            exprvar, exprstmts = self.visit(assnode.expr)
+            return exprstmts + stmtlist + [Assign([AssAttr(exprvar,assnode.attrname,assnode.flags)], var)]
+        elif isinstance(assnode, AssName):
+            self.varalloc.add_var(assnode.name)
+            return stmtlist + [Assign(node.nodes, var)]
+        else:
+            raise Exception('Unknown assignment node: %s' % assnode)
     def visit_Discard(self, node, *args, **kwargs):
         var, stmtlist = self.visit(node.expr)
         varname = self.varalloc.get_next_var()
@@ -199,17 +211,30 @@ class GCFlattener:
         self.log.debug('then=%s' % then)
         self.log.debug('else_=%s' % then)
         return test + [If([(vartes, then)], else_)]
-    def visit_GetAttr(self, node, *args, **kwargs):
-        return node
-    def visit_AssAttr(self, node, *args, **kwargs):
-        return node
+    def visit_Getattr(self, node, *args, **kwargs):
+        # need to flatten
+        exprvar, exprstmts = self.visit(node.expr)
+        varname = self.varalloc.get_next_var()
+        return (Name(varname), exprstmts + [Assign([AssName(varname, 'OP_ASSIGN')], Getattr(exprvar, node.attrname))])
+    def visit_InjectFrom(self, node, *args, **kwargs):
+        argvar, argstmts = self.visit(node.arg)
+        varname = self.varalloc.get_next_var()
+        return (Name(varname), argstmts + [Assign([AssName(varname, 'OP_ASSIGN')], InjectFrom(node.typ, argvar))])
     def visit_Lambda(self, node, *args, **kwargs):
         # Lambda argnames, defaults, flags, code, lineno=None):
         self.log.debug('in visit_Lambda, node.code = %s',node.code)
-        code = self.visit(node.code)
+        # code is actually an expression, so treat it like all other expressions.  flatten it.
+        codevar, codestmts = self.visit(node.code)
         for x in node.argnames:
             self.varalloc.add_var(x)
-        return Lambda(node.argnames, node.defaults, node.flags, code, node.lineno)
+        varname = self.varalloc.get_next_var()
+        # Since we are flattening the code inside the lambda, we need to encapsulate it in a
+        # Stmt() node here.  This used to be done in the P2Explicate phase, but it has to be
+        # moved here since we are flattening.
+        return (Name(varname), 
+                [Assign([AssName(varname,'OP_ASSIGN')], 
+                        Lambda(node.argnames, node.defaults, node.flags, Stmt(codestmts + [Return(codevar)]), node.lineno))]
+               )
     def visit_Compare(self, node, *args, **kwargs):
         # Only need to handle binary comparison operators.  So if len(node.ops) > 1, its a syntax error.
         # For example, a == b == c is valid python, but invalid P1
@@ -237,13 +262,16 @@ if __name__ == "__main__":
     for testcase in testcases:
         varalloc = VariableAllocator()
         declassify = P3Declassify(varalloc)
+        wrapper = P3Wrapper()
         unique = P3UniquifyVars()
         explicator = P3Explicate(varalloc)
         flatten = GCFlattener(varalloc,True)
 
         ast = compiler.parseFile(testcase)
         ast = declassify.transform(ast)
+        ast = wrapper.transform(ast)
         ast = unique.transform(ast)        
         ast = flatten.transform(ast)
         print ast
+        print prettyAST(ast)
 

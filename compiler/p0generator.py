@@ -35,8 +35,11 @@ main:
 \tpushl %%ebp
 \tmovl %%esp, %%ebp
 \tsubl $%s,%%esp # make stack space for variables
+\tcall pymem_init
 
 %s
+\tcall pymem_print_stats
+\tcall pymem_shutdown
 \tmovl $0, %%eax # put return value in eax
 \tleave
 \tret

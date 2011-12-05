@@ -5,6 +5,8 @@ from x86ir import *
 import logging
 
 from p3freevars import P3FreeVars
+from gcflattener import GCFlattener
+from p3wrapper import P3Wrapper
 from p3explicate import P3Explicate
 from p2heapify import P2Heapify
 
@@ -49,12 +51,17 @@ if __name__ == "__main__":
     for testcase in testcases:
         varalloc = VariableAllocator()
         declassify = P3Declassify(varalloc)
+        wrapper = P3Wrapper()
         unique = P3UniquifyVars()
-        explicator = P3Explicate(varalloc)
+        gcflatten = GCFlattener(varalloc)
+        explicator = P3Explicate(varalloc, handleLambdas=False)
         heap = P3Heapify(explicator)
+
         ast = compiler.parseFile(testcase)
         ast = declassify.transform(ast)
+        ast = wrapper.transform(ast)
         ast = unique.transform(ast)        
+        ast = gcflatten.transform(ast)        
         ast = explicator.explicate(ast)
         ast = heap.transform(ast)
         print prettyAST(ast)

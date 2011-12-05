@@ -112,8 +112,10 @@ void pymem_shutdown()
 
 
     /* now we can close the output file */
-    if (output_fd != NULL)
+    if (output_fd != NULL) {
         fclose(output_fd);
+        output_fd = NULL;
+    }
 }
 
 

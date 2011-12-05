@@ -7,7 +7,7 @@ from p2explicate import P2Explicate
 
 class P3Explicate(P2Explicate):
     def __init__(self, varalloc, handleLambdas=True):
-        P2Explicate.__init__(self, varalloc)
+        P2Explicate.__init__(self, varalloc, handleLambdas)
             
     def visit_While(self, node, *args, **kwargs):
         test  = self.visit(node.test)
@@ -141,6 +141,7 @@ if __name__ == "__main__":
     import sys, compiler
     import logging.config
     from p3declassify import P3Declassify
+    from p3wrapper import P3Wrapper
     from p3uniquifyvars import P3UniquifyVars
     from gcflattener import GCFlattener
     if len(sys.argv) < 2:
@@ -149,13 +150,16 @@ if __name__ == "__main__":
     logging.config.fileConfig('logging.cfg')
     testcases = sys.argv[1:]
     for testcase in testcases:
-        ast = compiler.parseFile(testcase)
         varalloc = VariableAllocator()
         declassify = P3Declassify(varalloc)
+        wrapper = P3Wrapper()
         gcflatten = GCFlattener(varalloc)
-        ast = declassify.transform(ast)
         uniquify  = P3UniquifyVars()
+        explicator = P3Explicate(varalloc, handleLambdas=False)
+
+        ast = compiler.parseFile(testcase)
+        ast = declassify.transform(ast)
+        ast = wrapper.transform(ast)
         ast = uniquify.transform(ast)
         ast = gcflatten.transform(ast)         
-        explicator = P3Explicate(VariableAllocator())
         print prettyAST(explicator.transform(ast))

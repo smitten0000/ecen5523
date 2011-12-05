@@ -787,6 +787,7 @@ big_pyobj* create_closure(void* fun_ptr, pyobj free_vars) {
     f.free_vars = free_vars;
     // XXX: increment ref counter to free_vars list
     // Shouldn't we assert that free_vars is of type LIST?
+    assert(is_big(free_vars));
     inc_ref_ctr(project_big(free_vars));
     return closure_to_big(f);
 }
@@ -1122,7 +1123,8 @@ pyobj set_attr(pyobj obj, char* attr, pyobj val)
     v = (pyobj *)pymem_new(b->tag, sizeof(pyobj));
     strcpy(k, attr);
     // XXX: increment reference count here for the referenced object
-    inc_ref_ctr(project_big(val));
+    if (is_big(val))
+        inc_ref_ctr(project_big(val));
     *v = val;
 
     struct hashtable* attrs;

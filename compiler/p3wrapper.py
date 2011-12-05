@@ -28,10 +28,10 @@ class P3Wrapper:
     # ================================================================================
     def visit_Module(self, node):
         stmt = self.visit(node.node)
-        prestmt = [Discard(CallFunc(Name('pymem_init'), []))]
-        poststmt = [Discard(CallFunc(Name('pymem_print_stats'), [])), 
-                    Discard(CallFunc(Name('pymem_shutdown'), []))]
-        stmt.nodes = prestmt + stmt.nodes + poststmt
+        #prestmt = [Discard(CallFunc(Name('pymem_init'), []))]
+        #poststmt = [Discard(CallFunc(Name('pymem_print_stats'), [])), 
+        #            Discard(CallFunc(Name('pymem_shutdown'), []))]
+        #stmt.nodes = prestmt + stmt.nodes + poststmt
         return Module(None, stmt, None)
 
     def visit_Stmt(self, node):
