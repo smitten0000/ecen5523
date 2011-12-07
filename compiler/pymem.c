@@ -201,10 +201,13 @@ void pymem_print_stats()
     fprintf (output_fd, "===========================================\n");
     i = 0;
     while (p != NULL) {
-        fprintf (output_fd, "Allocation %d: type=%s, size_req=%d, freed=%d, loc=%p, "
-                "alloc_tv=%s, free_tv=%s\n",
-                ++i, types[p->type], p->size_req, p->freed, p->loc,
-                format_tv(&p->alloc_tv), format_tv(&p->free_tv));
+        fprintf (output_fd, "Allocation %d: type=%s, size_req=%d, freed=%d, loc=%p, ",
+                ++i, types[p->type], p->size_req, p->freed, p->loc);
+
+        /* we have to print the times separately, since each call to format_tv
+           overwrites the values from the previous call */
+        fprintf (output_fd, "alloc_tv=%s, ", format_tv(&p->alloc_tv));
+        fprintf (output_fd, "free_tv=%s\n", format_tv(&p->free_tv));
         p = p->next;
     }
 }
