@@ -11,7 +11,7 @@ import operator
 def cleanup_tempvars(tmpvars):
     stmts = []
     for varname in tmpvars:
-        stmts.append(Assign([AssName(Name(varname), 'OP_ASSIGN')],Const(0)))
+        stmts.append(Assign([AssName(varname, 'OP_ASSIGN')],Const(0)))
         
     return stmts
 
