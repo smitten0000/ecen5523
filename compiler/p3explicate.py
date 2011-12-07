@@ -136,7 +136,6 @@ class P3Explicate(P2Explicate):
         else:
             return P2Explicate.visit_Assign(self, node)
 
-
 if __name__ == "__main__":
     import sys, compiler
     import logging.config
@@ -144,6 +143,7 @@ if __name__ == "__main__":
     from p3wrapper import P3Wrapper
     from p3uniquifyvars import P3UniquifyVars
     from gcflattener import GCFlattener
+    from gcrefcount import GCRefCount
     if len(sys.argv) < 2:
         sys.exit(1)
     # configure logging 
@@ -156,10 +156,11 @@ if __name__ == "__main__":
         gcflatten = GCFlattener(varalloc)
         uniquify  = P3UniquifyVars()
         explicator = P3Explicate(varalloc, handleLambdas=False)
-
+        gcrefcount = GCRefCount(varalloc)
         ast = compiler.parseFile(testcase)
         ast = declassify.transform(ast)
         ast = wrapper.transform(ast)
         ast = uniquify.transform(ast)
-        ast = gcflatten.transform(ast)         
+        ast = gcflatten.transform(ast)
+        ast = gcrefcount.transform(ast)         
         print prettyAST(explicator.transform(ast))

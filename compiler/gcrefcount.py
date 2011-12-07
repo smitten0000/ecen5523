@@ -32,10 +32,13 @@ class GCRefCount:
     def visit_Module(self, node, *args, **kwargs):
         self.log.debug('localAssigns = %s' % getLocalAssigns(node))
         decrefstmts = []
+        initialassigns = []
+        for localvar in getLocalAssigns(node):
+            initialassigns.append(Assign([AssName(Name(localvar), 'OP_ASSIGN')],Const(0)))
         for localvar in getLocalAssigns(node):
             decrefstmts.append(Discard(CallFunc(Name('dec_ref_ctr'),[Name(localvar)])))
         stmt = self.visit(node.node)
-        stmt.nodes = stmt.nodes + decrefstmts
+        stmt.nodes = initialassigns + stmt.nodes + decrefstmts
         return Module(None, stmt, None)
 
     def visit_Stmt(self, node, *args, **kwargs):
