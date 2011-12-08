@@ -239,7 +239,7 @@ class GCFlattener:
      
     def visit_If(self, node, *args, **kwargs):
         # flatten the "test" expression
-        vartes, tmpvars, test = self.flatten(node.tests[0][0])
+        vartes, tmpvars, test = self.visit(node.tests[0][0])
         # flatten the "then" and "else" statements
         then = self.visit(node.tests[0][1])
         else_ = self.visit(node.else_)
