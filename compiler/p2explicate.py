@@ -12,11 +12,11 @@ class P2Explicate(P1Explicate):
         P1Explicate.__init__(self, varalloc)
         self.handleLambdas = handleLambdas
             
-    def visit_Function(self, node, *args, **kwargs):
+#    def visit_Function(self, node, *args, **kwargs):
         #Function: decorators, name, argnames, defaults, flags, doc, code
         #Lamba: argnames, defaults, flags, code
         #Assign([AssName(retvar,'OP_ASSIGN')], CallFunc(Name('set_subscript'),[expr,subexpr,valueexpr]))
-        return Assign([AssName(node.name, 'OP_ASSIGN')], Lambda(node.argnames, node.defaults, node.flags, self.visit(node.code), node.name))
+#        return Assign([AssName(node.name, 'OP_ASSIGN')], Lambda(node.argnames, node.defaults, node.flags, self.visit(node.code), node.name))
 
     def visit_CallFunc(self, node, *args, **kwargs):
         p1expl = P1Explicate.visit_CallFunc(self, node, *args, **kwargs)
