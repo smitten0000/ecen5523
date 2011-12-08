@@ -134,6 +134,7 @@ class GCFlattener:
         return (Name(varname), [varname]+tmpvarleft+tmpvarright, lhsstmtlist + rhsstmtlist + [Assign([AssName(varname, 'OP_ASSIGN')], result)])
     
     def visit_IfExp(self, node, *args, **kwargs):
+        raise Exception("We shouldn't have an IfExp at this point.  It should have been changed to an If by our flattener.")
         # Go ahead and flatten all expressions, including the test expression, as well as the 
         # "then" and "else" expressions.
         vartes, testtmpvars, test = self.visit(node.test)
