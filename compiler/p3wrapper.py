@@ -117,7 +117,7 @@ class P3Wrapper:
     # P3
     # ================================================================================
     def visit_While(self, node):
-        return [While(self.visit(node.test), self.visit(node.body), None)]
+        return While(self.visit(node.test), self.visit(node.body), None)
 
     def visit_If(self, node):
         tests = [self.visit(x[0]) for x in node.tests]
