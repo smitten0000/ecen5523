@@ -52,17 +52,17 @@ class GCRefCount:
             # care of in the runtime; see subscript_assign in runtime.c
             # so we can just return the assignment here, since this will get explicated to a call
             # to subscript_assign in a later phase.
-            return [node]
+            return [Assign([AssName(assnode.name,'OP_ASSIGN')], self.visit(node.expr))]
         elif isinstance(assnode, AssAttr):
             # NOTE: see set_attr in runtime.c ; the runtime has been modified to take care of 
             # incrementing the reference count.
-            return [node]
+            return [Assign([AssName(assnode.name,'OP_ASSIGN')], self.visit(node.expr))]
         elif isinstance(assnode, AssName):
             stmtlist = []
             if assnode.name in self.varset:
                 stmtlist.append(Discard(CallFunc(Name('dec_ref_ctr'),[Name(assnode.name)])))
             self.varset.add(assnode.name)
-            stmtlist.append(node)
+            stmtlist.append(Assign([AssName(assnode.name,'OP_ASSIGN')], self.visit(node.expr)))
             stmtlist.append(Discard(CallFunc(Name('inc_ref_ctr'),[Name(assnode.name)])))
             return stmtlist
         else:
@@ -120,13 +120,6 @@ class GCRefCount:
     def visit_CallFuncIndirect(self, node, *args, **kwargs):
         return node
 
-    def visit_Function(self, node, *args, **kwargs):
-        # This should be a Stmt AST node; recurse on it to handle assignments within function
-        code = self.visit(node.code)
-        #for x in node.argnames:
-        #    self.varalloc.add_var(x)
-        return [Function(node.decorators, node.name, node.argnames, node.defaults, node.flags, node.doc, code, node.lineno)]
-
     def visit_While(self, node, *args, **kwargs):
         return [node]
 
@@ -153,10 +146,17 @@ class GCRefCount:
         # GCFlattener; recurse on that stmt object here to add ref counting.
         if not isinstance(node.code, Stmt):
             raise Exception('Expected Stmt object for Lambda.code')
+        decrefstmts = []
+        initialassigns = []
+        for localvar in getLocalAssigns(node):
+            initialassigns.append(Assign([AssName(Name(localvar), 'OP_ASSIGN')],Const(0)))
+        for localvar in getLocalAssigns(node):
+            decrefstmts.append(Discard(CallFunc(Name('dec_ref_ctr'),[Name(localvar)])))
         code = self.visit(node.code)
-        #for x in node.argnames:
-        #    self.varalloc.add_var(x)
-        return [Lambda(node.argnames, node.defaults, node.flags, code, node.lineno)]
+        code.nodes = initialassigns + code.nodes + decrefstmts
+        for x in node.argnames:
+            self.varalloc.add_var(x)
+        return Lambda(node.argnames, node.defaults, node.flags, code, node.lineno)
 
     def visit_Compare(self, node, *args, **kwargs):
         return node
