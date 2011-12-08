@@ -220,16 +220,15 @@ class GCFlattener:
         return (Name(varname), [varname]+nodetmpvars+tmpvars, stmts)
     
     def visit_Function(self, node, *args, **kwargs):
-        # This is not a Function returned from the parse stage, but a top-level function
-        # that is created in the closure-conversion pass.
-        # We just need to flatten the "code" attribute, which is a Stmt.
-        # Function(decorators, name, argnames, defaults, flags, doc, code, lineno=None)
+        #Function: decorators, name, argnames, defaults, flags, doc, code
+        #Lamba: argnames, defaults, flags, code
+        #Assign([AssName(retvar,'OP_ASSIGN')], CallFunc(Name('set_subscript'),[expr,subexpr,valueexpr]))
         self.log.debug('in visit_Function, node.code = %s',node.code)
         code = self.visit(node.code)
         for x in node.argnames:
             self.varalloc.add_var(x)
-        return [Function(node.decorators, node.name, node.argnames, node.defaults, node.flags, node.doc, code, node.lineno)]
-    
+        return [Assign([AssName(node.name, 'OP_ASSIGN')], Lambda(node.argnames, node.defaults, node.flags, code, node.name))]
+
     def visit_While(self, node, *args, **kwargs):
         #statement
         flatbody = self.visit(node.body)
