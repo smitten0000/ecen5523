@@ -27,6 +27,9 @@ if __name__ == "__main__":
     import sys, compiler
     import logging.config
     from p3declassify import P3Declassify
+    from gcflattener import GCFlattener
+    from p3wrapper import P3Wrapper
+    from gcrefcount import GCRefCount
     from p3explicate import P3Explicate
     from p3uniquifyvars import P3UniquifyVars
     from p3heapify import P3Heapify
@@ -38,14 +41,20 @@ if __name__ == "__main__":
     for testcase in testcases:
         varalloc = VariableAllocator()
         declassify = P3Declassify(varalloc)
+        wrapper = P3Wrapper()
         unique = P3UniquifyVars()
+        gcflatten = GCFlattener(varalloc)
+        gcrefcount = GCRefCount(varalloc)
         explicator = P3Explicate(varalloc)
         heap = P3Heapify(explicator)
         closure = P3ClosureConversion(explicator, varalloc)
 
         ast = compiler.parseFile(testcase)
         ast = declassify.transform(ast)
+        ast = wrapper.transform(ast)
         ast = unique.transform(ast)        
+        ast = gcflatten.transform(ast)        
+        ast = gcrefcount.transform(ast)        
         ast = explicator.explicate(ast)
         ast = heap.transform(ast)
         astlist = closure.transform(ast)

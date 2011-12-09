@@ -3,6 +3,7 @@ from compiler.ast import *
 from comp_util import *
 from p2flattener import P2Flattener
 from p3declassify import P3Declassify
+from p3wrapper import P3Wrapper
 from p3explicate import P3Explicate
 from p3uniquifyvars import P3UniquifyVars
 from p3heapify import P3Heapify
@@ -25,8 +26,14 @@ class P3Flattener(P2Flattener):
             #statement
             flatbody = self.flatten(node.body)
             #expression
-            var, flattest = self.flatten(node.test) 
-            return [While((var,Stmt(flattest)), flatbody, [], node.lineno)]   
+            # the first element in the tuple is an expression, so it needs flattened.
+            var0, flattest0 = self.flatten(node.test[0]) 
+            # the second selement is a stmt node.
+            stmt = self.flatten(node.test[1])
+            # the statements associated with the newly flattened expression (node.test[0]),
+            # have to be run AFTER the statements in node.test[1]
+            stmt.nodes = stmt.nodes + flattest0
+            return [While((var0,stmt), flatbody, [], node.lineno)]   
         elif isinstance(node, If):
             # flatten the "test" expression
             vartes, test = self.flatten(node.tests[0][0])
@@ -61,6 +68,7 @@ if __name__ == "__main__":
         varalloc = VariableAllocator()
         declassify = P3Declassify(varalloc)
         unique = P3UniquifyVars()
+        wrapper = P3Wrapper()
         gcflatten = GCFlattener(varalloc, True)
         gcrefcount = GCRefCount(varalloc)
         explicator = P3Explicate(varalloc, handleLambdas=False)
@@ -70,6 +78,7 @@ if __name__ == "__main__":
 
         ast = compiler.parseFile(testcase)
         ast = declassify.transform(ast)
+        ast = wrapper.transform(ast)
         ast = unique.transform(ast)
         ast = gcflatten.transform(ast)        
         ast = gcrefcount.transform(ast)        

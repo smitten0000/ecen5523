@@ -9,8 +9,19 @@ class P3Explicate(P2Explicate):
     def __init__(self, varalloc, handleLambdas=True):
         P2Explicate.__init__(self, varalloc, handleLambdas)
             
+    # XXX: Had to change this after we added a flatten phase before explication.
+    # Because of this change, we have a tuple for the "test" attribute, instead of
+    # an expression.   The first element of the tuple is the variable associated 
+    # with the test, while the second element in the tuple is the Stmt node. 
+    # Below, we maintain the tuple for the "test" attribute, but since we have to
+    # inject some IfExp logic, we change the first element of the tuple to a Let
+    # node.   The second element remains the same, but is the explicated version
+    # of the Stmt node.
     def visit_While(self, node, *args, **kwargs):
-        test  = self.visit(node.test)
+        test0  = self.visit(node.test[0])
+        test1  = self.visit(node.test[1])
+        self.log.info('visit_While: test0=%s' % test0)
+        self.log.info('visit_While: test1=%s' % test1)
         body  = self.visit(node.body)
         var = Name(self.varalloc.get_next_var())
         # explicate the test so we can compare it to 0
@@ -19,7 +30,7 @@ class P3Explicate(P2Explicate):
                   ProjectTo('bool',var),
                   ProjectTo('bool',CallFunc(Name('is_true'),[var]))
                 )
-        return  While(Let(var, test, ifexp), body, [], node.lineno)
+        return  While((Let(var, test0, ifexp),test1), body, [], node.lineno)
 
     def visit_If(self, node, *args, **kwargs):
         if len(node.tests) > 1:

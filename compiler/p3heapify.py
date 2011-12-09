@@ -20,7 +20,7 @@ class P3Heapify(P2Heapify):
 
     def getLambdaFreeVars(self, n):
         if isinstance(n, (While)):
-            test_fv = self.getLambdaFreeVars(n.test)
+            test_fv = self.getLambdaFreeVars(n.test[1])
             body_fv = self.getLambdaFreeVars(n.body)
             return test_fv | body_fv
         elif isinstance(n, If):
@@ -34,7 +34,7 @@ class P3Heapify(P2Heapify):
             #return super(P3Heapify, self).getLambdaFreeVars(n)
     
     def visit_While(self, node):
-        return While(self.visit(node.test), self.visit(node.body), [], node.lineno)
+        return While((self.visit(node.test[0]),self.visit(node.test[1])), self.visit(node.body), [], node.lineno)
 
     def visit_If(self, node):
         return If([(self.visit(node.tests[0][0]), self.visit(node.tests[0][1]))], self.visit(node.else_))

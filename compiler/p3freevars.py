@@ -27,7 +27,7 @@ class P3FreeVars(P2FreeVars):
     
     def visit_While(self, node, *args, **kwargs):
         self.log.debug('visit_While %s'%node)
-        test_b, test_f = self.visit(node.test)
+        test_b, test_f = self.visit(node.test[1])
         then_b, then_f = self.visit(node.body)
         return (set([]), test_f | then_f )
 
