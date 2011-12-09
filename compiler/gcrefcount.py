@@ -7,6 +7,59 @@ from p3uniquifyvars import P3UniquifyVars
 from gcflattener import GCFlattener
 import operator
 
+def getLocals(n):
+    """
+    Returns the set of variables that are assigned to within the current scope,
+    ignoring assignments in nested scopes (functions).
+    """
+    if isinstance(n, Module):
+        return getLocals(n.node)
+    elif isinstance(n, Stmt):
+        assigns = [getLocals(x) for x in n.nodes]
+        return reduce(lambda x,y: x|y, assigns, set([]))
+    elif isinstance(n, Printnl):
+        return set([])
+    elif isinstance(n, Assign):
+        if isinstance(n.nodes[0], (Subscript,AssAttr)):
+            # assigning to a subscript of a variable does not constitute
+            # assigning to the variable itself.  Return empty set.
+            # ditto for an object attribute
+            return set([])
+        elif isinstance(n.nodes[0], AssName):
+            return set([n.nodes[0].name])
+        else:
+            raise Exception('Unhandled Assign case: %s' % n.nodes[0])
+    elif isinstance(n, Discard):
+        # there shouldn't ever be a case where there will be an assignment in a Discard
+        # since a Discard is, by definition, a statement that produced no assignments
+        return set([])
+    elif isinstance(n, Return):
+        return set([])
+    elif isinstance(n, Function):
+        # a function definition is equivalent to an assignment to a 
+        # variable with the same name as the function
+        # No need to recurse into the Function since the intent of the function
+        # is to only find assigments for the local scope
+        return set([n.name])
+    elif isinstance(n, If):
+        testset = getLocals(n.tests[0][0])
+        thenset = getLocals(n.tests[0][1])
+        elseset = getLocals(n.else_)
+        return testset | thenset | elseset
+    elif isinstance(n, While):
+        testset = getLocals(n.test[1])
+        bodyset = getLocals(n.body)
+        elseset = getLocals(n.else_) if n.else_ is not None and n.else_ != [] else set()
+        return testset | bodyset | elseset
+    elif isinstance(n, (Add,UnarySub,CallFunc,Const,Name,Or,And,IfExp,List,Dict,Compare,Not,Subscript,Lambda,CallFuncIndirect)):
+        # these are all expressions, so no assignments
+        return set([])
+    elif isinstance(n, Class):
+        return set([n.name])
+    else:
+        raise Exception('Unhandled expression: "%s"' % repr(n))
+
+
 class GCRefCount:
     """Class to insert reference counting for garbage collection phase"""
     def __init__ (self, varalloc):
@@ -30,12 +83,12 @@ class GCRefCount:
         return meth(node, *args, **kwargs)
     
     def visit_Module(self, node, *args, **kwargs):
-        self.log.debug('localAssigns = %s' % getLocalAssigns(node))
+        self.log.debug('localAssigns = %s' % getLocals(node))
         decrefstmts = []
         initialassigns = []
-        for localvar in getLocalAssigns(node):
+        for localvar in getLocals(node):
             initialassigns.append(Assign([AssName(Name(localvar), 'OP_ASSIGN')],Const(0)))
-        for localvar in getLocalAssigns(node):
+        for localvar in getLocals(node):
             decrefstmts.append(Discard(CallFunc(Name('dec_ref_ctr'),[Name(localvar)])))
         stmt = self.visit(node.node)
         stmt.nodes = initialassigns + stmt.nodes + decrefstmts
@@ -52,11 +105,11 @@ class GCRefCount:
             # care of in the runtime; see subscript_assign in runtime.c
             # so we can just return the assignment here, since this will get explicated to a call
             # to subscript_assign in a later phase.
-            return [Assign([AssName(assnode.name,'OP_ASSIGN')], self.visit(node.expr))]
+            return [Assign([assnode], self.visit(node.expr))]
         elif isinstance(assnode, AssAttr):
             # NOTE: see set_attr in runtime.c ; the runtime has been modified to take care of 
             # incrementing the reference count.
-            return [Assign([AssName(assnode.name,'OP_ASSIGN')], self.visit(node.expr))]
+            return [Assign([assnode], self.visit(node.expr))]
         elif isinstance(assnode, AssName):
             stmtlist = []
             if assnode.name in self.varset:
@@ -100,6 +153,7 @@ class GCRefCount:
         return node
 
     def visit_IfExp(self, node, *args, **kwargs):
+        raise Exception('IfExp should not exist at this point')
         return node
 
     def visit_List(self, node, *args, **kwargs):
@@ -148,9 +202,9 @@ class GCRefCount:
             raise Exception('Expected Stmt object for Lambda.code')
         decrefstmts = []
         initialassigns = []
-        for localvar in getLocalAssigns(node):
+        for localvar in getLocals(node):
             initialassigns.append(Assign([AssName(Name(localvar), 'OP_ASSIGN')],Const(0)))
-        for localvar in getLocalAssigns(node):
+        for localvar in getLocals(node):
             decrefstmts.append(Discard(CallFunc(Name('dec_ref_ctr'),[Name(localvar)])))
         code = self.visit(node.code)
         code.nodes = initialassigns + code.nodes + decrefstmts

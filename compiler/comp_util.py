@@ -299,7 +299,7 @@ def getLocalAssigns(n):
     elif isinstance(n, Class):
         return set([n.name])
     else:
-        raise Exception('Unhandled expression: "%s"' % n)
+        raise Exception('Unhandled expression: "%s"' % repr(n))
 
 class CallFuncIndirect(Node):
     def __init__(self, node, args, star_args = None, dstar_args = None, lineno=None):

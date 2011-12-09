@@ -33,6 +33,7 @@ class GCFlattener:
         meth = None
         meth_name = 'visit_'+node.__class__.__name__
         meth = getattr(self, meth_name, None)
+        self.log.info(meth_name)
         if not meth:
             raise Exception('Unknown node: %s method: %s' % (node.__class__, meth_name))
         return meth(node, *args, **kwargs)
@@ -134,7 +135,6 @@ class GCFlattener:
         return (Name(varname), [varname]+tmpvarleft+tmpvarright, lhsstmtlist + rhsstmtlist + [Assign([AssName(varname, 'OP_ASSIGN')], result)])
     
     def visit_IfExp(self, node, *args, **kwargs):
-        raise Exception("We shouldn't have an IfExp at this point.  It should have been changed to an If by our flattener.")
         # Go ahead and flatten all expressions, including the test expression, as well as the 
         # "then" and "else" expressions.
         vartes, testtmpvars, test = self.visit(node.test)
@@ -205,19 +205,24 @@ class GCFlattener:
         return (Name(varname), [varname]+exprtmplist+subtmplist, exprstmtlist + substmtlist + [Assign([AssName(varname,'OP_ASSIGN')], Subscript(exprvar, node.flags, subvar))])
     
     def visit_Return(self, node, *args, **kwargs):
-        x = self.visit(node.value)
         retvar, tmplist, retstmtlist = self.visit(node.value)
         return retstmtlist + cleanup_tempvars(tmplist) + [Return(retvar)]
     
     def visit_CallFuncIndirect(self, node, *args, **kwargs):
         self.log.debug('CallFuncIndirect: args: %s', node.args)
         nodevar, nodetmpvars, nodestmtlist = self.visit(node.node)
-        tuplelist = [self.visit(x) for x in node.args]
-        varargs = [x[0] for x in tuplelist]
-        tmpvars = reduce(lambda x,y: x+y, [y for x,z,y in tuplelist if y != []], []) 
-        varstmts = [x[1] for x in tuplelist]
+        varargs=[]
+        tmpvars=[]
+        varstmts=[]
+        for x in node.args:
+            a, b, c = self.visit(x)
+            varargs.append(a)
+            tmpvars.append(b)
+            varstmts.append(c)
+        tmpvars = reduce(lambda x,y: x+y, tmpvars, [])
+        varstmts = reduce(lambda x,y: x+y, varstmts, [])
         varname = self.varalloc.get_next_var()
-        stmts = nodestmtlist + reduce(lambda x,y: x+y, varstmts, []) + [Assign([AssName(varname, 'OP_ASSIGN')], CallFuncIndirect(nodevar, varargs))]
+        stmts = nodestmtlist + varstmts + [Assign([AssName(varname, 'OP_ASSIGN')], CallFuncIndirect(nodevar, varargs))]
         return (Name(varname), [varname]+nodetmpvars+tmpvars, stmts)
     
     def visit_Function(self, node, *args, **kwargs):
@@ -269,6 +274,9 @@ class GCFlattener:
         self.log.debug('in visit_Lambda, node.code = %s',node.code)
         # code is actually an expression, so treat it like all other expressions.  flatten it.
         codevar, tmpvars, codestmts = self.visit(node.code)
+        self.log.debug('in visit_Lambda, codevar = %s',codevar)
+        self.log.debug('in visit_Lambda, tmpvars = %s',tmpvars)
+        self.log.debug('in visit_Lambda, codestmts = %s',codestmts)
         for x in node.argnames:
             self.varalloc.add_var(x)
         varname = self.varalloc.get_next_var()
@@ -276,7 +284,8 @@ class GCFlattener:
         # Stmt() node here.  This used to be done in the P2Explicate phase, but it has to be
         # moved here since we are flattening.
         return (Name(varname),
-                [varname]+tmpvars, 
+                #[varname]+tmpvars, 
+                [varname],
                 [Assign([AssName(varname,'OP_ASSIGN')], 
                         Lambda(node.argnames, node.defaults, node.flags, Stmt(codestmts + [Return(codevar)]), node.lineno))]
                )

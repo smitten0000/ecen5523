@@ -14,7 +14,7 @@ libruntime.a: $(OBJS)
 	gcc -c $<
 
 clean:
-	rm -f $(OBJS) libruntime.a *.pyc parser.out parsetab.py *.pymem
+	rm -f $(OBJS) libruntime.a parser.out parsetab.py *.pymem *.s *.pyc *.o
 	for i in test alltests our_tests our_hw5_tests hw5_test our_hw6_tests ; do \
 		rm -f $$i/*.c $$i/*.s $$i/*.expected $$i/*.out $$i/*.warn $$i/*.pymem ; \
 		find $$i -type f -perm 0755 -exec rm -f {} \; ; \
