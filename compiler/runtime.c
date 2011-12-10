@@ -16,6 +16,7 @@ static void print_float(double in);
 static void print_list(pyobj pyobj_list);
 static void print_dict(pyobj dict);
 static list list_add(list x, list y);
+static void print_pyobj(pyobj x);
 
 int tag(pyobj val) {
     return val & MASK;
@@ -140,6 +141,36 @@ static void print_bool(int b) {
         printf ("False");
 }
 
+static void print_class(pyobj obj) {
+    big_pyobj* b = project_big(obj);
+    printf("class with parents ");
+    print_pyobj(b->u.cl.parents);
+}
+
+static void print_object(pyobj obj) {
+    big_pyobj* b = project_big(obj);
+    printf("object of class ");
+    print_pyobj(b->u.obj.clazz);
+}
+
+static void print_ubmethod(pyobj obj) {
+    big_pyobj* b = project_big(obj);
+    printf("unbound method class ");
+    print_pyobj(b->u.ubm.clazz);
+}
+
+static void print_bmethod(pyobj obj) {
+    big_pyobj* b = project_big(obj);
+    printf("bound method receiver ");
+    print_pyobj(b->u.bm.receiver);
+    printf("    and fun at address %X\n", b->u.bm.fun);
+}
+
+static void print_fun(pyobj obj) {
+    big_pyobj* b = project_big(obj);
+    printf("function at address %X\n", b->u.f.function_ptr);
+}
+
 static void print_pyobj(pyobj x) {
     switch (tag(x)) {
     case INT_TAG:
@@ -160,7 +191,23 @@ static void print_pyobj(pyobj x) {
         case LIST:
             print_list(x);
             break;
+        case FUN:
+            print_fun(x);
+            break;
+        case CLASS:
+            print_class(x);
+            break;
+        case OBJECT:
+            print_object(x);
+            break;
+        case UBMETHOD:
+            print_ubmethod(x);
+            break;
+        case BMETHOD:
+            print_bmethod(x);
+            break;
         default:
+            printf("unknown tag for print_pyobj %d\n", tag(x));
             assert(0);
         }
         break;
@@ -619,10 +666,14 @@ static list list_add(list a, list b)
     c.len = a.len + b.len;
     c.data = (pyobj*)pymem_new(LIST, sizeof(pyobj) * c.len);
     int i;
-    for (i = 0; i != a.len; ++i)
+    for (i = 0; i != a.len; ++i) {
         c.data[i] = a.data[i];
-    for (i = 0; i != b.len; ++i)
+        inc_ref_ctr(c.data[i]);
+    }
+    for (i = 0; i != b.len; ++i) {
         c.data[a.len + i] = b.data[i];
+        inc_ref_ctr(c.data[a.len+i]);
+    }
     return c;
 }
 
@@ -1311,6 +1362,8 @@ void release(big_pyobj* o) {
 void inc_ref_ctr(pyobj v) {
     if (is_big(v)) {
         big_pyobj *val = project_big(v);
+        //printf("incrementing ref_ctr at %d addr %d on ", val->ref_ctr, val);
+        //print_any(v);
         val->ref_ctr ++;
     }
 }
@@ -1318,14 +1371,17 @@ void inc_ref_ctr(pyobj v) {
 void dec_ref_ctr(pyobj v) {
     if (is_big(v)) {
         big_pyobj *val = project_big(v);
+        //printf("decrementing ref_ctr at %d addr %d on ", val, val->ref_ctr);
+        //print_any(v);
         val->ref_ctr --;
         if ( val->ref_ctr < 0 ) {
-            fprintf(stderr,"too many dec_ref on big_pyobj\n");
+            fprintf(stderr,"too many dec_ref on big_pyobj: ");
             print_any(v);
             val->ref_ctr = 0;
         }
         if ( val->ref_ctr == 0 ) {
             release(val);
         }
+
     }
 }

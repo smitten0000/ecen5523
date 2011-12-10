@@ -26,6 +26,8 @@ i = 0
 while less(i,n):
 	sieve = sieve + [[i, True]]
 	i = i + 1
+	print i
+	print sieve
 
 nover2 = div(n, 2)
 i = 2

@@ -21,9 +21,9 @@ def getLocals(n):
         return set([])
     elif isinstance(n, Assign):
         if isinstance(n.nodes[0], (Subscript,AssAttr)):
-            # assigning to a subscript of a variable does not constitute
-            # assigning to the variable itself.  Return empty set.
-            # ditto for an object attribute
+             ##assigning to a subscript of a variable does not constitute
+             ##assigning to the variable itself.  Return empty set.
+             ##ditto for an object attribute
             return set([])
         elif isinstance(n.nodes[0], AssName):
             return set([n.nodes[0].name])
