@@ -53,7 +53,7 @@
 \maketitle
 
 \begin{abstract}
-Integrating a modern dynamic language in to existing systems-level languages (Assembly or C) easily has a number of challenges.  This paper will focus on automatic garbage collection within a subset of the Python language, to enable a Python-like program the ability to cleanly interact with Assembly or C routines without extra intervention from the software developer.  This paper will focus on reference counting garbage collection at the compiler level, to enable code injection which automatically frees non-referenced objects at the end of their useful lifetime.  We will also outline the analysis steps required in the compiler which enable reference tracking, how the abstract syntax tree of the program is altered and what trade-offs are made with such altercations.
+Integrating a modern dynamic language in to existing systems-level languages (Assembly or C) easily has a number of challenges.  This paper will focus on automatic garbage collection within a subset of the Python language, to enable a Python-like program the ability to cleanly interact with Assembly or C routines without extra intervention from the software developer.  This paper will focus on reference counting garbage collection at the compiler level, to enable automatically freeing no-longer-referenced objects at the end of their useful lifetime.  We will also outline the analysis steps required in the compiler which enable reference tracking, how the abstract syntax tree of the program is altered and what trade-offs are made with such altercations.
 \end{abstract}
 
 \category{D.1.5}{Programming Techniques}{Object-oriented Programming}
@@ -97,14 +97,14 @@ The basic premise of such routines is to wrap the provided malloc and free, requ
 \end{figure}
 
 \subsection{Compiler Flow}
-Refer to Figure~\ref{fig-comparch} for the compiler data flow.  Each stage operates on an abstract syntax tree, the relevant new stages are the garbage collection flattening stage and the reference count code injection stage.
+Refer to Figure~\ref{fig-comparch} for the compiler data flow.  Each stage operates on an abstract syntax tree, the relevant new stages are the garbage collection flattening stage and the reference count AST transformation stage.
 
 \subsection{Syntax Tree Modifications}
-We added two new stages to our reference compiler.  The first stage is a modified flattening stage, which produces a flattened AST to aid in the reference determination.  The next stage is the actual reference determination and code injection, where the compiler determines what variables will be objects and when assignments happen and adds appropriate calls to increment and decrement the reference counter of the object as needed.
+We added two new stages to our reference compiler.  The first stage is a modified flattening stage, which produces a flattened AST to aid in the reference determination.  The next stage is the actual reference determination and AST transformation, where the compiler determines what variables will be objects and when assignments happen and adds appropriate calls to increment and decrement the reference counter of the object as needed.
 \par
 Our initial assumption was that we could easily add the increment and decrement reference counter operations in the reference compilers flatten stage, however because this stage is after type explication and there are variables created which do not correspond to a type in the language the pre-flatten stage was necessary.  This stage converts all expressions in to assignments to temporary variables.  At this stage we know every expression is operating on types.
 \par
-The next new stage is the reference counting code injection.  In this stage we take the flattened tree and look for assignments which are setting list elements, dictionary values, class attributes, object attributes or variables.  The compiler determines what variables are created in the current scope and injects code at the beginning of that scope to set the value initially.  We decided on this approach to simplify determining when an object is first assigned and this allows us to simply decrement the reference counter to the object before an assign, regardless of the variables state.
+The next new stage is the reference counting AST transformation.  In this stage we take the flattened tree and look for assignments which are setting list elements, dictionary values, class attributes, object attributes or variables.  The compiler determines what variables are created in the current scope and injects code at the beginning of that scope to set the value initially.  We decided on this approach to simplify determining when an object is first assigned and this allows us to simply decrement the reference counter to the object before an assign, regardless of the variables state.
 \subsection{Runtime Modifications}
 Our runtime consisted of C functions which took care of allocating and initializing memory for a new object of a given type.  The obvious modifications included setting the reference counter initially to zero and creating a number of free functions to free each type of object.
 \par
