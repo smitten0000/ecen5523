@@ -76,14 +76,18 @@ Given a naive implementation of a direct Python to x86-assembly compiler which d
 In general a reference count garbage collector will have shorter pause times for the garbage collection phase, but will incur a higher performance penalty \cite{joisha}\cite{blackburn}.  Reference-counting collectors have been implemented which defer the de-allocation, called lazy reference-counting, to some later time and some improvements on such strategies have been made \cite{boehm}.  Without extra work a strictly reference-counting collector will leak memory when references contain cycles, and multiple algorithms have been presented as solutions to this problem.
 \subsection{Advantages}
 One potential advantage that reference-counting garbage collectors have is the ability to be implemented in hardware \cite{joao}.  Given the significant cost of garbage collection \cite{hertz} any hardware assisted acceleration would be highly desirable if it is flexible enough to adapt across multiple garbage collection techniques. 
-Real-time systems are rarely implemented in languages which are garbage collected, but reference-counting garbage collection has been adapted to hard real-time systems
+\par
+Real-time systems are rarely implemented in languages which are garbage collected, but reference-counting garbage collection has been adapted to hard real-time systems \cite{?}.  Due to immediate knowledge that an object is no longer in use reference counting garbage collection can allow for destructors or finalizers to be run immediately which can enhance the clean up of system resources.
 \section{Implementation}
 We develop a base compiler which generates x86 assembly code and then alter the compiler to include reference counting and garbage collection.
 \subsection{Language}
 A subset of Python has been chosen which includes functions, objects, lambdas, and the primitives integer, boolean.  We implement this as a reference compiler which is extended to include reference counting.  This language has no built in parallelism but Levanoni, et. al. have shown that reference counting is a valid approach for multprocessor systems.\cite{levanoni}
 \par
-Starting from our reference compiler, we treat any object which is not an integer or boolean primitive as a C-struct.  This structure was modified to include a reference counter and in all places where such a structure was allocated we converted the allocation to use a statistics tracking allocator and set the reference count to an initial value of 0.
+Starting from our reference compiler, we treat any object which is not an integer or boolean primitive as a C structure.  This structure was modified to include a reference counter and in all places where such a structure was allocated we converted the allocation to use a statistics tracking allocator and set the reference count to an initial value of 0.
+\par
 We chose to implement our own memory routines primarily to investigate object lifetime (initial allocation time and final de-allocation time) as well as allow us the ability to detect memory leaks.  Since every allocation of an object in our language uses this wrapper we know exactly how much memory has been allocated and what objects were never de-allocated.
+\par
+The basic premise of such routines is to wrap the provided malloc and free, request slightly more memory than required.  That extra memory is what where the reference counter is stored and the pointer location is returned which skips the counter.  The memory routines also create a linked list to track all of the allocations in a structure for statistics gathering and leak detection.
 \begin{figure}
 \begin{center}
 \includegraphics[scale=0.48]{compiler_flow.png}
@@ -96,10 +100,24 @@ We chose to implement our own memory routines primarily to investigate object li
 Refer to Figure~\ref{fig-comparch} for the compiler data flow.  Each stage operates on an abstract syntax tree, the relevant new stages are the garbage collection flattening stage and the reference count code injection stage.
 
 \subsection{Syntax Tree Modifications}
-We added two new stages to our reference compiler.  The first stage is a modified flattening stage, which 
+We added two new stages to our reference compiler.  The first stage is a modified flattening stage, which produces a flattened AST to aid in the reference determination.  The next stage is the actual reference determination and code injection, where the compiler determines what variables will be objects and when assignments happen and adds appropriate calls to increment and decrement the reference counter of the object as needed.
+\par
+Our initial assumption was that we could easily add the increment and decrement reference counter operations in the reference compilers flatten stage, however because this stage is after type explication and there are variables created which do not correspond to a type in the language the pre-flatten stage was necessary.  This stage converts all expressions in to assignments to temporary variables.  At this stage we know every expression is operating on types.
+\par
+The next new stage is the reference counting code injection.  In this stage we take the flattened tree and look for assignments which are setting list elements, dictionary values, class attributes, object attributes or variables.  The compiler determines what variables are created in the current scope and injects code at the beginning of that scope to set the value initially.  We decided on this approach to simplify determining when an object is first assigned and this allows us to simply decrement the reference counter to the object before an assign, regardless of the variables state.
 \subsection{Runtime Modifications}
-\subsection{Assembly Output}
+Our runtime consisted of C functions which took care of allocating and initializing memory for a new object of a given type.  The obvious modifications included setting the reference counter initially to zero and creating a number of free functions to free each type of object.
+\par
+In the free\emph{\_type} functions it was necessary to add further calls to decrement the reference counter of any objects referenced by the type.  For a list list we iterate the values contained in the list, decrementing their reference (which can result in freeing that object).  For a dictionary we decrement the reference counter on keys as well as values contained in the dictionary, since both can be objects.
+\subsection{Interesting Problems}
 
+\subsection{Assembly Output}
+We modified the x86 assembly to include calls to set up our memory tracking system and print statistics at the end of the program.
+\section{Results}
+\subsection{Execution}
+\subsection{Memory}
+\section{Future work}
+\section{Related Work}
 \appendix
 \section{Appendix Title}
 
