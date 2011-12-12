@@ -206,6 +206,13 @@ class GCFlattener:
     
     def visit_Return(self, node, *args, **kwargs):
         retvar, tmplist, retstmtlist = self.visit(node.value)
+        # if the return variable is in our temp list, remove it, since
+        # we need to keep the reference count at 1
+        self.log.info('visit_Return: retvar=%s' % retvar)
+        self.log.info('visit_Return: tmplist=%s' % tmplist)
+        if isinstance(retvar,Name) and retvar.name in tmplist:
+            self.log.info('visit_Return: Removing %s from tmplist' % retvar.name)
+            tmplist.remove(retvar.name)
         return retstmtlist + cleanup_tempvars(tmplist) + [Return(retvar)]
     
     def visit_CallFuncIndirect(self, node, *args, **kwargs):

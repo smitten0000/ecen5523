@@ -66,6 +66,7 @@ class GCRefCount:
         self.varalloc = varalloc
         self.varset = set()
         self.log = logging.getLogger('compiler.gcrefcounter')
+        self.lambda_local_assigns = []
     
     def transform(self, node, *args, **kwargs):
         self.log.info('Starting gcrefcounter')
@@ -116,7 +117,8 @@ class GCRefCount:
                 stmtlist.append(Discard(CallFunc(Name('dec_ref_ctr'),[Name(assnode.name)])))
             self.varset.add(assnode.name)
             stmtlist.append(Assign([AssName(assnode.name,'OP_ASSIGN')], self.visit(node.expr)))
-            stmtlist.append(Discard(CallFunc(Name('inc_ref_ctr'),[Name(assnode.name)])))
+            if not isinstance(node.expr,CallFuncIndirect):
+                stmtlist.append(Discard(CallFunc(Name('inc_ref_ctr'),[Name(assnode.name)])))
             return stmtlist
         else:
             raise Exception('Unknown assignment node: %s' % assnode)
@@ -169,7 +171,14 @@ class GCRefCount:
         return node
     
     def visit_Return(self, node, *args, **kwargs):
-        return [node]
+        localAssigns = self.lambda_local_assigns[-1]
+        self.log.debug('visit_Return: localAssigns=%s' % localAssigns)
+        self.log.debug('visit_Return: node=%s' % node)
+        decrefstmts=[]
+        for localvar in localAssigns:
+            if not isinstance(node.value, Name) or node.value.name not in localAssigns:
+                decrefstmts.append(Discard(CallFunc(Name('dec_ref_ctr'),[Name(localvar)])))
+        return decrefstmts + [node]
 
     def visit_CallFuncIndirect(self, node, *args, **kwargs):
         return node
@@ -210,7 +219,9 @@ class GCRefCount:
             initialassigns.append(Assign([AssName(Name(localvar), 'OP_ASSIGN')],Const(0)))
         for localvar in localAssigns:
             decrefstmts.append(Discard(CallFunc(Name('dec_ref_ctr'),[Name(localvar)])))
+        self.lambda_local_assigns.append(localAssigns)
         code = self.visit(node.code)
+        self.lambda_local_assigns.pop()
         code.nodes = initialassigns + code.nodes + decrefstmts
         for x in node.argnames:
             self.varalloc.add_var(x)

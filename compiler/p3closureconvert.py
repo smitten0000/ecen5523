@@ -45,7 +45,7 @@ if __name__ == "__main__":
         unique = P3UniquifyVars()
         gcflatten = GCFlattener(varalloc)
         gcrefcount = GCRefCount(varalloc)
-        explicator = P3Explicate(varalloc)
+        explicator = P3Explicate(varalloc, handleLambdas=False)
         heap = P3Heapify(explicator)
         closure = P3ClosureConversion(explicator, varalloc)
 
