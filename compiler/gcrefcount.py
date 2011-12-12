@@ -204,9 +204,11 @@ class GCRefCount:
             raise Exception('Expected Stmt object for Lambda.code')
         decrefstmts = []
         initialassigns = []
-        for localvar in getLocals(node):
+        localAssigns = getLocals(node.code)
+        self.log.info('visit_Lambda: localAssigns=%s' % localAssigns)
+        for localvar in localAssigns:
             initialassigns.append(Assign([AssName(Name(localvar), 'OP_ASSIGN')],Const(0)))
-        for localvar in getLocals(node):
+        for localvar in localAssigns:
             decrefstmts.append(Discard(CallFunc(Name('dec_ref_ctr'),[Name(localvar)])))
         code = self.visit(node.code)
         code.nodes = initialassigns + code.nodes + decrefstmts

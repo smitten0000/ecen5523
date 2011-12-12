@@ -83,10 +83,11 @@ void pymem_shutdown()
     struct timeval tv;
     node_t *ptr;
     node_t *next;
-    int i;
+    int i, leak;
 
     /* free our linked list of facts, and free any user memory that
      * failed to be free()'d and emit a warning */
+    leak = 0;
     if (head_ptr != NULL) {
         ptr = head_ptr;
         i = 0;
@@ -95,12 +96,15 @@ void pymem_shutdown()
             if (!ptr->freed) {
                 fprintf (output_fd, "WARNING: memory leak detected for allocation %d at %p\n", i, ptr->loc);
                 free(ptr->loc);
+                leak = 1;
             }
             next = ptr->next;
             free(ptr);
             ptr = next;
         }
     }
+    if (leak)
+        printf("Leak detected. See .pymem for details.\n");
 
     head_ptr = NULL;
     cur_ptr = NULL;
