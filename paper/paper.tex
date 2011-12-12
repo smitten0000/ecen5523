@@ -90,7 +90,7 @@ We chose to implement our own memory routines primarily to investigate object li
 The basic premise of such routines is to wrap the provided malloc and free, request slightly more memory than required.  That extra memory is what where the reference counter is stored and the pointer location is returned which skips the counter.  The memory routines also create a linked list to track all of the allocations in a structure for statistics gathering and leak detection.
 \begin{figure}
 \begin{center}
-\includegraphics[scale=0.48]{compiler_flow.png}
+\includegraphics[scale=0.48]{compiler_flow.pdf}
 \end{center}
 \caption{Compiler Architecture}
 \label{fig-comparch}
