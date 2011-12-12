@@ -1,0 +1,140 @@
+%-----------------------------------------------------------------------------
+%
+%               Template for sigplanconf LaTeX Class
+%
+% Name:         sigplanconf-template.tex
+%
+% Purpose:      A template for sigplanconf.cls, which is a LaTeX 2e class
+%               file for SIGPLAN conference proceedings.
+%
+% Guide:        Refer to "Author's Guide to the ACM SIGPLAN Class,"
+%               sigplanconf-guide.pdf
+%
+% Author:       Paul C. Anagnostopoulos
+%               Windfall Software
+%               978 371-2316
+%               paul@windfall.com
+%
+% Created:      15 February 2005
+%
+%-----------------------------------------------------------------------------
+
+
+\documentclass{sigplanconf}
+
+% The following \documentclass options may be useful:
+%
+% 10pt          To set in 10-point type instead of 9-point.
+% 11pt          To set in 11-point type instead of 9-point.
+% authoryear    To obtain author/year citation style instead of numeric.
+
+\usepackage{amsmath}
+\usepackage[pdftex]{graphicx}
+
+\begin{document}
+
+\conferenceinfo{WXYZ '05}{date, City.} 
+\copyrightyear{2011} 
+\copyrightdata{[to be supplied]} 
+
+\titlebanner{banner above paper title}        % These are ignored unless
+\preprintfooter{short description of paper}   % 'preprint' option specified.
+
+\title{Python to Assembly Compilation}
+\subtitle{With Reference Counting Garbage Collection}
+
+\authorinfo{Brent Smith}
+           {University of Colorado, Boulder}
+           {brent.m.smith@colorado.edu}
+\authorinfo{Robert Elsner}
+           {University of Colorado, Boulder}
+           {robert.elsner@colorado.edu}
+
+\maketitle
+
+\begin{abstract}
+Integrating a modern dynamic language in to existing systems-level languages (Assembly or C) easily has a number of challenges.  This paper will focus on automatic garbage collection within a subset of the Python language, to enable a Python-like program the ability to cleanly interact with Assembly or C routines without extra intervention from the software developer.  This paper will focus on reference counting garbage collection at the compiler level, to enable code injection which automatically frees non-referenced objects at the end of their useful lifetime.  We will also outline the analysis steps required in the compiler which enable reference tracking, how the abstract syntax tree of the program is altered and what trade-offs are made with such altercations.
+\end{abstract}
+
+\category{D.1.5}{Programming Techniques}{Object-oriented Programming}
+\category{D.3.3}{Programming Languages}{Language Constructs And Features-Dynamic Storage Management}
+\category{D.3.4}{Programming Languages}{Processors-Memory Management (garbage collection)}
+\category{D.4.2}{Operating Systems}{Storage Management-Garbage collection}
+
+\terms
+Management, Performance, Design, Languages, Algorithms
+
+\keywords
+memory management, garbage collection, reference counting, compilation, compilers, programming languages
+
+\section{Introduction}
+
+Python is a modern high level language which has a reference counting garbage collector at its core.  It is also, by default, an interpreted language.  In many cases the usefulness of Python as a productive language is highly desired and a trade-off is made in terms of performance.  While numerous optimizations have been made to the Python run time there is still a usefulness to compile a high level language directly to machine code.  Most high level languages do not allow for direct memory management, instead leaving allocation and de-allocation of memory to the interpreter and garbage collection process.
+There are two main classifications for garbage collectors: generational or tracing collectors and reference-counting collectors.  Generational or tracing collectors make periodic inspection of all objects to determine if they are reachable by a pointer or object reference.  These are the modern batch of garbage collectors and have the best performance 
+Given a naive implementation of a direct Python to x86-assembly compiler which disregards all memory management, we explore the choices and consequences of adding a reference counting garbage collector.  Our base Python-like language includes classes, objects, functions, lambdas, simple math, lists, dictionaries and integer primitives.
+\subsection{Disadvantages}
+In general a reference count garbage collector will have shorter pause times for the garbage collection phase, but will incur a higher performance penalty \cite{joisha}\cite{blackburn}.  Reference-counting collectors have been implemented which defer the de-allocation, called lazy reference-counting, to some later time and some improvements on such strategies have been made \cite{boehm}.  Without extra work a strictly reference-counting collector will leak memory when references contain cycles, and multiple algorithms have been presented as solutions to this problem.
+\subsection{Advantages}
+One potential advantage that reference-counting garbage collectors have is the ability to be implemented in hardware \cite{joao}.  Given the significant cost of garbage collection \cite{hertz} any hardware assisted acceleration would be highly desirable if it is flexible enough to adapt across multiple garbage collection techniques. 
+Real-time systems are rarely implemented in languages which are garbage collected, but reference-counting garbage collection has been adapted to hard real-time systems
+\section{Implementation}
+We develop a base compiler which generates x86 assembly code and then alter the compiler to include reference counting and garbage collection.
+\subsection{Language}
+A subset of Python has been chosen which includes functions, objects, lambdas, and the primitives integer, boolean.  We implement this as a reference compiler which is extended to include reference counting.  This language has no built in parallelism but Levanoni, et. al. have shown that reference counting is a valid approach for multprocessor systems.\cite{levanoni}
+\par
+Starting from our reference compiler, we treat any object which is not an integer or boolean primitive as a C-struct.  This structure was modified to include a reference counter and in all places where such a structure was allocated we converted the allocation to use a statistics tracking allocator and set the reference count to an initial value of 0.
+We chose to implement our own memory routines primarily to investigate object lifetime (initial allocation time and final de-allocation time) as well as allow us the ability to detect memory leaks.  Since every allocation of an object in our language uses this wrapper we know exactly how much memory has been allocated and what objects were never de-allocated.
+\begin{figure}
+\begin{center}
+\includegraphics[scale=0.48]{compiler_flow.png}
+\end{center}
+\caption{Compiler Architecture}
+\label{fig-comparch}
+\end{figure}
+
+\subsection{Compiler Flow}
+Refer to Figure~\ref{fig-comparch} for the compiler data flow.  Each stage operates on an abstract syntax tree, the relevant new stages are the garbage collection flattening stage and the reference count code injection stage.
+
+\subsection{Syntax Tree Modifications}
+We added two new stages to our reference compiler.  The first stage is a modified flattening stage, which 
+\subsection{Runtime Modifications}
+\subsection{Assembly Output}
+
+\appendix
+\section{Appendix Title}
+
+This is the text of the appendix, if you need one.
+
+\acks
+
+We would like to thank Jeremy Siek and Evan Chang for the course notes from which the compiler design is derived.
+
+% We recommend abbrvnat bibliography style.
+
+\bibliographystyle{abbrvnat}
+
+% The bibliography should be embedded for final submission.
+
+\begin{thebibliography}{}
+\softraggedright
+\bibitem{joisha}
+Pramod G. Joisha. 2006. Compiler optimizations for nondeferred reference: counting garbage collection. In Proceedings of the 5th international symposium on Memory management (ISMM '06). ACM, New York, NY, USA, 150-161. DOI=10.1145/1133956.1133976
+
+\bibitem{blackburn}
+Stephen M. Blackburn and Kathryn S. McKinley. 2003. Ulterior reference counting: fast garbage collection without a long wait. In Proceedings of the 18th annual ACM SIGPLAN conference on Object-oriented programing, systems, languages, and applications (OOPSLA '03). ACM, New York, NY, USA, 344-358. DOI=10.1145/949305.949336
+
+\bibitem{boehm}
+Hans-J. Boehm. 2004. The space cost of lazy reference counting. In Proceedings of the 31st ACM SIGPLAN-SIGACT symposium on Principles of programming languages (POPL '04). ACM, New York, NY, USA, 210-219. DOI=10.1145/964001.964019 
+
+\bibitem{joao}
+José A. Joao, Onur Mutlu, and Yale N. Patt. 2009. Flexible reference-counting-based hardware acceleration for garbage collection. In Proceedings of the 36th annual international symposium on Computer architecture (ISCA '09). ACM, New York, NY, USA, 418-428. DOI=10.1145/1555754.1555806
+
+\bibitem{hertz}
+Matthew Hertz and Emery D. Berger. 2005. Quantifying the performance of garbage collection vs. explicit memory management. In Proceedings of the 20th annual ACM SIGPLAN conference on Object-oriented programming, systems, languages, and applications (OOPSLA '05). ACM, New York, NY, USA, 313-326. DOI=10.1145/1094811.1094836  
+
+\bibitem{levanoni}
+Yossi Levanoni and Erez Petrank. 2006. An on-the-fly reference-counting garbage collector for java. ACM Trans. Program. Lang. Syst. 28, 1 (January 2006), 1-69. DOI=10.1145/1111596.1111597 
+
+\end{thebibliography}
+
+\end{document}
