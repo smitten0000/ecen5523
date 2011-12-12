@@ -175,7 +175,9 @@ class GCRefCount:
         return node
 
     def visit_While(self, node, *args, **kwargs):
-        return [node]
+        body = self.visit(node.body)
+        test = self.visit(node.test[1])
+        return [While((node.test[0],test), body, [], node.lineno)]
 
     def visit_If(self, node, *args, **kwargs):
         # recurse on the "then" and "else" statements
