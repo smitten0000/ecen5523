@@ -110,7 +110,13 @@ Our runtime consisted of C functions which took care of allocating and initializ
 \par
 In the free\emph{\_type} functions it was necessary to add further calls to decrement the reference counter of any objects referenced by the type.  For a list list we iterate the values contained in the list, decrementing their reference (which can result in freeing that object).  For a dictionary we decrement the reference counter on keys as well as values contained in the dictionary, since both can be objects.
 \subsection{Interesting Problems}
-
+We encountered a number of interesting questions during this implementation and summarize them below.
+\subsubsection{Addition of Lists}
+In the current runtime an entirely new list is created when two lists are added together.  At the assignment level our compiler can determine (due to the flattened structure) that the left-hand-side and the right-hand-side of the addition need their reference counters manipulated, however the assignment from an addition to a list creates an entirely new list which should properly increment the reference counter to all objects in both lists.
+\subsubsection{Variable Assignment}
+We wanted a simple way to determine when to decrement an objects reference counter.  Our first implementation was to add a call to decrement the counter before every assignment.  However, because a variable can be created at any point in program execution we couldn't just blindly decrement the counter of an object since the variable will be uninitialized, and could be pointing at memory that makes it look like an object or accidentally references an object.
+\par
+The solution we took makes a slight modification to program behaviour, but we feel it is an acceptable trade-off.  In every scope, we add an immediate assignment as the first instructions.  This assignment is to a primitive, so it costs us no memory and then a decrement on the reference counter amounts to a function call with a no-op.  This function call overhead could potentially be avoided by adding code to check if the variable points to an object or a primitive and is a future enhancement for performance.
 \subsection{Assembly Output}
 We modified the x86 assembly to include calls to set up our memory tracking system and print statistics at the end of the program.
 \section{Results}
