@@ -100,11 +100,14 @@ The basic premise of such routines is to wrap the provided malloc and free, requ
 Refer to Figure~\ref{fig-comparch} for the compiler data flow.  Each stage operates on an abstract syntax tree, the relevant new stages are the garbage collection flattening stage and the reference count AST transformation stage.
 
 \subsection{Syntax Tree Modifications}
+\subsubsection{New compiler stages}
 We added two new stages to our reference compiler.  The first stage is a modified flattening stage, which produces a flattened AST to aid in the reference determination.  The next stage is the actual reference determination and AST transformation, where the compiler determines what variables will be objects and when assignments happen and adds appropriate calls to increment and decrement the reference counter of the object as needed.
 \par
 Our initial assumption was that we could easily add the increment and decrement reference counter operations in the reference compilers flatten stage, however because this stage is after type explication and there are variables created which do not correspond to a type in the language the pre-flatten stage was necessary.  This stage converts all expressions in to assignments to temporary variables.  At this stage we know every expression is operating on types.
-\par
+\subsubsection{Analysis on when to decrement an object reference}
 The next new stage is the reference counting AST transformation.  In this stage we take the flattened tree and look for assignments which are setting list elements, dictionary values, class attributes, object attributes or variables.  The compiler determines what variables are created in the current scope and injects code at the beginning of that scope to set the value initially.  We decided on this approach to simplify determining when an object is first assigned and this allows us to simply decrement the reference counter to the object before an assign, regardless of the variables state.
+\subsubsection{Temporary Variables}
+The compiler creates temporary variables in a number of situations (namely function calls and as a result of flattened expressions).  These temporary variables need not hang on to their memory reference past the next assignment to the actual result variable.
 \subsection{Runtime Modifications}
 Our runtime consisted of C functions which took care of allocating and initializing memory for a new object of a given type.  The obvious modifications included setting the reference counter initially to zero and creating a number of free functions to free each type of object.
 \par
@@ -117,6 +120,8 @@ In the current runtime an entirely new list is created when two lists are added 
 We wanted a simple way to determine when to decrement an objects reference counter.  Our first implementation was to add a call to decrement the counter before every assignment.  However, because a variable can be created at any point in program execution we couldn't just blindly decrement the counter of an object since the variable will be uninitialized, and could be pointing at memory that makes it look like an object or accidentally references an object.
 \par
 The solution we took makes a slight modification to program behaviour, but we feel it is an acceptable trade-off.  In every scope, we add an immediate assignment as the first instructions.  This assignment is to a primitive, so it costs us no memory and then a decrement on the reference counter amounts to a function call with a no-op.  This function call overhead could potentially be avoided by adding code to check if the variable points to an object or a primitive and is a future enhancement for performance.
+\par
+An additional problem is lack of static single assignment.  When a variable is re-assigned to its own name, the code should decrement the reference counter on the previous version of the object and increment it on the new version.
 \subsection{Assembly Output}
 We modified the x86 assembly to include calls to set up our memory tracking system and print statistics at the end of the program.
 \section{Results}
