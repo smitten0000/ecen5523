@@ -19,6 +19,7 @@ static void print_list(pyobj pyobj_list);
 static void print_dict(pyobj dict);
 static list list_add(list x, list y);
 static void print_pyobj(pyobj x);
+static void dec_ref_ctr_rec(pyobj v);
 
 int tag(pyobj val) {
     return val & MASK;
@@ -736,12 +737,12 @@ static pyobj subscript_assign(big_pyobj* c, pyobj key, pyobj val)
     switch (c->tag) {
     case LIST:
         // XXX: inc ref count (for val only)
-	dec_ref_ctr(get_subscript(inject_big(c), key));
+	dec_ref_ctr_rec(get_subscript(inject_big(c), key));
         inc_ref_ctr(val);
         return *list_subscript(c->u.l, key) = val;
     case DICT:
         // XXX: inc ref count (for key and val)
-	dec_ref_ctr(get_subscript(inject_big(c), key));
+	dec_ref_ctr_rec(get_subscript(inject_big(c), key));
         inc_ref_ctr(key);
         inc_ref_ctr(val);
         return *dict_subscript(c->u.d, key) = val;
@@ -1225,10 +1226,10 @@ void iterate_and_release_table(struct hashtable* h, int dec_keys) {
         pyobj v = *(pyobj *)hashtable_iterator_value(itr);
 
         if ( dec_keys ) {
-            dec_ref_ctr(k);
+            dec_ref_ctr_rec(k);
         }
 
-        dec_ref_ctr(v);
+        dec_ref_ctr_rec(v);
     } while (hashtable_iterator_advance(itr));
     // none of the above functions which use iterators clean this up...
     free(itr);
@@ -1253,7 +1254,7 @@ void free_class(big_pyobj* o) {
      */
     unsigned int i=0;
     // decrement reference count for list of parent classes
-    dec_ref_ctr(o->u.cl.parents);
+    dec_ref_ctr_rec(o->u.cl.parents);
     // decrement reference counts for all values in the attribute hash table  
     // (but not keys since the keys are just strings that are not managed
     //  by the runtime)
@@ -1277,7 +1278,7 @@ void free_class(big_pyobj* o) {
  */
 void free_object(big_pyobj* o) {
     // decrement the class reference
-    dec_ref_ctr(o->u.obj.clazz);
+    dec_ref_ctr_rec(o->u.obj.clazz);
 
     // iterate the attr hashtable and release values (but not keys, since
     // they are not pyobj)
@@ -1296,23 +1297,23 @@ void free_object(big_pyobj* o) {
  */
  
 void free_function(big_pyobj* o) {
-    dec_ref_ctr(o->u.f.free_vars);
+    dec_ref_ctr_rec(o->u.f.free_vars);
     // The only other portion of a function is the pointer itself
     pymem_free(o);
 }
  
 void free_bound_method(big_pyobj* o) {
     // decrement references to function (closure) and object (receiver).
-    dec_ref_ctr(o->u.bm.fun);
-    dec_ref_ctr(o->u.bm.receiver);
+    dec_ref_ctr_rec(o->u.bm.fun);
+    dec_ref_ctr_rec(o->u.bm.receiver);
     
     pymem_free(o);
 }
 
 void free_unbound_method(big_pyobj* o) {
     // decrement references to function (closure) and class.
-    dec_ref_ctr(o->u.ubm.fun);
-    dec_ref_ctr(o->u.ubm.clazz);
+    dec_ref_ctr_rec(o->u.ubm.fun);
+    dec_ref_ctr_rec(o->u.ubm.clazz);
     
     pymem_free(o);
 }
@@ -1322,7 +1323,7 @@ void free_list(big_pyobj* o) {
     unsigned int i=0;
     
     for(i=0; i < o->u.l.len; i++) {
-        dec_ref_ctr(o->u.l.data[i]);
+        dec_ref_ctr_rec(o->u.l.data[i]);
     }
     pymem_free(o->u.l.data);
     pymem_free(o);
@@ -1377,19 +1378,9 @@ void inc_ref_ctr(pyobj v) {
     }
 }
 
-void dec_ref_ctr(pyobj v) {
-    struct timeval start, end, result;
-    int ret;
-
+void dec_ref_ctr_rec(pyobj v) {
     if (is_big(v)) {
-	//printf("decref(%p): ", v);
-	//print_any(v);
-	//printf("\n");
-        ret = gettimeofday(&start, NULL);
-        assert (ret > -1);
         big_pyobj *val = project_big(v);
-        //printf("decrementing ref_ctr at %d addr %d on ", val, val->ref_ctr);
-        //print_any(v);
         val->ref_ctr --;
         if ( val->ref_ctr < 0 ) {
             fprintf(stderr,"too many dec_ref on big_pyobj: ");
@@ -1399,11 +1390,20 @@ void dec_ref_ctr(pyobj v) {
         if ( val->ref_ctr == 0 ) {
             release(val);
         }
-        ret = gettimeofday(&end, NULL);
-        assert (ret > -1);
-        timeval_subtract(&result, &start, &end);
-        //fprintf(stderr, "dec_ref_ctr took %ld.%ld seconds\n", result.tv_sec, result.tv_usec);
     }
+}
+
+void dec_ref_ctr(pyobj v) {
+    struct timeval start, end, result;
+    int ret;
+
+    ret = gettimeofday(&start, NULL);
+    assert (ret > -1);
+    dec_ref_ctr_rec(v);
+    ret = gettimeofday(&end, NULL);
+    assert (ret > -1);
+    timeval_subtract(&result, &end, &start);
+    fprintf(stderr, "dec_ref_ctr took %ld.%ld seconds\n", result.tv_sec, result.tv_usec);
 }
 
 /* Subtract the `struct timeval' values X and Y,
