@@ -1397,13 +1397,13 @@ void dec_ref_ctr(pyobj v) {
     struct timeval start, end, result;
     int ret;
 
-    ret = gettimeofday(&start, NULL);
-    assert (ret > -1);
+    //ret = gettimeofday(&start, NULL);
+    //assert (ret > -1);
     dec_ref_ctr_rec(v);
-    ret = gettimeofday(&end, NULL);
-    assert (ret > -1);
-    timeval_subtract(&result, &end, &start);
-    fprintf(stderr, "dec_ref_ctr took %ld.%ld seconds\n", result.tv_sec, result.tv_usec);
+    //ret = gettimeofday(&end, NULL);
+    //assert (ret > -1);
+    //timeval_subtract(&result, &end, &start);
+    //fprintf(stderr, "dec_ref_ctr took %ld.%ld seconds\n", result.tv_sec, result.tv_usec);
 }
 
 /* Subtract the `struct timeval' values X and Y,
