@@ -54,7 +54,7 @@
 \maketitle
 
 \begin{abstract}
-Garbage collection in high level languages has enabled increased programmer productivity, but at the cost of performance and ease of implementation for the language designer.  This paper will explore these trade-offs through an implementation of automatic garbage collection for a subset of the Python language.   Our implementation will extend an existing Python to x86 compiler to use reference counting garbage collection.  Reference counting is chosen for its ease of implementation, and because it is less invasive when one of the design goals is to integrate with assembly or C routines without extra intervention from the software developer.  We outline the changes to the existing compiler to enable reference counting, how the abstract syntax tree of the program is altered and what trade-offs are made with our design choices.
+Garbage collection in high level languages has enabled increased programmer productivity, but at the cost of performance and ease of implementation for the language designer.  This paper will explore these trade-offs through an implementation of automatic garbage collection for a subset of the Python language.   Our implementation will extend an existing Python to x86 compiler to use reference counting garbage collection.  Reference counting is chosen for its ease of implementation, and because it is less invasive when one of the design goals is to integrate with assembly or C routines without extra intervention from the software developer.  We outline the changes to the existing compiler to enable reference counting, including how the abstract syntax tree of the program is altered, and then discuss the trade-offs made by our design choices.
 \end{abstract}
 
 \category{D.1.5}{Programming Techniques}{Object-oriented Programming}
@@ -70,13 +70,13 @@ memory management, garbage collection, reference counting, compilation, compiler
 
 \section{Introduction}
 
-Python is a modern, high level language that uses dynamic typing and is run within an interpreter.  It manages memory for the programmer, and is considered by many to be a good "prototyping" language, in which programmers can quickly and easily develop an application.   Automatic memory management plays a large part in supporting this role, as it relieves the programmer from the tedious task of remembering when to de-allocate memory.  For language designers, deciding what form of memory management to incorporate into their language can be a difficult task.  The choice will depend on many factors, including the designer's vision on the general usefulness of the language, the environment where the language will be primary used, performance requirements, program semantics, integration with legacy systems and many other factors.  The choice also has significant implications on the implementation and therefore warrants careful consideration.  
+Python is a modern, high level language that uses dynamic typing and is run within an interpreter.  It manages memory for the programmer, and is considered by many to be a good ``prototyping'' language, in which programmers can quickly and easily develop an application.   Automatic memory management plays a large part in supporting this role, as it relieves the programmer from the tedious task of remembering when to de-allocate memory.  For language designers, deciding what form of memory management to incorporate into their language can be a difficult task.  The choice will depend on many factors, including the designer's vision on the general usefulness of the language, the environment where the language will be primary used, performance requirements, program semantics, integration with legacy systems and many other factors.  The choice also has significant implications on the implementation and therefore warrants careful consideration.  
 
-There are currently two widely used strategies to perform automatic memory management.  One such strategy is tracing garbage collection, which periodically traverses the in-memory object graph starting from a currently reachable set of "root" objects.  This set of objects includes the set of all globals, as well as the objects which are referencable from the current stack frame.  Any objects that are traversed during this operation are considered reachable and therefore cannot be de-allocated.  Conversely, any objects not traversed are no longer reachable, and can be de-allocated.  The other primary strategy for automated memory management, is reference counting garbage collection. Reference counting works by keeping a count of references to a particular object.  References are tracked by incrementing and decrementing an object's reference count when an assignment to a pointer occurs, or when a pointer variable goes out of scope.  When the reference count reaches zero, it is safe to de-allocate the object.
+There are currently two widely used strategies to perform automatic memory management.  One such strategy is tracing garbage collection, which periodically traverses the in-memory object graph starting from a currently reachable set of ``root'' objects.  This set of objects includes all global variables, as well as the objects which are referenceable from the current stack frame.  Any objects that are traversed during this operation are considered reachable and therefore cannot be de-allocated.  Conversely, any objects not traversed are no longer reachable, and can be de-allocated.  The other primary strategy for automated memory management, is reference counting garbage collection. Reference counting works by keeping a count of references to a particular object.  References are tracked by incrementing and decrementing an object's reference count when an assignment to a pointer occurs, or when a pointer variable goes out of scope.  When the reference count reaches zero, it is safe to de-allocate the object.
 
-The performance characteristics of each strategy can vary considerably, depending on implementation.   Tracing garbage collectors can sometimes be associated with long "pause" times, where application work must be paused to allow the entire contents of the heap to be scanned by the garbage collector.  These long pause times have largely been solved with new algorithms that improve upon the original naive mark-and-sweep algorithm.  It is typical that these algorithms tradeoff throughput for responsiveness.  However, these pause times can still be an issue, especially in real time systems, where a hard guarantees on latency are needed.  Reference counting has been discussed as a solution to this problem, but classic implementations of reference counting can have serious performance concerns when one de-allocation results in cascading de-allocations\cite{boehm}.  
+The performance characteristics of each strategy can vary considerably, depending on implementation.   Tracing garbage collectors can sometimes be associated with long pause times, where application work must be temporarily stopped to allow the entire contents of the heap to be scanned by the garbage collector.  These long pause times have largely been solved with new algorithms that improve upon the original naive mark-and-sweep algorithm.  It is typical that these algorithms tradeoff throughput for responsiveness.  However, these pause times can still be an issue, especially in real time systems, where a hard guarantees on latency are needed.  Reference counting has been discussed as a solution to this problem, but classic implementations of reference counting can have serious performance concerns when one de-allocation results in cascading de-allocations\cite{boehm}.  
 
-Given a existing implementation of a Python to x86-assembly compiler which disregards all memory management, we explore the consequences of adding a reference counting garbage collector.  Our base Python-like language includes classes, objects, functions, lambdas, addition, unary subtraction, lists, dictionaries and integer primitives.  The remainder of the paper is organized as follows.  Section~\ref{sec:related} discusses related work.  Section~\ref{sec:implementation} discusses the implementation of reference counting for our compiler.  Section~\ref{sec:results} evaluates our compiler for performance and correctness.  Section~\ref{sec:future} discusses potential future work.  Finally, section~\ref{sec:conclusion} concludes.
+Given an existing implementation of a Python to x86-assembly compiler which lacks any memory management, we explore the consequences of adding a reference counting garbage collector.  Our base Python-like language includes classes, objects, functions, lambdas, addition, unary subtraction, lists, dictionaries and integer primitives.  The remainder of the paper is organized as follows.  Section~\ref{sec:related} discusses related work.  Section~\ref{sec:implementation} discusses the implementation of reference counting for our compiler.  Section~\ref{sec:results} evaluates our compiler for performance and correctness.  Section~\ref{sec:future} discusses potential future work.  Finally, section~\ref{sec:conclusion} concludes.
 
 
 \section{Related Work}
@@ -87,20 +87,49 @@ One potential advantage that reference-counting garbage collectors have is the a
 
 Real-time systems are rarely implemented in languages which are garbage collected, but reference-counting garbage collection has been adapted to hard real-time systems \cite{ritzaou}.  Due to immediate knowledge that an object is no longer in use reference counting garbage collection can allow for destructors or finalizers to be run immediately which can enhance the clean up of system resources.
 
+In \cite{levanoni}, Levanoni, et. al. show that reference counting is a valid approach for multprocessor systems.
+
 \par
 \section{Implementation}
 \label{sec:implementation}
 
-We develop a base compiler which generates x86 assembly code and then alter the compiler to include reference counting and garbage collection.
+We start with an existing compiler based upon previous work\cite{siek}.  This compiler converts a subset of the Python language to x86 assembly and supports one of the core features of Python, namely that everything is a first class object.  Prior to our modifications, the compiler does not perform any memory management, resulting in a language that is only useful for short lived programs, with minimal memory constraints.  After our modifications, the compiler properly maintains reference counts for all objects created, and automatically de-allocates objects when there are no longer any references to them.
 
-\subsection{Language}
-A subset of Python has been chosen which includes functions, objects, lambdas, and the primitives integer, boolean.  We implement this as a reference compiler which is extended to include reference counting.  This language has no built in parallelism but Levanoni, et. al. have shown that reference counting is a valid approach for multprocessor systems.\cite{levanoni}
-\par
-Starting from our reference compiler, we treat any object which is not an integer or boolean primitive as a C structure.  This structure was modified to include a reference counter and in all places where such a structure was allocated we converted the allocation to use a statistics tracking allocator and set the reference count to an initial value of 0.
-\par
-We chose to implement our own memory routines primarily to investigate object lifetime (initial allocation time and final de-allocation time) as well as allow us the ability to detect memory leaks.  Since every allocation of an object in our language uses this wrapper we know exactly how much memory has been allocated and what objects were never de-allocated.
-\par
-The basic premise of such routines is to wrap the provided malloc and free, request slightly more memory than required.  That extra memory is what where the reference counter is stored and the pointer location is returned which skips the counter.  The memory routines also create a linked list to track all of the allocations in a structure for statistics gathering and leak detection.
+Implementing reference counting requires a minimum set of steps to be taken.
+
+\begin{itemize}
+\item Objects must include a counter that tracks the number of references to that object.
+\item Functions to increment and decrement an objects reference count must be created.
+\item Assignment of an object to a pointer or \textit{reference} should result in correct updates to an object's reference count.
+\item Reference counts must be decremented when a program reaches the end of a given scope, since local variables are destroyed.
+\item When an object's reference count reaches zero, it is no longer reachable and can be safely destroyed.
+
+\end{itemize}
+
+These steps require modifications to the architecture of our compiler, as well as the supporting runtime library responsible for creating objects and allocating memory.  We discuss these modifications in the following sections.
+
+\subsection{Runtime Modifications}
+Our runtime library is implemented in C so that it can be easily called by the assembly programs created by our compiler.  The runtime library contains abstractions such as \texttt{create\_list}, \texttt{create\_dict} and \texttt{create\_object} that take care of allocating and initializing memory for a new object of the specified type.  These functions return a pointer to the memory allocated, and the pointer is \textit{tagged} to indicate that it represents a non-primitive type.  In our reference compiler, any non-primitive object must be a pointer to a C structure called \texttt{big\_pyobj}.  To support reference counts, this C structure is modified to include an int field called \texttt{ref\_ctr}.  Then all of the functions to create objects are modified to set the initial reference count to zero.
+
+To support incrementing and decrementing an object's reference count, we create corresponding functions in our runtime called \texttt{inc\_ref\_ctr} and \texttt{dec\_ref\_ctr}.  The increment function is trivial in that it simply de-references the object pointer and increments the \texttt{ref\_ctr} field.   However, the decrement function potentially has more work to do than just de-referencing the pointer and decrementing the reference count.  According to the steps for reference counting mentioned previously, we need to de-allocate an object whenever its reference count reaches zero.  To provide this behavior, the \texttt{dec\_ref\_ctr} function has to check if the reference count has reached zero, and if so, delegate to a corresponding \texttt{free\_\textit{type}} method to free an object of the given type.
+
+In the \texttt{free\_\textit{type}} functions, it is necessary to add further calls to decrement the reference counter of any objects referenced by the object being de-allocated.  For the case of a list, we have the \texttt{free\_list} function, which iterates over each element in the list and decrements its reference count.  For a dictionary, we have the \texttt{free\_dict} function, which decrements the reference counter on keys as well as values contained in the dictionary, since both can be objects.  Note that for any case of an object that references other objects, this can can result in de-allocation of the referenced object, if the only reference to it is held by the parent object.  In the worst case, this could lead to a number of de-allocations equivalent to the number of nodes in the object graph created by the parent object.  
+
+Since every object in our system may contain references to another object, we modify our runtime to correctly increment the reference count when such as reference is established.  For example, an assignment to a list or dictionary subscript results in a call to the \texttt{set\_subscript} runtime function.  This function is modified to first decrement the reference count for any object that may have been previously referenced by the given subscript, and then increment the reference count for the new object that is assigned to the given subscript.  Similarly, a closure maintains a reference to its list of free variables, and a class object maintains a reference to its base classes.  In each case, we modify the appropriate runtime function to ensure that these reference counts are correctly maintained.  
+
+In some cases, the type definition for an object in our runtime did not aggregate a \texttt{big\_pyobj} type, and instead maintained only a pointer to the non-generic version of the type (e.g., \texttt{class\_struct}).  For this reason, significant changes were made to the runtime to ensure that any type that references another type, has a generic pointer to a \texttt{big\_pyobj} structure, so that the reference counts can be correctly maintained.  To ensure that we did not make any mistakes in this process, we create a runtime test suite that uses the abstractions provided by the runtime library to create objects, increment and decrement their reference counts and ensure that all objects are de-allocated when their reference count reaches zero.  This runtime test suite is important to unit test the runtime library, before attempting to use it from our compiler.
+
+Finally, in order to verify the correctness of our implementation, we create a set of abstractions on top of the system allocation functions \texttt{malloc} and \texttt{free}.  These abstractions are part of our runtime and provide us the following benefits. 
+
+\begin{enumerate}
+\item Ability to detect memory leaks
+\item Ability to track allocations by type/size
+\item Ability to track the time of allocation/de-allocation
+\end{enumerate}
+
+The abstractions are implemented in a new module appropriately called \texttt{pymem}.  Every allocation of an object in our runtime is modified to use the \texttt{pymem\_new} and \texttt{pymem\_free} instead of \texttt{malloc} and \texttt{free}. As a result of this, we can determine exactly how much memory has been allocated and what objects have still not been de-allocated, by calling the \texttt{pymem\_print\_statistics} function at any given program point.  In practice, this is only called at the end of each program to ensure that all memory has been de-allocated.  Since we can track the time of allocation and de-allocation, this module can be beneficial for investigating object lifetime as well.  
+
+The \texttt{pymem\_new} routine works by allocating slightly more memory than is requested by the user.  This extra memory is used to store a pointer to a linked list node that contains the details of the allocation, including the type of object being created, the requested size, the pointer returned by \texttt{malloc} and the time of allocation.  The caller is then returned the portion of memory immediately after this pointer.  Subsequent calls to \texttt{pymem\_free} then have access to the linked list node via the pointer, and can update the node to mark the memory as de-allocated, as well as the de-allocation time.  The memory can then be freed independently of the linked list containing the statistics. 
 \begin{figure}
 \begin{center}
 \includegraphics[scale=0.48]{compiler_flow.pdf}
@@ -125,10 +154,6 @@ The next new stage is the reference counting AST transformation.  In this stage 
 \subsubsection{Temporary Variables}
 The compiler creates temporary variables in a number of situations (namely function calls and as a result of flattened expressions).  These temporary variables need not hang on to their memory reference past the next assignment to the actual result variable.  Any temporary variable is dereferenced immediately at the end of the current scope if it is not the variable being returned.  If it is the return variable we ignore decrementing the reference on this variable, thereby assuring the caller that the object returned is correctly reference counted for its assignment.  If we had decremented the reference counter, due to the immediate nature of garbage collection, we would have been returning a value which did not point to an allocated memory region.
 
-\subsection{Runtime Modifications}
-Our runtime consisted of C functions which took care of allocating and initializing memory for a new object of a given type.  The obvious modifications included setting the reference counter initially to zero and creating a number of free functions to free each type of object.
-\par
-In the free\emph{\_type} functions it was necessary to add further calls to decrement the reference counter of any objects referenced by the type.  For a list list we iterate the values contained in the list, decrementing their reference (which can result in freeing that object).  For a dictionary we decrement the reference counter on keys as well as values contained in the dictionary, since both can be objects.
 
 \subsection{Interesting Problems}
 We encountered a number of interesting questions during this implementation and summarize them below.
@@ -181,6 +206,8 @@ With our reference counting for the same program
 \section{Future work}
 \label{sec:future}
 
+Optimizations.
+
 \section{Conclusions}
 \label{sec:conclusion}
 
@@ -225,6 +252,9 @@ Yossi Levanoni and Erez Petrank. 2006. An on-the-fly reference-counting garbage 
 
 \bibitem{ritzau}
 Tobias Ritzau. 1999.  Real-Time Reference Counting in RT-Java
+
+\bibitem{siek}
+Jeremy G. Siek. 2011.  A Problem Course in Compilation: From Python to x86 Assembly
 
 \end{thebibliography}
 
