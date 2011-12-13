@@ -59,7 +59,7 @@ Integrating a modern dynamic language in to existing systems-level languages (As
 
 \category{D.1.5}{Programming Techniques}{Object-oriented Programming}
 \category{D.3.3}{Programming Languages}{Language Constructs And Features-Dynamic Storage Management}
-\category{D.3.4}{Programming Languages}{Processors-Memory Management (garbage collection)}
+\category{D.3.4}{Programming Languages}{Processors- Memory Management (garbage collection)}
 \category{D.4.2}{Operating Systems}{Storage Management-Garbage collection}
 
 \terms
@@ -78,7 +78,7 @@ In general a reference count garbage collector will have shorter pause times for
 \subsection{Advantages}
 One potential advantage that reference-counting garbage collectors have is the ability to be implemented in hardware \cite{joao}.  Given the significant cost of garbage collection \cite{hertz} any hardware assisted acceleration would be highly desirable if it is flexible enough to adapt across multiple garbage collection techniques. 
 \par
-Real-time systems are rarely implemented in languages which are garbage collected, but reference-counting garbage collection has been adapted to hard real-time systems \cite{?}.  Due to immediate knowledge that an object is no longer in use reference counting garbage collection can allow for destructors or finalizers to be run immediately which can enhance the clean up of system resources.
+Real-time systems are rarely implemented in languages which are garbage collected, but reference-counting garbage collection has been adapted to hard real-time systems \cite{ritzaou}.  Due to immediate knowledge that an object is no longer in use reference counting garbage collection can allow for destructors or finalizers to be run immediately which can enhance the clean up of system resources.
 \section{Implementation}
 We develop a base compiler which generates x86 assembly code and then alter the compiler to include reference counting and garbage collection.
 \subsection{Language}
@@ -120,8 +120,8 @@ In the current runtime an entirely new list is created when two lists are added 
 \subsubsection{Variable Assignment}
 We wanted a simple way to determine when to decrement an objects reference counter.  Our first implementation was to add a call to decrement the counter before every assignment.  However, because a variable can be created at any point in program execution we couldn't just blindly decrement the counter of an object since the variable will be uninitialized, and could be pointing at memory that makes it look like an object or accidentally references an object.
 \par
-The solution we took makes a slight modification to program behaviour, but we feel it is an acceptable trade-off.  In every scope, we add an immediate assignment as the first instructions.  This assignment is to a primitive, so the cost is minimal and then a decrement on the reference counter amounts to a function call with a no-op.  This function call overhead could potentially be avoided by adding code to check if the variable points to an object or a primitive and is a future enhancement for performance.  A program which used uninitialized (or declared) variables for program flow control would then have its runtime semantics changed.  We felt this was a sufficient trade off since such use of an exception for program flow control is frowned upon in practice and the benefit to our design was an obvious positive.
-\par
+The solution we took makes a slight modification to program behaviour, but we feel it is an acceptable trade-off.  In every scope, the compiler adds an immediate assignment as the first instructions.  This assignment is to a primitive, so the cost is minimal and then a decrement on the reference counter amounts to a function call with a no-op.  This function call overhead could potentially be avoided by adding code to check if the variable points to an object or a primitive and is a future enhancement for performance.  A program which used uninitialized (or declared) variables for program flow control would then have its runtime semantics changed.  We felt this was a sufficient trade off since such use of an exception for program flow control is frowned upon in practice and the benefit to our design was an obvious positive.
+
 
 \subsection{Assembly Output}
 We modified the x86 assembly to include calls to set up our memory tracking system and print statistics at the end of the program.  Running analysis tools such as valgrind on our programs before and after shows the obvious gain of going from every memory allocation leaks to zero leaks.
@@ -189,6 +189,9 @@ Matthew Hertz and Emery D. Berger. 2005. Quantifying the performance of garbage 
 
 \bibitem{levanoni}
 Yossi Levanoni and Erez Petrank. 2006. An on-the-fly reference-counting garbage collector for java. ACM Trans. Program. Lang. Syst. 28, 1 (January 2006), 1-69. DOI=10.1145/1111596.1111597 
+
+\bibitem{ritzau}
+Tobias Ritzau. 1999.  Real-Time Reference Counting in RT-Java
 
 \end{thebibliography}
 
