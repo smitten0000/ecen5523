@@ -3,6 +3,8 @@
 #include <assert.h>
 #include <ctype.h>
 #include <string.h>
+#include <time.h>
+#include <sys/time.h>
 
 #include "runtime.h"
 
@@ -243,8 +245,12 @@ static big_pyobj* list_to_big(list l) {
 
 big_pyobj* create_list(pyobj length) {
     list l;
+    int i;
     l.len = project_int(length); /* this should be checked */
     l.data = (pyobj*)pymem_new(LIST, sizeof(pyobj) * l.len);
+    // Make sure list is initialized with ints, so decrefs don't fail
+    for (i=0; i < l.len; i++)
+        l.data[i]=inject_int(0);
     return list_to_big(l);
 }
 
@@ -730,10 +736,12 @@ static pyobj subscript_assign(big_pyobj* c, pyobj key, pyobj val)
     switch (c->tag) {
     case LIST:
         // XXX: inc ref count (for val only)
+	dec_ref_ctr(get_subscript(inject_big(c), key));
         inc_ref_ctr(val);
         return *list_subscript(c->u.l, key) = val;
     case DICT:
         // XXX: inc ref count (for key and val)
+	dec_ref_ctr(get_subscript(inject_big(c), key));
         inc_ref_ctr(key);
         inc_ref_ctr(val);
         return *dict_subscript(c->u.d, key) = val;
@@ -980,6 +988,7 @@ big_pyobj* create_object(pyobj cl) {
         exit(-1);
     }
     ret->u.obj.attrs = create_hashtable(2, attrname_hash, attrname_equal, OBJECT);
+    inc_ref_ctr(inject_big(ret));
     return ret;
 }
 
@@ -1369,7 +1378,15 @@ void inc_ref_ctr(pyobj v) {
 }
 
 void dec_ref_ctr(pyobj v) {
+    struct timeval start, end, result;
+    int ret;
+
     if (is_big(v)) {
+	//printf("decref(%p): ", v);
+	//print_any(v);
+	//printf("\n");
+        ret = gettimeofday(&start, NULL);
+        assert (ret > -1);
         big_pyobj *val = project_big(v);
         //printf("decrementing ref_ctr at %d addr %d on ", val, val->ref_ctr);
         //print_any(v);
@@ -1382,6 +1399,35 @@ void dec_ref_ctr(pyobj v) {
         if ( val->ref_ctr == 0 ) {
             release(val);
         }
-
+        ret = gettimeofday(&end, NULL);
+        assert (ret > -1);
+        timeval_subtract(&result, &start, &end);
+        //fprintf(stderr, "dec_ref_ctr took %ld.%ld seconds\n", result.tv_sec, result.tv_usec);
     }
+}
+
+/* Subtract the `struct timeval' values X and Y,
+   storing the result in RESULT.
+   Return 1 if the difference is negative, otherwise 0.  */
+int timeval_subtract (struct timeval *result, struct timeval *x, struct timeval *y)
+{
+    /* Perform the carry for the later subtraction by updating y. */
+    if (x->tv_usec < y->tv_usec) {
+        int nsec = (y->tv_usec - x->tv_usec) / 1000000 + 1;
+        y->tv_usec -= 1000000 * nsec;
+        y->tv_sec += nsec;
+    }
+    if (x->tv_usec - y->tv_usec > 1000000) {
+        int nsec = (x->tv_usec - y->tv_usec) / 1000000;
+        y->tv_usec += 1000000 * nsec;
+        y->tv_sec -= nsec;
+    }
+     
+    /* Compute the time remaining to wait.
+       tv_usec is certainly positive. */
+    result->tv_sec = x->tv_sec - y->tv_sec;
+    result->tv_usec = x->tv_usec - y->tv_usec;
+     
+    /* Return 1 if result is negative. */
+    return x->tv_sec < y->tv_sec;
 }

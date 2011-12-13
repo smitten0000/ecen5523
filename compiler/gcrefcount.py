@@ -88,7 +88,7 @@ class GCRefCount:
         decrefstmts = []
         initialassigns = []
         for localvar in getLocals(node):
-            initialassigns.append(Assign([AssName(Name(localvar), 'OP_ASSIGN')],Const(0)))
+            initialassigns.append(Assign([AssName(localvar, 'OP_ASSIGN')],Const(0)))
         for localvar in getLocals(node):
             decrefstmts.append(Discard(CallFunc(Name('dec_ref_ctr'),[Name(localvar)])))
         stmt = self.visit(node.node)
@@ -113,9 +113,9 @@ class GCRefCount:
             return [Assign([assnode], self.visit(node.expr))]
         elif isinstance(assnode, AssName):
             stmtlist = []
-            if assnode.name in self.varset:
-                stmtlist.append(Discard(CallFunc(Name('dec_ref_ctr'),[Name(assnode.name)])))
+            self.log.info('varset=%s' % self.varset)
             self.varset.add(assnode.name)
+            stmtlist.append(Discard(CallFunc(Name('dec_ref_ctr'),[Name(assnode.name)])))
             stmtlist.append(Assign([AssName(assnode.name,'OP_ASSIGN')], self.visit(node.expr)))
             if not isinstance(node.expr,CallFuncIndirect):
                 stmtlist.append(Discard(CallFunc(Name('inc_ref_ctr'),[Name(assnode.name)])))
@@ -215,8 +215,12 @@ class GCRefCount:
         initialassigns = []
         localAssigns = getLocals(node.code)
         self.log.info('visit_Lambda: localAssigns=%s' % localAssigns)
+        # Assign every local variable the value zero, except for arguments to the function
+        # This eliminates the need to know where a variable is first assigned, which may
+        # not be able to be determined statically.  
         for localvar in localAssigns:
-            initialassigns.append(Assign([AssName(Name(localvar), 'OP_ASSIGN')],Const(0)))
+            if localvar not in node.argnames:
+                initialassigns.append(Assign([AssName(localvar, 'OP_ASSIGN')],Const(0)))
         for localvar in localAssigns:
             decrefstmts.append(Discard(CallFunc(Name('dec_ref_ctr'),[Name(localvar)])))
         self.lambda_local_assigns.append(localAssigns)

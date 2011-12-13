@@ -20,7 +20,10 @@ if __name__ == "__main__":
     import logging, logging.config
     from comp_util import *
     from p3declassify import P3Declassify
+    from p3wrapper import P3Wrapper
     from p3uniquifyvars import P3UniquifyVars
+    from gcflattener import GCFlattener
+    from gcrefcount import GCRefCount
     from p3explicate import P3Explicate
     from p3heapify import P3Heapify
     from p3closureconvert import P3ClosureConversion
@@ -35,7 +38,10 @@ if __name__ == "__main__":
         varalloc = VariableAllocator()
         declassify = P3Declassify(varalloc)
         unique = P3UniquifyVars()
-        explicator = P3Explicate(varalloc)
+        wrapper = P3Wrapper()
+        gcflatten = GCFlattener(varalloc)
+        gcrefcount = GCRefCount(varalloc)
+        explicator = P3Explicate(varalloc, handleLambdas=False)
         heap = P3Heapify(explicator)
         closure = P3ClosureConversion(explicator, varalloc)
         flatten = P3Flattener(varalloc)
@@ -43,10 +49,13 @@ if __name__ == "__main__":
 
         ast = compiler.parseFile(testcase)
         ast = declassify.transform(ast)
-        unique = unique.transform(ast)        
-        explicated = explicator.explicate(unique)
-        heaped = heap.transform(explicated)
-        astlist = closure.transform(heaped)
+        ast = wrapper.transform(ast)
+        ast = unique.transform(ast)        
+        ast = gcflatten.transform(ast)
+        ast = gcrefcount.transform(ast)         
+        ast = explicator.explicate(ast)
+        ast = heap.transform(ast)
+        astlist = closure.transform(ast)
         for ast in astlist:
             ast = flatten.flatten(ast)
             program = insselector.transform(ast)
