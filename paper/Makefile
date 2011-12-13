@@ -2,8 +2,9 @@
 # 
 # Makefile for the paper
 
-PAPER = finalproject.tex
-FIGURES = slot_runtime.pdf
+PAPER = paper.tex
+#FIGURES = slot_runtime.pdf
+FIGURES =
 
 SUFFIXES = .pdf .eps .gnuplot
 

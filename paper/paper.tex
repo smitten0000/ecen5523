@@ -54,7 +54,7 @@
 \maketitle
 
 \begin{abstract}
-Integrating a modern dynamic language in to existing systems-level languages (Assembly or C) easily has a number of challenges.  This paper will focus on automatic garbage collection within a subset of the Python language, to enable a Python-like program the ability to cleanly interact with Assembly or C routines without extra intervention from the software developer.  This paper will focus on reference counting garbage collection at the compiler level, to enable automatically freeing no-longer-referenced objects at the end of their useful lifetime.  We will also outline the analysis steps required in the compiler which enable reference tracking, how the abstract syntax tree of the program is altered and what trade-offs are made with such altercations.
+Garbage collection in high level languages has enabled increased programmer productivity, but at the cost of performance and ease of implementation for the language designer.  This paper will explore these trade-offs through an implementation of automatic garbage collection for a subset of the Python language.   Our implementation will extend an existing Python to x86 compiler to use reference counting garbage collection.  Reference counting is chosen for its ease of implementation, and because it is less invasive when one of the design goals is to integrate with assembly or C routines without extra intervention from the software developer.  We outline the changes to the existing compiler to enable reference counting, how the abstract syntax tree of the program is altered and what trade-offs are made with our design choices.
 \end{abstract}
 
 \category{D.1.5}{Programming Techniques}{Object-oriented Programming}
