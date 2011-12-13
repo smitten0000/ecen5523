@@ -70,17 +70,29 @@ memory management, garbage collection, reference counting, compilation, compiler
 
 \section{Introduction}
 
-Python is a modern high level language which has a reference counting garbage collector at its core.  It is also, by default, an interpreted language.  In many cases the usefulness of Python as a productive language is highly desired and a trade-off is made in terms of performance.  While numerous optimizations have been made to the Python run time there is still a usefulness to compile a high level language directly to machine code.  Most high level languages do not allow for direct memory management, instead leaving allocation and de-allocation of memory to the interpreter and garbage collection process.
-There are two main classifications for garbage collectors: generational or tracing collectors and reference-counting collectors.  Generational or tracing collectors make periodic inspection of all objects to determine if they are reachable by a pointer or object reference.  These are the modern batch of garbage collectors and have the best performance 
-Given a naive implementation of a direct Python to x86-assembly compiler which disregards all memory management, we explore the choices and consequences of adding a reference counting garbage collector.  Our base Python-like language includes classes, objects, functions, lambdas, simple math, lists, dictionaries and integer primitives.
-\subsection{Disadvantages}
-In general a reference count garbage collector will have shorter pause times for the garbage collection phase, but will incur a higher performance penalty \cite{joisha}\cite{blackburn}.  Reference-counting collectors have been implemented which defer the de-allocation, called lazy reference-counting, to some later time and some improvements on such strategies have been made \cite{boehm}.  Without extra work a strictly reference-counting collector will leak memory when references contain cycles, and multiple algorithms have been presented as solutions to this problem.
-\subsection{Advantages}
+Python is a modern, high level language that uses dynamic typing and is run within an interpreter.  It manages memory for the programmer, and is considered by many to be a good "prototyping" language, in which programmers can quickly and easily develop an application.   Automatic memory management plays a large part in supporting this role, as it relieves the programmer from the tedious task of remembering when to de-allocate memory.  For language designers, deciding what form of memory management to incorporate into their language can be a difficult task.  The choice will depend on many factors, including the designer's vision on the general usefulness of the language, the environment where the language will be primary used, performance requirements, program semantics, integration with legacy systems and many other factors.  The choice also has significant implications on the implementation and therefore warrants careful consideration.  
+
+There are currently two widely used strategies to perform automatic memory management.  One such strategy is tracing garbage collection, which periodically traverses the in-memory object graph starting from a currently reachable set of "root" objects.  This set of objects includes the set of all globals, as well as the objects which are referencable from the current stack frame.  Any objects that are traversed during this operation are considered reachable and therefore cannot be de-allocated.  Conversely, any objects not traversed are no longer reachable, and can be de-allocated.  The other primary strategy for automated memory management, is reference counting garbage collection. Reference counting works by keeping a count of references to a particular object.  References are tracked by incrementing and decrementing an object's reference count when an assignment to a pointer occurs, or when a pointer variable goes out of scope.  When the reference count reaches zero, it is safe to de-allocate the object.
+
+The performance characteristics of each strategy can vary considerably, depending on implementation.   Tracing garbage collectors can sometimes be associated with long "pause" times, where application work must be paused to allow the entire contents of the heap to be scanned by the garbage collector.  These long pause times have largely been solved with new algorithms that improve upon the original naive mark-and-sweep algorithm.  It is typical that these algorithms tradeoff throughput for responsiveness.  However, these pause times can still be an issue, especially in real time systems, where a hard guarantees on latency are needed.  Reference counting has been discussed as a solution to this problem, but classic implementations of reference counting can have serious performance concerns when one de-allocation results in cascading de-allocations\cite{boehm}.  
+
+Given a existing implementation of a Python to x86-assembly compiler which disregards all memory management, we explore the consequences of adding a reference counting garbage collector.  Our base Python-like language includes classes, objects, functions, lambdas, addition, unary subtraction, lists, dictionaries and integer primitives.  The remainder of the paper is organized as follows.  Section~\ref{sec:related} discusses related work.  Section~\ref{sec:implementation} discusses the implementation of reference counting for our compiler.  Section~\ref{sec:results} evaluates our compiler for performance and correctness.  Section~\ref{sec:future} discusses potential future work.  Finally, section~\ref{sec:conclusion} concludes.
+
+
+\section{Related Work}
+\label{sec:related}
+In general a reference count garbage collector will have shorter pause times for the garbage collection phase, but will incur a higher performance penalty \cite{joisha}\cite{blackburn}.  Reference-counting collectors have been implemented which defer the de-allocation, called lazy reference-counting, to some later time and some improvements on such strategies have been made \cite{boehm}.  Without extra work a strictly reference-counting collector will leak memory when references contain cycles, and multiple algorithms have been presented as solutions to this problem. \textit{Citation?}
+
 One potential advantage that reference-counting garbage collectors have is the ability to be implemented in hardware \cite{joao}.  Given the significant cost of garbage collection \cite{hertz} any hardware assisted acceleration would be highly desirable if it is flexible enough to adapt across multiple garbage collection techniques. 
-\par
+
 Real-time systems are rarely implemented in languages which are garbage collected, but reference-counting garbage collection has been adapted to hard real-time systems \cite{ritzaou}.  Due to immediate knowledge that an object is no longer in use reference counting garbage collection can allow for destructors or finalizers to be run immediately which can enhance the clean up of system resources.
+
+\par
 \section{Implementation}
+\label{sec:implementation}
+
 We develop a base compiler which generates x86 assembly code and then alter the compiler to include reference counting and garbage collection.
+
 \subsection{Language}
 A subset of Python has been chosen which includes functions, objects, lambdas, and the primitives integer, boolean.  We implement this as a reference compiler which is extended to include reference counting.  This language has no built in parallelism but Levanoni, et. al. have shown that reference counting is a valid approach for multprocessor systems.\cite{levanoni}
 \par
@@ -101,22 +113,29 @@ The basic premise of such routines is to wrap the provided malloc and free, requ
 Refer to Figure~\ref{fig-comparch} for the compiler data flow.  Each stage operates on an abstract syntax tree, the relevant new stages are the garbage collection flattening stage and the reference count AST transformation stage.
 
 \subsection{Syntax Tree Modifications}
+
 \subsubsection{New compiler stages}
 We added two new stages to our reference compiler.  The first stage is a modified flattening stage, which produces a flattened AST to aid in the reference determination.  The next stage is the actual reference determination and AST transformation, where the compiler determines what variables will be objects and when assignments happen and adds appropriate calls to increment and decrement the reference counter of the object as needed.
 \par
 Our initial assumption was that we could easily add the increment and decrement reference counter operations in the reference compilers flatten stage, however because this stage is after type explication and there are variables created which do not correspond to a type in the language the pre-flatten stage was necessary.  This stage converts all expressions in to assignments to temporary variables.  At this stage we know every expression is operating on types.
+
 \subsubsection{Analysis on when to decrement an object reference}
 The next new stage is the reference counting AST transformation.  In this stage we take the flattened tree and look for assignments which are setting list elements, dictionary values, class attributes, object attributes or variables.  The compiler determines what variables are created in the current scope and injects code at the beginning of that scope to set the value initially.  We decided on this approach to simplify determining when an object is first assigned and this allows us to simply decrement the reference counter to the object before an assign, regardless of the variables state.
+
 \subsubsection{Temporary Variables}
 The compiler creates temporary variables in a number of situations (namely function calls and as a result of flattened expressions).  These temporary variables need not hang on to their memory reference past the next assignment to the actual result variable.  Any temporary variable is dereferenced immediately at the end of the current scope if it is not the variable being returned.  If it is the return variable we ignore decrementing the reference on this variable, thereby assuring the caller that the object returned is correctly reference counted for its assignment.  If we had decremented the reference counter, due to the immediate nature of garbage collection, we would have been returning a value which did not point to an allocated memory region.
+
 \subsection{Runtime Modifications}
 Our runtime consisted of C functions which took care of allocating and initializing memory for a new object of a given type.  The obvious modifications included setting the reference counter initially to zero and creating a number of free functions to free each type of object.
 \par
 In the free\emph{\_type} functions it was necessary to add further calls to decrement the reference counter of any objects referenced by the type.  For a list list we iterate the values contained in the list, decrementing their reference (which can result in freeing that object).  For a dictionary we decrement the reference counter on keys as well as values contained in the dictionary, since both can be objects.
+
 \subsection{Interesting Problems}
 We encountered a number of interesting questions during this implementation and summarize them below.
+
 \subsubsection{Addition of Lists}
 In the current runtime an entirely new list is created when two lists are added together.  At the assignment level our compiler can determine (due to the flattened structure) that the left-hand-side and the right-hand-side of the addition need their reference counters manipulated, however the assignment from an addition to a list creates an entirely new list which should properly increment the reference counter to all objects in both lists.
+
 \subsubsection{Variable Assignment}
 We wanted a simple way to determine when to decrement an objects reference counter.  Our first implementation was to add a call to decrement the counter before every assignment.  However, because a variable can be created at any point in program execution we couldn't just blindly decrement the counter of an object since the variable will be uninitialized, and could be pointing at memory that makes it look like an object or accidentally references an object.
 \par
@@ -125,9 +144,14 @@ The solution we took makes a slight modification to program behaviour, but we fe
 
 \subsection{Assembly Output}
 We modified the x86 assembly to include calls to set up our memory tracking system and print statistics at the end of the program.  Running analysis tools such as valgrind on our programs before and after shows the obvious gain of going from every memory allocation leaks to zero leaks.
+
 \section{Results}
+\label{sec:results}
+
 \subsection{Execution}
+
 \subsection{Memory}
+
 \subsubsection{Valgrind results}
 For the trivial program
 \begin{verbatim}
@@ -153,8 +177,17 @@ With our reference counting for the same program
 ==23831==    indirectly lost: 0 bytes in 0 blocks
 ==23831==      possibly lost: 0 bytes in 0 blocks
 \end{verbatim}
+
 \section{Future work}
-\section{Related Work}
+\label{sec:future}
+
+\section{Conclusions}
+\label{sec:conclusion}
+
+\subsection{Disadvantages}
+
+\subsection{Advantages}
+
 \appendix
 \section{Appendix Title}
 
