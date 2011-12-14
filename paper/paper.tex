@@ -130,6 +130,11 @@ Finally, in order to verify the correctness of our implementation, we create a s
 The abstractions are implemented in a new module appropriately called \texttt{pymem}.  Every allocation of an object in our runtime is modified to use the \texttt{pymem\_new} and \texttt{pymem\_free} instead of \texttt{malloc} and \texttt{free}. As a result of this, we can determine exactly how much memory has been allocated and what objects have still not been de-allocated, by calling the \texttt{pymem\_print\_statistics} function at any given program point.  In practice, this is only called at the end of each program to ensure that all memory has been de-allocated.  Since we can track the time of allocation and de-allocation, this module can be beneficial for investigating object lifetime as well.  
 
 The \texttt{pymem\_new} routine works by allocating slightly more memory than is requested by the user.  This extra memory is used to store a pointer to a linked list node that contains the details of the allocation, including the type of object being created, the requested size, the pointer returned by \texttt{malloc} and the time of allocation.  The caller is then returned the portion of memory immediately after this pointer.  Subsequent calls to \texttt{pymem\_free} then have access to the linked list node via the pointer, and can update the node to mark the memory as de-allocated, as well as the de-allocation time.  The memory can then be freed independently of the linked list containing the statistics. 
+
+\subsection{Compiler}
+
+Figure~\ref{fig-comparch} shows the compiler data flow after modifying our compiler for reference counting.  Each stage operates on an abstract syntax tree (AST).  The relevant new stages are the pre-explicate flatten stage, and the reference counting AST transformation stage.  
+
 \begin{figure}
 \begin{center}
 \includegraphics[scale=0.48]{compiler_flow.pdf}
@@ -138,25 +143,46 @@ The \texttt{pymem\_new} routine works by allocating slightly more memory than is
 \label{fig-comparch}
 \end{figure}
 
-\subsection{Compiler Flow}
-Refer to Figure~\ref{fig-comparch} for the compiler data flow.  Each stage operates on an abstract syntax tree, the relevant new stages are the garbage collection flattening stage and the reference count AST transformation stage.
+\subsubsection{Reference Counting AST Transformation}
 
-\subsection{Syntax Tree Modifications}
+Recall that in order to properly maintain reference counts, we need to increment the reference count for an object when a reference is created for it, and decrement the reference count when a reference is destroyed.  References are created by assigning a memory location (which contains an object) to a variable.  References are destroyed when a variable is changed to refer to a different object, or when a variable ceases to exist when a program reaches the end of a given scope.
 
-\subsubsection{New compiler stages}
-We added two new stages to our reference compiler.  The first stage is a modified flattening stage, which produces a flattened AST to aid in the reference determination.  The next stage is the actual reference determination and AST transformation, where the compiler determines what variables will be objects and when assignments happen and adds appropriate calls to increment and decrement the reference counter of the object as needed.
-\par
-Our initial assumption was that we could easily add the increment and decrement reference counter operations in the reference compilers flatten stage, however because this stage is after type explication and there are variables created which do not correspond to a type in the language the pre-flatten stage was necessary.  This stage converts all expressions in to assignments to temporary variables.  At this stage we know every expression is operating on types.
+The most natural way to implement this in our compiler, is to transform our input programs AST such that any assignment to a variable is preceded by a decrement to the reference count for the object the variable refers to, and is succeeded by an increment to the reference count for the newly assigned object.  This is the approach we took, but there are some subtleties with respect to where this operation is placed within the compiler.  Our initial hypothesis was that we could easily add the increment and decrement reference counter operations in the existing ``Flatten AST'' stage.  We quickly realized that because this stage is after type explication, there exist variables which are not \textit{tagged} with a type.  Since we only want to decrement reference counts for \textit{tagged} types\footnote{Actually, we only want to modify reference counts for a subset of tagged types that only includes ``big'' types. However, to simplify our implementation, we transform our AST to always call our increment and decrement runtime functions, but these functions will ignore the primitive types of \texttt{int} and \texttt{boolean}.}, the only option is to put this transformation stage before type explication.  
 
-\subsubsection{Analysis on when to decrement an object reference}
-The next new stage is the reference counting AST transformation.  In this stage we take the flattened tree and look for assignments which are setting list elements, dictionary values, class attributes, object attributes or variables.  The compiler determines what variables are created in the current scope and injects code at the beginning of that scope to set the value initially.  We decided on this approach to simplify determining when an object is first assigned and this allows us to simply decrement the reference counter to the object before an assign, regardless of the variables state.
+\subsection{Challenges}
+We encountered a number of interesting challenges related to our design choices in modifying the compiler and summarize them below.
+
+\subsubsection{Expressions}
+Prior to our explicate phase, complex expressions are not flattened.  This leads to problems where memory is leaked, since no assignments ever occur to temporary objects.  Listing~\ref{lst:simpleleak} shows a program that assigns the result of addition between to lists to the variable \texttt{a}.  The assignment to the variable \texttt{a} results in a corresponding increment reference count on the result of the list addition.  However, the temporary lists, \texttt{[1]} and \texttt{[2]} are leaked if we don't take any additional steps.  To overcome this problem, we introduce a intermediate flattening stage, prior to our reference counting AST transformation.   This results in the corresponding code given in Listing~\ref{lst:flattened}.
+
+\begin{figure}[h!]
+\begin{lstlisting}[
+language=Python,
+frame=topline,
+caption={A simple input program that leaks memory if not flattened.},
+captionpos=b,
+label=lst:simpleleak
+]
+a = [1] + [2]
+\end{lstlisting}
+\end{figure}
+
+\begin{figure}[h!]
+\begin{lstlisting}[
+language=Python,
+frame=topline,
+caption={The flattened version of listing \ref{lst:simpleleak}.},
+captionpos=b,
+label=lst:flattened
+]
+tmp0 = [1]
+tmp1 = [2]
+tmp2 = tmp0 + tmp1
+\end{lstlisting}
+\end{figure}
 
 \subsubsection{Temporary Variables}
 The compiler creates temporary variables in a number of situations (namely function calls and as a result of flattened expressions).  These temporary variables need not hang on to their memory reference past the next assignment to the actual result variable.  Any temporary variable is dereferenced immediately at the end of the current scope if it is not the variable being returned.  If it is the return variable we ignore decrementing the reference on this variable, thereby assuring the caller that the object returned is correctly reference counted for its assignment.  If we had decremented the reference counter, due to the immediate nature of garbage collection, we would have been returning a value which did not point to an allocated memory region.
-
-
-\subsection{Interesting Problems}
-We encountered a number of interesting questions during this implementation and summarize them below.
 
 \subsubsection{Addition of Lists}
 In the current runtime an entirely new list is created when two lists are added together.  At the assignment level our compiler can determine (due to the flattened structure) that the left-hand-side and the right-hand-side of the addition need their reference counters manipulated, however the assignment from an addition to a list creates an entirely new list which should properly increment the reference counter to all objects in both lists.
@@ -215,10 +241,9 @@ Optimizations.
 
 \subsection{Advantages}
 
-\appendix
-\section{Appendix Title}
-
-This is the text of the appendix, if you need one.
+%\appendix
+%\section{Appendix Title}
+% This is the text of the appendix, if you need one.
 
 \acks
 
