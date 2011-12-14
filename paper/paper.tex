@@ -147,7 +147,7 @@ Figure~\ref{fig-comparch} shows the compiler data flow after modifying our compi
 
 Recall that in order to properly maintain reference counts, we need to increment the reference count for an object when a reference is created for it, and decrement the reference count when a reference is destroyed.  References are created by assigning a memory location (which contains an object) to a variable.  References are destroyed when a variable is changed to refer to a different object, or when a variable ceases to exist when a program reaches the end of a given scope.
 
-The most natural way to implement this in our compiler, is to transform our input programs AST such that any assignment to a variable is preceded by a decrement to the reference count for the object the variable refers to, and is succeeded by an increment to the reference count for the newly assigned object.  This is the approach we took, but there are some subtleties with respect to where this operation is placed within the compiler.  Our initial hypothesis was that we could easily add the increment and decrement reference counter operations in the existing ``Flatten AST'' stage.  We quickly realized that because this stage is after type explication, there exist variables which are not \textit{tagged} with a type.  Since we only want to decrement reference counts for \textit{tagged} types\footnote{Actually, we only want to modify reference counts for a subset of tagged types that only includes ``big'' types. However, to simplify our implementation, we transform our AST to always call our increment and decrement runtime functions, but these functions will ignore the primitive types of \texttt{int} and \texttt{boolean}.}, the only option is to put this transformation stage before type explication.  
+The most natural way to implement this in our compiler, is to transform our input programs AST such that any assignment to a variable is preceded by a decrement to the reference count for the object the variable refers to, and is succeeded by an increment to the reference count for the newly assigned object.  This is the approach we took, but there are some subtleties with respect to where this operation is placed within the compiler.  Our initial hypothesis was that we could easily add the increment and decrement reference counter operations in the existing ``Flatten AST'' stage.  We quickly realized that because this stage is after type explication, there exist variables which are not \textit{tagged} with a type.  Since we only want to decrement reference counts for \textit{tagged} types\footnote{Actually, we only want to modify reference counts for a subset of tagged types that only includes ``big'' types. However, to simplify our implementation, we transform our AST to always call our increment and decrement runtime functions, but these functions will ignore the primitive types of \texttt{int} and \texttt{boolean}.}, the only option is to put this transformation stage before type explication.  In addition to modifying the AST prior before/after an assignment, the reference counting transformation is also responsible for determining which variables are local to a given scope and decrementing the counts for these references at the end of the given program scope.
 
 \subsection{Challenges}
 We encountered a number of interesting challenges related to our design choices in modifying the compiler and summarize them below.
@@ -164,6 +164,8 @@ captionpos=b,
 label=lst:simpleleak
 ]
 a = [1] + [2]
+a = 0
+print a
 \end{lstlisting}
 \end{figure}
 
@@ -179,19 +181,46 @@ tmp0 = [1]
 tmp1 = [2]
 tmp2 = tmp0 + tmp1
 a = tmp2
+a = 0
+print a
 \end{lstlisting}
 \end{figure}
 
-\subsubsection{Temporary Variables}
-The compiler creates temporary variables in a number of situations (namely function calls and as a result of flattened expressions).  These temporary variables need not hang on to their memory reference past the next assignment to the actual result variable.  Any temporary variable is dereferenced immediately at the end of the current scope if it is not the variable being returned.  If it is the return variable we ignore decrementing the reference on this variable, thereby assuring the caller that the object returned is correctly reference counted for its assignment.  If we had decremented the reference counter, due to the immediate nature of garbage collection, we would have been returning a value which did not point to an allocated memory region.
+\subsubsection{Temporary variables}
+As a result of introducing the intermediate flattening stage, we introduce additional references to an object which hang around until the end of the given program scope.  This is undesirable because it changes the de-allocation behavior of the program from the expected behavior.  For original input program in figure~\ref{lst:simplebreak}, the expectation is that when the variable \texttt{a} is assigned the value zero, the reference count for the list object should be decremented to zero and the object de-allocated.  However, in the flattened program, this is no longer the case since the \texttt{tmp2} variable continues to reference the object.  The de-allocation is therefore delayed until the end of the current scope.  To handle this situation, we keep track of all temporary variables introduced as a result of flattening an expression.  These temporary variables are then assigned a value of zero immediately after the statement containing the expression in which they were introduced.  This will lead to an immediate decrement of the reference count after the reference counting AST transformation.  Figure~\ref{lst:fixflattened} shows the result of the flattening transformation after this change is made.
 
-\subsubsection{Addition of Lists}
-In the current runtime an entirely new list is created when two lists are added together.  At the assignment level our compiler can determine (due to the flattened structure) that the left-hand-side and the right-hand-side of the addition need their reference counters manipulated, however the assignment from an addition to a list creates an entirely new list which should properly increment the reference counter to all objects in both lists.
+\begin{lstlisting}[
+language=Python,
+frame=topline,
+caption={The flattened version of listing \ref{lst:simpleleak} with immediate de-allocation of temporary variables.},
+captionpos=b,
+label=lst:flattened
+]
+tmp0 = [1]
+tmp1 = [2]
+tmp2 = tmp0 + tmp1
+a = tmp2
+tmp2 = 0
+tmp1 = 0
+tmp0 = 0
+a = 0
+print a
+\end{lstlisting}
+\end{figure}
+
 
 \subsubsection{Variable Assignment}
 We wanted a simple way to determine when to decrement an objects reference counter.  Our first implementation was to add a call to decrement the counter before every assignment.  However, because a variable can be created at any point in program execution we couldn't just blindly decrement the counter of an object since the variable will be uninitialized, and could be pointing at memory that makes it look like an object or accidentally references an object.
 \par
 The solution we took makes a slight modification to program behaviour, but we feel it is an acceptable trade-off.  In every scope, the compiler adds an immediate assignment as the first instructions.  This assignment is to a primitive, so the cost is minimal and then a decrement on the reference counter amounts to a function call with a no-op.  This function call overhead could potentially be avoided by adding code to check if the variable points to an object or a primitive and is a future enhancement for performance.  A program which used uninitialized (or declared) variables for program flow control would then have its runtime semantics changed.  We felt this was a sufficient trade off since such use of an exception for program flow control is frowned upon in practice and the benefit to our design was an obvious positive.
+
+\subsubsection{Addition of Lists}
+In the current runtime an entirely new list is created when two lists are added together.  At the assignment level our compiler can determine (due to the flattened structure) that the left-hand-side and the right-hand-side of the addition need their reference counters manipulated, however the assignment from an addition to a list creates an entirely new list which should properly increment the reference counter to all objects in both lists.
+
+\subsubsection{Functions}
+
+The compiler creates temporary variables in a number of situations (namely function calls and as a result of flattened expressions).  These temporary variables need not hang on to their memory reference past the next assignment to the actual result variable.  Any temporary variable is dereferenced immediately at the end of the current scope if it is not the variable being returned.  If it is the return variable we ignore decrementing the reference on this variable, thereby assuring the caller that the object returned is correctly reference counted for its assignment.  If we had decremented the reference counter, due to the immediate nature of garbage collection, we would have been returning a value which did not point to an allocated memory region.
+
 
 
 \subsection{Assembly Output}
