@@ -153,5 +153,7 @@ pyobj error_pyobj(char* string);
 
 void inc_ref_ctr(pyobj v);
 void dec_ref_ctr(pyobj v);
+void runtime_init();
+void runtime_shutdown();
 
 #endif /* RUNTIME_H */

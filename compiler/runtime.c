@@ -12,6 +12,8 @@ int min(int x, int y) {
     return y < x ? y : x;
 }
 
+static struct timeval decref_latency;
+
 /* Some forward declarations */
 static int equal_pyobj(pyobj a, pyobj b);
 static void print_float(double in);
@@ -1397,14 +1399,34 @@ void dec_ref_ctr(pyobj v) {
     struct timeval start, end, result;
     int ret;
 
-    //ret = gettimeofday(&start, NULL);
-    //assert (ret > -1);
+    ret = gettimeofday(&start, NULL);
+    assert (ret > -1);
     dec_ref_ctr_rec(v);
-    //ret = gettimeofday(&end, NULL);
-    //assert (ret > -1);
-    //timeval_subtract(&result, &end, &start);
-    //fprintf(stderr, "dec_ref_ctr took %ld.%ld seconds\n", result.tv_sec, result.tv_usec);
+    ret = gettimeofday(&end, NULL);
+    assert (ret > -1);
+    timeval_subtract(&result, &end, &start);
+
+    if (result.tv_sec > decref_latency.tv_sec || 
+        (result.tv_sec == decref_latency.tv_sec &&
+         result.tv_usec > decref_latency.tv_usec)
+       )
+    {
+        decref_latency.tv_sec = result.tv_sec;
+        decref_latency.tv_usec = result.tv_usec;
+    }
 }
+
+void runtime_init()
+{
+    decref_latency.tv_sec = 0;
+    decref_latency.tv_usec = 0;
+}
+
+void runtime_shutdown()
+{
+    fprintf(stderr, "dec_ref_ctr took %ld.%06ld seconds\n", decref_latency.tv_sec, decref_latency.tv_usec);
+}
+
 
 /* Subtract the `struct timeval' values X and Y,
    storing the result in RESULT.
@@ -1427,7 +1449,7 @@ int timeval_subtract (struct timeval *result, struct timeval *x, struct timeval 
        tv_usec is certainly positive. */
     result->tv_sec = x->tv_sec - y->tv_sec;
     result->tv_usec = x->tv_usec - y->tv_usec;
-     
+
     /* Return 1 if result is negative. */
     return x->tv_sec < y->tv_sec;
 }
