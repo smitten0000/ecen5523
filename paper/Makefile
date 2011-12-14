@@ -2,8 +2,8 @@
 # 
 # Makefile for the paper
 
-PAPER = finalproject.tex
-FIGURES = slot_runtime.pdf
+PAPER = paper.tex
+FIGURES = treelatency.pdf
 
 SUFFIXES = .pdf .eps .gnuplot
 
@@ -12,9 +12,12 @@ default: paper
 clean: figures-clean paper-clean
 
 paper: figures
+	rm -f $(PAPER:.tex=.pdf)
 	pdflatex $(PAPER)
+	rm -f $(PAPER:.tex=.pdf)
 	bibtex $(PAPER:.tex=)
 	pdflatex $(PAPER)
+	rm -f $(PAPER:.tex=.pdf)
 	pdflatex $(PAPER)
 
 paper-clean: figures-clean
