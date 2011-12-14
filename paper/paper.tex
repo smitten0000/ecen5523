@@ -54,7 +54,7 @@
 \maketitle
 
 \begin{abstract}
-Garbage collection in high level languages has enabled increased programmer productivity, but at the cost of performance and ease of implementation for the language designer.  This paper will explore these trade-offs through an implementation of automatic garbage collection for a subset of the Python language.   Our implementation will extend an existing Python to x86 compiler to use reference counting garbage collection.  Reference counting is chosen for its ease of implementation, and because it is less invasive when one of the design goals is to integrate with assembly or C routines without extra intervention from the software developer.  We outline the changes to the existing compiler to enable reference counting, including how the abstract syntax tree of the program is altered, and then discuss the trade-offs made by our design choices.
+Garbage collection in high level languages has enabled increased programmer productivity, but at the cost of performance and ease of implementation for the language designer.  This paper will explore these trade-offs through an implementation of automatic garbage collection for a subset of the Python language.   Our implementation will extend an existing Python to x86 compiler to use reference counting garbage collection.  Reference counting is chosen for its ease of implementation, and because it is less invasive when one of the design goals is to integrate with assembly or C routines without extra intervention from the software developer.  We outline the changes to the existing compiler to enable reference counting, including how the abstract syntax tree of the program is altered, and then discuss the implications of our design choices.
 \end{abstract}
 
 \category{D.1.5}{Programming Techniques}{Object-oriented Programming}
@@ -72,16 +72,16 @@ memory management, garbage collection, reference counting, compilation, compiler
 
 Python is a modern, high level language that uses dynamic typing and is run within an interpreter.  It manages memory for the programmer, and is considered by many to be a good ``prototyping'' language, in which programmers can quickly and easily develop an application.   Automatic memory management plays a large part in supporting this role, as it relieves the programmer from the tedious task of remembering when to de-allocate memory.  For language designers, deciding what form of memory management to incorporate into their language can be a difficult task.  The choice will depend on many factors, including the designer's vision on the general usefulness of the language, the environment where the language will be primary used, performance requirements, program semantics, integration with legacy systems and many other factors.  The choice also has significant implications on the implementation and therefore warrants careful consideration.  
 
-There are currently two widely used strategies to perform automatic memory management.  One such strategy is tracing garbage collection, which periodically traverses the in-memory object graph starting from a currently reachable set of ``root'' objects.  This set of objects includes all global variables, as well as the objects which are referenceable from the current stack frame.  Any objects that are traversed during this operation are considered reachable and therefore cannot be de-allocated.  Conversely, any objects not traversed are no longer reachable, and can be de-allocated.  The other primary strategy for automated memory management, is reference counting garbage collection. Reference counting works by keeping a count of references to a particular object.  References are tracked by incrementing and decrementing an object's reference count when an assignment to a pointer occurs, or when a pointer variable goes out of scope.  When the reference count reaches zero, it is safe to de-allocate the object.
+There are currently two widely used strategies to perform automatic memory management.  One such strategy is tracing garbage collection, which periodically traverses the in-memory object graph starting from a currently reachable set of ``root'' objects.  This set of objects includes all global variables, as well as the objects which are reachable from the current stack frame.  Any objects that are traversed during this operation are considered reachable and therefore cannot be de-allocated.  Conversely, any objects not traversed are no longer reachable, and can be de-allocated.  The other primary strategy for automated memory management, is reference counting garbage collection. Reference counting works by keeping a count of references to a particular object.  References are tracked by incrementing and decrementing an object's reference count when an assignment to a pointer occurs, or when a pointer variable goes out of scope.  When the reference count reaches zero, it is safe to de-allocate the object.
 
-The performance characteristics of each strategy can vary considerably, depending on implementation.   Tracing garbage collectors can sometimes be associated with long pause times, where application work must be temporarily stopped to allow the entire contents of the heap to be scanned by the garbage collector.  These long pause times have largely been solved with new algorithms that improve upon the original naive mark-and-sweep algorithm.  It is typical that these algorithms tradeoff throughput for responsiveness.  However, these pause times can still be an issue, especially in real time systems, where a hard guarantees on latency are needed.  Reference counting has been discussed as a solution to this problem, but classic implementations of reference counting can have serious performance concerns when one de-allocation results in cascading de-allocations\cite{boehm}.  
+The performance characteristics of each strategy can vary considerably, depending on implementation.   Tracing garbage collectors can sometimes be associated with long pause times, where application work must be temporarily stopped to allow the entire contents of the heap to be scanned by the garbage collector.  These long pause times have largely been solved with new algorithms that improve upon the original naive mark-and-sweep algorithm.  It is typical that these algorithms trade-off throughput for responsiveness.  However, these pause times can still be an issue, especially in real time systems, where a hard guarantees on latency are needed.  Reference counting has been discussed as a solution to this problem, but classic implementations of reference counting can have serious performance concerns when one de-allocation results in cascading de-allocations\cite{boehm}.  
 
 Given an existing implementation of a Python to x86-assembly compiler which lacks any memory management, we explore the consequences of adding a reference counting garbage collector.  Our base Python-like language includes classes, objects, functions, lambdas, addition, unary subtraction, lists, dictionaries and integer primitives.  The remainder of the paper is organized as follows.  Section~\ref{sec:related} discusses related work.  Section~\ref{sec:implementation} discusses the implementation of reference counting for our compiler.  Section~\ref{sec:results} evaluates our compiler for performance and correctness.  Section~\ref{sec:future} discusses potential future work.  Finally, section~\ref{sec:conclusion} concludes.
 
 
 \section{Related Work}
 \label{sec:related}
-In general a reference count garbage collector will have shorter pause times for the garbage collection phase, but will incur a higher performance penalty \cite{joisha}\cite{blackburn}.  Reference-counting collectors have been implemented which defer the de-allocation, called lazy reference-counting, to some later time and some improvements on such strategies have been made \cite{boehm}.  Without extra work a strictly reference-counting collector will leak memory when references contain cycles, and multiple algorithms have been presented as solutions to this problem. \textit{Citation?}
+In general a reference count garbage collector will have shorter pause times for the garbage collection phase, but will incur a higher performance penalty \cite{joisha}\cite{blackburn}.  Reference-counting collectors have been implemented which defer the de-allocation, called lazy reference-counting, to some later time and some improvements on such strategies have been made \cite{boehm}.  Without extra work a strictly reference-counting collector will leak memory when references contain cycles, and multiple algorithms have been presented as solutions to this problem. \cite{lin}\cite{trancon}
 
 One potential advantage that reference-counting garbage collectors have is the ability to be implemented in hardware \cite{joao}.  Given the significant cost of garbage collection \cite{hertz} any hardware assisted acceleration would be highly desirable if it is flexible enough to adapt across multiple garbage collection techniques. 
 
@@ -286,14 +286,21 @@ We would like to thank Jeremy Siek and Evan Chang for the course notes from whic
 
 \begin{thebibliography}{}
 \softraggedright
+
+\bibitem{boehm}
+Hans-J. Boehm. 2004. The space cost of lazy reference counting. In Proceedings of the 31st ACM SIGPLAN-SIGACT symposium on Principles of programming languages (POPL '04). ACM, New York, NY, USA, 210-219. DOI=10.1145/964001.964019 
+
 \bibitem{joisha}
 Pramod G. Joisha. 2006. Compiler optimizations for nondeferred reference: counting garbage collection. In Proceedings of the 5th international symposium on Memory management (ISMM '06). ACM, New York, NY, USA, 150-161. DOI=10.1145/1133956.1133976
 
 \bibitem{blackburn}
 Stephen M. Blackburn and Kathryn S. McKinley. 2003. Ulterior reference counting: fast garbage collection without a long wait. In Proceedings of the 18th annual ACM SIGPLAN conference on Object-oriented programing, systems, languages, and applications (OOPSLA '03). ACM, New York, NY, USA, 344-358. DOI=10.1145/949305.949336
 
-\bibitem{boehm}
-Hans-J. Boehm. 2004. The space cost of lazy reference counting. In Proceedings of the 31st ACM SIGPLAN-SIGACT symposium on Principles of programming languages (POPL '04). ACM, New York, NY, USA, 210-219. DOI=10.1145/964001.964019 
+\bibitem{lin}
+Chin-Yang Lin and Ting-Wei Hou. 2010. An efficient approach to cyclic reference counting based on a coarse-grained search. Inf. Process. Lett. 111, 1 (December 2010), 1-10. DOI=10.1016/j.ipl.2010.10.004 
+
+\bibitem{trancon}
+Baltasar Trancón y Widemann. 2008. A reference-counting garbage collection algorithmfor cyclical functional programming. In Proceedings of the 7th international symposium on Memory management (ISMM '08). ACM, New York, NY, USA, 71-80. DOI=10.1145/1375634.1375645 
 
 \bibitem{joao}
 José A. Joao, Onur Mutlu, and Yale N. Patt. 2009. Flexible reference-counting-based hardware acceleration for garbage collection. In Proceedings of the 36th annual international symposium on Computer architecture (ISCA '09). ACM, New York, NY, USA, 418-428. DOI=10.1145/1555754.1555806
@@ -304,7 +311,7 @@ Matthew Hertz and Emery D. Berger. 2005. Quantifying the performance of garbage 
 \bibitem{levanoni}
 Yossi Levanoni and Erez Petrank. 2006. An on-the-fly reference-counting garbage collector for java. ACM Trans. Program. Lang. Syst. 28, 1 (January 2006), 1-69. DOI=10.1145/1111596.1111597 
 
-\bibitem{ritzau}
+\bibitem{ritzaou}
 Tobias Ritzau. 1999.  Real-Time Reference Counting in RT-Java
 
 \bibitem{siek}
