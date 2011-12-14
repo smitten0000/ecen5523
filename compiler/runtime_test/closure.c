@@ -10,6 +10,9 @@
  * infrastructure.
  */
 
+void incref (big_pyobj *obj) { inc_ref_ctr(inject_big(obj)); }
+void decref (big_pyobj *obj) { dec_ref_ctr(inject_big(obj)); }
+
 int dummy_function (int x)
 {
     return x;
@@ -28,16 +31,16 @@ int main (int argc, char *argv[])
      */
     pymem_init();
     freevars = create_list(inject_int(0));
-    inc_ref_ctr(freevars);
+    incref(freevars);
 
     f = create_closure(dummy_function, inject_big(freevars));
-    inc_ref_ctr(f);
+    incref(f);
     assert (freevars->ref_ctr == 2);
 
-    dec_ref_ctr(f);
+    decref(f);
     assert (freevars->ref_ctr == 1);
 
-    dec_ref_ctr(freevars);
+    decref(freevars);
 
     pymem_print_stats();
     pymem_shutdown();

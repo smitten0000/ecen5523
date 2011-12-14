@@ -10,6 +10,9 @@
  * work correctly to release allocated memory. Relies on the pymem
  * infrastructure.
  */
+void incref (big_pyobj *obj) { inc_ref_ctr(inject_big(obj)); }
+void decref (big_pyobj *obj) { dec_ref_ctr(inject_big(obj)); }
+
 
 int main (int argc, char *argv[])
 {
@@ -26,24 +29,24 @@ int main (int argc, char *argv[])
      */
     pymem_init();
     A_parents = create_list(inject_int(0));
-    inc_ref_ctr(A_parents);
+    incref(A_parents);
 
     A = create_class(inject_big(A_parents));
-    inc_ref_ctr(A);
+    incref(A);
     assert (A_parents->ref_ctr == 2);
 
     a = create_object(inject_big(A));
-    inc_ref_ctr(a);
+    incref(a);
     assert (A->ref_ctr == 2);
 
-    dec_ref_ctr(A_parents);
+    decref(A_parents);
     assert (A_parents->ref_ctr == 1);
 
-    dec_ref_ctr(A);
+    decref(A);
     assert (A->ref_ctr == 1);
 
     pymem_print_stats();
-    dec_ref_ctr(a);   // this should deallocate everything
+    decref(a);   // this should deallocate everything
     pymem_print_stats();
     pymem_shutdown();
 
@@ -64,49 +67,49 @@ int main (int argc, char *argv[])
 
     pymem_init();
     A_parents = create_list(inject_int(0));
-    inc_ref_ctr(A_parents);
+    incref(A_parents);
 
     A = create_class(inject_big(A_parents));
-    inc_ref_ctr(A);
+    incref(A);
     assert (A_parents->ref_ctr == 2);
 
     B_parents = create_list(inject_int(1));
-    inc_ref_ctr(B_parents);
+    incref(B_parents);
     set_subscript(inject_big(B_parents), inject_int(0), inject_big(A));
     assert (A->ref_ctr == 2);
 
     B = create_class(inject_big(B_parents));
-    inc_ref_ctr(B);
+    incref(B);
     assert (B_parents->ref_ctr == 2);
 
     a = create_object(inject_big(A));
-    inc_ref_ctr(a);
+    incref(a);
     assert (A->ref_ctr == 3);
 
     b = create_object(inject_big(B));
-    inc_ref_ctr(b);
+    incref(b);
     assert (B->ref_ctr == 2);
 
     // now start releasing stuff.
-    dec_ref_ctr(A_parents);
+    decref(A_parents);
     assert (A_parents->ref_ctr == 1);
 
-    dec_ref_ctr(A);
+    decref(A);
     assert (A->ref_ctr == 2);
 
-    dec_ref_ctr(a);             // a becomes deallocated at this point
+    decref(a);             // a becomes deallocated at this point
                                 // but A should hang around since B_parents
                                 // should still own a reference to it.
     assert (A->ref_ctr == 1);
 
-    dec_ref_ctr(B_parents);
+    decref(B_parents);
     assert (B_parents->ref_ctr == 1);
 
-    dec_ref_ctr(B);
+    decref(B);
     assert (B->ref_ctr == 1);
 
     pymem_print_stats();
-    dec_ref_ctr(b);  // everything should go away at this point.
+    decref(b);  // everything should go away at this point.
     pymem_print_stats();
     pymem_shutdown();
 }

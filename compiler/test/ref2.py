@@ -5,3 +5,4 @@ input()
 tmp1 = 0
 input()
 f()
+print tmp1

@@ -10,6 +10,10 @@
  * infrastructure.
  */
 
+void incref (big_pyobj *obj) { inc_ref_ctr(inject_big(obj)); }
+void decref (big_pyobj *obj) { dec_ref_ctr(inject_big(obj)); }
+
+
 int main (int argc, char *argv[])
 {
     big_pyobj *list, *list2;
@@ -23,8 +27,8 @@ int main (int argc, char *argv[])
      */
     pymem_init();
     list = create_list(inject_int(0));
-    inc_ref_ctr(list);
-    dec_ref_ctr(list);
+    incref(list);
+    decref(list);
     pymem_print_stats();
     pymem_shutdown();
 
@@ -35,13 +39,13 @@ int main (int argc, char *argv[])
      */
     pymem_init();
     list = create_list(inject_int(5));
-    inc_ref_ctr(list);
+    incref(list);
     set_subscript(inject_big(list), inject_int(0), inject_int(99));
     set_subscript(inject_big(list), inject_int(1), inject_int(88));
     set_subscript(inject_big(list), inject_int(2), inject_int(77));
     set_subscript(inject_big(list), inject_int(3), inject_int(66));
     set_subscript(inject_big(list), inject_int(4), inject_int(55));
-    dec_ref_ctr(list);
+    decref(list);
     pymem_print_stats();
     pymem_shutdown();
 
@@ -56,18 +60,18 @@ int main (int argc, char *argv[])
     pymem_init();
 
     list = create_list(inject_int(1));
-    inc_ref_ctr(list);
+    incref(list);
     set_subscript(inject_big(list), inject_int(0), inject_int(99));
 
     list2 = create_list(inject_int(1));
-    inc_ref_ctr(list2);
+    incref(list2);
     set_subscript(inject_big(list2), inject_int(0), inject_big(list));
     assert (list->ref_ctr == 2);
 
-    dec_ref_ctr(list2);
+    decref(list2);
     assert (list->ref_ctr == 1);
 
-    dec_ref_ctr(list);
+    decref(list);
     pymem_print_stats();
     pymem_shutdown();
 }

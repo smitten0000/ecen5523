@@ -1,2 +1,2 @@
 f = lambda: False
-f()
+print f()

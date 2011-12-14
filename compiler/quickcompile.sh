@@ -13,5 +13,5 @@ SFILE="${BASENAME}.s"
 echo ./compile.py "$PYFILE"
 ./compile.py "$PYFILE"
 
-echo gcc -o "$BASENAME" "$SFILE" -lm *.c -pg -m32
-gcc -o "$BASENAME" "$SFILE" -lm *.c -pg -m32
+echo gcc -g -o "$BASENAME" "$SFILE" *.c -lm -m32
+gcc -g -o "$BASENAME" "$SFILE" *.c -lm -m32

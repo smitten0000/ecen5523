@@ -9,6 +9,9 @@
  * infrastructure.
  */
 
+void incref (big_pyobj *obj) { inc_ref_ctr(inject_big(obj)); }
+void decref (big_pyobj *obj) { dec_ref_ctr(inject_big(obj)); }
+
 int main (int argc, char *argv[])
 {
     big_pyobj *dict, *dict2;
@@ -19,8 +22,8 @@ int main (int argc, char *argv[])
      */
     pymem_init();
     dict = create_dict();
-    inc_ref_ctr(dict);
-    dec_ref_ctr(dict);
+    incref(dict);
+    decref(dict);
     pymem_print_stats();
     pymem_shutdown();
 
@@ -29,9 +32,9 @@ int main (int argc, char *argv[])
      */
     pymem_init();
     dict = create_dict();
-    inc_ref_ctr(dict);
+    incref(dict);
     set_subscript(inject_big(dict), inject_int(1), inject_int(2));
-    dec_ref_ctr(dict);
+    decref(dict);
     pymem_print_stats();
     pymem_shutdown();
 
@@ -39,18 +42,18 @@ int main (int argc, char *argv[])
      * test3: dictionary with one pyobj entry for the value
      */
     pymem_init();
-    dict = create_dict(); inc_ref_ctr(dict);
-    dict2 = create_dict(); inc_ref_ctr(dict2);
+    dict = create_dict(); incref(dict);
+    dict2 = create_dict(); incref(dict2);
 
     set_subscript(inject_big(dict), inject_int(1), inject_big(dict2));
 
     // verify the ref count for dict2 is now 2
     assert (dict2->ref_ctr == 2);
-    dec_ref_ctr(dict);
+    decref(dict);
 
     // at this point, dict should no longer exist, but dict2 should still exist
     assert (dict2->ref_ctr == 1);
-    dec_ref_ctr(dict2);
+    decref(dict2);
 
     pymem_print_stats();
     pymem_shutdown();
