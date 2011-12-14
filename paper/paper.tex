@@ -187,14 +187,15 @@ print a
 \end{figure}
 
 \subsubsection{Temporary variables}
-As a result of introducing the intermediate flattening stage, we introduce additional references to an object which hang around until the end of the given program scope.  This is undesirable because it changes the de-allocation behavior of the program from the expected behavior.  For original input program in figure~\ref{lst:simplebreak}, the expectation is that when the variable \texttt{a} is assigned the value zero, the reference count for the list object should be decremented to zero and the object de-allocated.  However, in the flattened program, this is no longer the case since the \texttt{tmp2} variable continues to reference the object.  The de-allocation is therefore delayed until the end of the current scope.  To handle this situation, we keep track of all temporary variables introduced as a result of flattening an expression.  These temporary variables are then assigned a value of zero immediately after the statement containing the expression in which they were introduced.  This will lead to an immediate decrement of the reference count after the reference counting AST transformation.  Figure~\ref{lst:fixflattened} shows the result of the flattening transformation after this change is made.
+As a result of introducing the intermediate flattening stage, we introduce additional references to an object which hang around until the end of the given program scope.  This is undesirable because it changes the de-allocation behavior of the program from the expected behavior.  For original input program in figure~\ref{lst:simpleleak}, the expectation is that when the variable \texttt{a} is assigned the value zero, the reference count for the list object should be decremented to zero and the object de-allocated.  However, in the flattened program, this is no longer the case since the \texttt{tmp2} variable continues to reference the object.  The de-allocation is therefore delayed until the end of the current scope.  To handle this situation, we keep track of all temporary variables introduced as a result of flattening an expression.  These temporary variables are then assigned a value of zero immediately after the statement containing the expression in which they were introduced.  This will lead to an immediate decrement of the reference count after the reference counting AST transformation.  Figure~\ref{lst:fixflattened} shows the result of the flattening transformation after this change is made.
 
+\begin{figure}[h!]
 \begin{lstlisting}[
 language=Python,
 frame=topline,
 caption={The flattened version of listing \ref{lst:simpleleak} with immediate de-allocation of temporary variables.},
 captionpos=b,
-label=lst:flattened
+label=lst:fixflattened
 ]
 tmp0 = [1]
 tmp1 = [2]
@@ -220,8 +221,6 @@ In the current runtime an entirely new list is created when two lists are added 
 \subsubsection{Functions}
 
 The compiler creates temporary variables in a number of situations (namely function calls and as a result of flattened expressions).  These temporary variables need not hang on to their memory reference past the next assignment to the actual result variable.  Any temporary variable is dereferenced immediately at the end of the current scope if it is not the variable being returned.  If it is the return variable we ignore decrementing the reference on this variable, thereby assuring the caller that the object returned is correctly reference counted for its assignment.  If we had decremented the reference counter, due to the immediate nature of garbage collection, we would have been returning a value which did not point to an allocated memory region.
-
-
 
 \subsection{Assembly Output}
 We modified the x86 assembly to include calls to set up our memory tracking system and print statistics at the end of the program.  Running analysis tools such as valgrind on our programs before and after shows the obvious gain of going from every memory allocation leaks to zero leaks.
