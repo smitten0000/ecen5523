@@ -41,15 +41,15 @@ stepnumber=1
 
 \begin{document}
 
-\conferenceinfo{WXYZ '05}{date, City.} 
+\conferenceinfo{CSCI5525 '11}{2011-Dec-15, Boulder, CO.} 
 \copyrightyear{2011} 
 \copyrightdata{[to be supplied]} 
 
 \titlebanner{banner above paper title}        % These are ignored unless
 \preprintfooter{short description of paper}   % 'preprint' option specified.
 
-\title{Python to Assembly Compilation}
-\subtitle{With Reference Counting Garbage Collection}
+\title{An Implementation of Reference Counting for a Python to x86 Compiler}
+%\subtitle{With Reference Counting Garbage Collection}
 
 \authorinfo{Brent Smith}
            {University of Colorado, Boulder}
@@ -163,6 +163,8 @@ Prior to our explicate phase, complex expressions are not flattened.  This leads
 \begin{lstlisting}[
 language=Python,
 frame=none,
+xleftmargin=0.2in,
+numbers=left,
 caption={A simple input program that leaks memory if not flattened.},
 captionpos=b,
 label=lst:simpleleak
@@ -177,6 +179,8 @@ print x
 \begin{lstlisting}[
 language=Python,
 frame=none,
+xleftmargin=0.2in,
+numbers=left,
 caption={The flattened version of listing \ref{lst:simpleleak}.},
 captionpos=b,
 label=lst:flattened
@@ -197,6 +201,8 @@ As a result of introducing the intermediate flattening stage, we introduce addit
 \begin{lstlisting}[
 language=Python,
 frame=none,
+xleftmargin=0.2in,
+numbers=left,
 caption={The flattened version of listing \ref{lst:simpleleak} with immediate deallocation of temporary variables.},
 captionpos=b,
 label=lst:fixflattened
@@ -214,24 +220,41 @@ print x
 \end{figure}
 
 
-\subsubsection{Variable Assignment}
-We wanted a simple way to determine when to decrement an objects reference counter.  Our first implementation was to add a call to decrement the counter before every assignment.  However, because a variable can be created at any point in program execution we couldn't just blindly decrement the counter of an object since the variable will be uninitialized, and could be pointing at memory that makes it look like an object or accidentally references an object.
-\par
-The solution we took makes a slight modification to program behaviour, but we feel it is an acceptable trade-off.  In every scope, the compiler adds an immediate assignment as the first instructions.  This assignment is to a primitive, so the cost is minimal and then a decrement on the reference counter amounts to a function call with a no-op.  This function call overhead could potentially be avoided by adding code to check if the variable points to an object or a primitive and is a future enhancement for performance.  A program which used uninitialized (or declared) variables for program flow control would then have its runtime semantics changed.  We felt this was a sufficient trade off since such use of an exception for program flow control is frowned upon in practice and the benefit to our design was an obvious positive.
+\subsubsection{Decrementing reference counts}
+As discussed previously, an assignment to a variable should result in a decrement of the reference count for the object referred to by the variable before the assignment.  However, this can't be done when the variable doesn't refer to anything, which is true prior to the initial assignment.  In fact, trying to even access such a variable before it is assigned to can result in undefined results, since there is no guarantee on the contents of the variable (it could be garbage or a value from a previous stack frame).   To prevent a call to \texttt{dec\_ref\_ctr} on a variable before the initial assignment, we initially tried to statically determine when the first assignment occurred.  This approach failed when we realized that for some programs, it is not possible to determine where the initial assignment occurs at compile-time.  Listing~\ref{lst:initialassign} shows an example program where the initial assignment to the variable \texttt{x} cannot be determined statically.  If the input provided by the user evaluates to \texttt{True}, then the initial assignment to $x$ occurs at line 2.  However, if the input evaluates to \texttt{False}, then the initial assignment to \texttt{x} occurs at line 3.  If we transform the input program so that a call is made to decrement the reference count for \texttt{x} immediately prior to the assignment on line 3, then there is the possibility that this will cause the program to crash if the user provides an input that evaluates to \texttt{False}.
+
+To solve this issue, we make a simple change.  We ensure that the value of \texttt{x} is always initialized, by assigning it the value zero at the program scope where it is defined\footnote{Python defines this as the block where a variable is initially assigned to.}.  In our compiler, this is equivalent to a primitive of type \texttt{int}, but this can be any sentinel value that results in a no-op when a call is made to \texttt{dec\_ref\_ctr}.  By ensuring that all local variables are assigned a sentinel value at the beginning of the scope where they are defined, we can safely transform our input program to call \texttt{dec\_ref\_ctr} immediately preceding an assignment, and \texttt{inc\_ref\_ctr} immediately succeeding an assignment.
+
+This solution is somewhat controversial, since it can alter program behavior when the program tries to read from a variable that has not yet been assigned to.  The standard Python interpreter throws a \textit{NameError} in this case, but our compiler will allow such a program to be compiled.  Reading the variable will then result in the sentinel value (zero in our case) being read, instead of the program crashing or having undefined behavior.  A program which used uninitialized (or declared) variables would then have its runtime behavior changed.  Another option to address this issue, is to make it a compile-time error to try and access variable from a conditional block that may have not been previously initialized.  This is similar to a restriction in the Java language.
+
+\begin{figure}[h!]
+\begin{lstlisting}[
+language=Python,
+frame=none,
+xleftmargin=0.2in,
+numbers=left,
+caption={An example program where the initial assignment to \texttt{x} cannot be determined statically.},
+captionpos=b,
+label=lst:initialassign
+]
+if input():
+    x = [1]
+x = [2]
+\end{lstlisting}
+\end{figure}
+
+
+\subsubsection{Functions}
+The compiler creates temporary variables in a number of situations (namely function calls and as a result of flattened expressions).  These temporary variables need not hang on to their memory reference past the next assignment to the actual result variable.  Any temporary variable is dereferenced immediately at the end of the current scope if it is not the variable being returned.  If it is the return variable we ignore decrementing the reference on this variable, thereby assuring the caller that the object returned is correctly reference counted for its assignment.  If we had decremented the reference counter, due to the immediate nature of garbage collection, we would have been returning a value which did not point to an allocated memory region.
 
 \subsubsection{Addition of Lists}
 In the current runtime an entirely new list is created when two lists are added together.  At the assignment level our compiler can determine (due to the flattened structure) that the left-hand-side and the right-hand-side of the addition need their reference counters manipulated, however the assignment from an addition to a list creates an entirely new list which should properly increment the reference counter to all objects in both lists.
 
-\subsubsection{Functions}
-
-The compiler creates temporary variables in a number of situations (namely function calls and as a result of flattened expressions).  These temporary variables need not hang on to their memory reference past the next assignment to the actual result variable.  Any temporary variable is dereferenced immediately at the end of the current scope if it is not the variable being returned.  If it is the return variable we ignore decrementing the reference on this variable, thereby assuring the caller that the object returned is correctly reference counted for its assignment.  If we had decremented the reference counter, due to the immediate nature of garbage collection, we would have been returning a value which did not point to an allocated memory region.
-
-\subsection{Assembly Output}
-We modified the x86 assembly to include calls to set up our memory tracking system and print statistics at the end of the program.  Running analysis tools such as valgrind on our programs before and after shows the obvious gain of going from every memory allocation leaks to zero leaks.
+\subsubsection{Debugging Integration}
+To facilitate debugging in our compiler, we modify the x86 assembly generator to include calls to set up our \texttt{pymem} module and print statistics at the end of the program.
 
 \section{Results}
 \label{sec:results}
-
 We evaluated our reference counting implementation for correctness by using the \texttt{valgrind} utility against a simple application that uses a large number of language features.  The program is given below.
 
 \begin{verbatim}
@@ -277,6 +300,8 @@ The latency introduced by the \textit{dec\_ref\_ctr} is linear with the number o
 \begin{lstlisting}[
 language=Python,
 frame=none,
+xleftmargin=0.2in,
+numbers=left,
 caption={An example input program that creates a tree of objects contained in lists.},
 captionpos=b,
 label=lst:tree
