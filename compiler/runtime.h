@@ -97,6 +97,7 @@ struct pyobj_struct {
         bound_method bm;
     } u;
     int ref_ctr;
+    int deferred_cnt;
 };
 typedef struct pyobj_struct big_pyobj;
 
@@ -153,6 +154,7 @@ pyobj error_pyobj(char* string);
 
 void inc_ref_ctr(pyobj v);
 void dec_ref_ctr(pyobj v);
+void autorelease(pyobj v);
 void runtime_init();
 void runtime_shutdown();
 

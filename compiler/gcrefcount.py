@@ -66,7 +66,7 @@ class GCRefCount:
         self.varalloc = varalloc
         self.varset = set()
         self.log = logging.getLogger('compiler.gcrefcounter')
-        self.lambda_local_assigns = []
+        self.lambda_local_vars = []
     
     def transform(self, node, *args, **kwargs):
         self.log.info('Starting gcrefcounter')
@@ -117,8 +117,7 @@ class GCRefCount:
             self.varset.add(assnode.name)
             stmtlist.append(Discard(CallFunc(Name('dec_ref_ctr'),[Name(assnode.name)])))
             stmtlist.append(Assign([AssName(assnode.name,'OP_ASSIGN')], self.visit(node.expr)))
-            if not isinstance(node.expr,CallFuncIndirect):
-                stmtlist.append(Discard(CallFunc(Name('inc_ref_ctr'),[Name(assnode.name)])))
+            stmtlist.append(Discard(CallFunc(Name('inc_ref_ctr'),[Name(assnode.name)])))
             return stmtlist
         else:
             raise Exception('Unknown assignment node: %s' % assnode)
@@ -171,13 +170,17 @@ class GCRefCount:
         return node
     
     def visit_Return(self, node, *args, **kwargs):
-        localAssigns = self.lambda_local_assigns[-1]
+        localAssigns, argset = self.lambda_local_vars[-1]
         self.log.debug('visit_Return: localAssigns=%s' % localAssigns)
         self.log.debug('visit_Return: node=%s' % node)
         decrefstmts=[]
-        for localvar in localAssigns:
-            if not isinstance(node.value, Name) or node.value.name not in localAssigns:
+        # call dec_ref on all local variables, unless the this value is being returned.
+        for localvar in localAssigns | argset:
+            if not isinstance(node.value, Name) or node.value.name != localvar:
                 decrefstmts.append(Discard(CallFunc(Name('dec_ref_ctr'),[Name(localvar)])))
+        # Call set_autorelease on the variable being returned from the function
+        if isinstance(node.value,Name):
+            decrefstmts.append(Discard(CallFunc(Name('autorelease'),[node.value])))
         return decrefstmts + [node]
 
     def visit_CallFuncIndirect(self, node, *args, **kwargs):
@@ -211,6 +214,7 @@ class GCRefCount:
         # GCFlattener; recurse on that stmt object here to add ref counting.
         if not isinstance(node.code, Stmt):
             raise Exception('Expected Stmt object for Lambda.code')
+        increfstmts = []
         decrefstmts = []
         initialassigns = []
         localAssigns = getLocals(node.code)
@@ -218,15 +222,18 @@ class GCRefCount:
         # Assign every local variable the value zero, except for arguments to the function
         # This eliminates the need to know where a variable is first assigned, which may
         # not be able to be determined statically.  
+        for argvar in node.argnames:
+            increfstmts.append(Discard(CallFunc(Name('inc_ref_ctr'),[Name(argvar)])))
         for localvar in localAssigns:
             if localvar not in node.argnames:
                 initialassigns.append(Assign([AssName(localvar, 'OP_ASSIGN')],Const(0)))
-        for localvar in localAssigns:
+        allvars = localAssigns | set(node.argnames)
+        for localvar in allvars:
             decrefstmts.append(Discard(CallFunc(Name('dec_ref_ctr'),[Name(localvar)])))
-        self.lambda_local_assigns.append(localAssigns)
+        self.lambda_local_vars.append((localAssigns,set(node.argnames)))
         code = self.visit(node.code)
-        self.lambda_local_assigns.pop()
-        code.nodes = initialassigns + code.nodes + decrefstmts
+        self.lambda_local_vars.pop()
+        code.nodes = increfstmts + initialassigns + code.nodes + decrefstmts
         for x in node.argnames:
             self.varalloc.add_var(x)
         return Lambda(node.argnames, node.defaults, node.flags, code, node.lineno)

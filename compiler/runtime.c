@@ -243,6 +243,7 @@ static big_pyobj* list_to_big(list l) {
     v->tag = LIST;
     v->u.l = l;
     v->ref_ctr = 0;
+    v->deferred_cnt = 0;
     return v;
 }
 
@@ -550,6 +551,7 @@ big_pyobj* create_dict()
     v->tag = DICT;
     v->u.d = create_hashtable(4, hash_any, equal_any, DICT);
     v->ref_ctr = 0;
+    v->deferred_cnt = 0;
     return v;
 }
 
@@ -837,6 +839,7 @@ static big_pyobj* closure_to_big(function f) {
     v->tag = FUN;
     v->u.f = f;
     v->ref_ctr = 0;
+    v->deferred_cnt = 0;
     return v;
 }
 
@@ -970,6 +973,7 @@ big_pyobj* create_class(pyobj bases)
     ret = (big_pyobj*)pymem_new(CLASS, sizeof(big_pyobj));
     ret->tag = CLASS;
     ret->ref_ctr = 0;
+    ret->deferred_cnt = 0;
     ret->u.cl.attrs = create_hashtable(2, attrname_hash, attrname_equal, CLASS);
     ret->u.cl.parents = bases;
     // remember to increment the reference count on the list pyobj of base classes!
@@ -982,6 +986,7 @@ big_pyobj* create_object(pyobj cl) {
     big_pyobj* ret = (big_pyobj*)pymem_new(OBJECT, sizeof(big_pyobj));
     ret->tag = OBJECT;
     ret->ref_ctr = 0;
+    ret->deferred_cnt = 0;
     big_pyobj* clp = project_big(cl);
     if (clp->tag == CLASS) {
         ret->u.obj.clazz = cl;
@@ -991,7 +996,6 @@ big_pyobj* create_object(pyobj cl) {
         exit(-1);
     }
     ret->u.obj.attrs = create_hashtable(2, attrname_hash, attrname_equal, OBJECT);
-    inc_ref_ctr(inject_big(ret));
     return ret;
 }
 
@@ -1028,6 +1032,7 @@ static big_pyobj* create_bound_method(pyobj receiver, pyobj f) {
     big_pyobj* ret = (big_pyobj*)pymem_new(BMETHOD, sizeof(big_pyobj));
     ret->tag = BMETHOD;
     ret->ref_ctr = 0;
+    ret->deferred_cnt = 0;
     ret->u.bm.fun = f;
     inc_ref_ctr(f);
     ret->u.bm.receiver = receiver;
@@ -1383,6 +1388,10 @@ void inc_ref_ctr(pyobj v) {
 void dec_ref_ctr_rec(pyobj v) {
     if (is_big(v)) {
         big_pyobj *val = project_big(v);
+        if ( val->deferred_cnt > 0) {
+            val->deferred_cnt --;  // must be before dec_ref
+            dec_ref_ctr_rec(v);
+        }
         val->ref_ctr --;
         if ( val->ref_ctr < 0 ) {
             fprintf(stderr,"too many dec_ref on big_pyobj: ");
@@ -1413,6 +1422,14 @@ void dec_ref_ctr(pyobj v) {
     {
         decref_latency.tv_sec = result.tv_sec;
         decref_latency.tv_usec = result.tv_usec;
+    }
+}
+
+void autorelease(pyobj v) {
+    if (is_big(v)) {
+        big_pyobj *val = project_big(v);
+        val->deferred_cnt ++;
+        //fprintf(stderr, "deferred_cnt set to %d\n", val->deferred_cnt);
     }
 }
 
