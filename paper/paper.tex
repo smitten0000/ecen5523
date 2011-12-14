@@ -257,13 +257,23 @@ To facilitate debugging in our compiler, we modify the x86 assembly generator to
 \label{sec:results}
 We evaluated our reference counting implementation for correctness by using the \texttt{valgrind} utility against a simple application that uses a large number of language features.  The program is given below.
 
-\begin{verbatim}
+\begin{figure}[h!]
+\begin{lstlisting}[
+language=Python,
+frame=none,
+xleftmargin=0.2in,
+numbers=left,
+caption={An example program showing list addition to test for memory leaks.},
+captionpos=b,
+label=lst:initialassign
+]
 i = 0
 list = []
 while i !=  10000:
     list = list + [[i]]
     i = i + 1
-\end{verbatim}
+\end{lstlisting}
+\end{figure}
 
 Without any garbage collection, valgrind reports 
 
