@@ -32,6 +32,13 @@
 \usepackage[pdftex]{graphicx}
 \usepackage{listings}
 
+\lstset{
+basicstyle=\ttfamily,
+numberstyle=\small,
+commentstyle=\textit
+stepnumber=1
+}
+
 \begin{document}
 
 \conferenceinfo{WXYZ '05}{date, City.} 
@@ -70,18 +77,18 @@ memory management, garbage collection, reference counting, compilation, compiler
 
 \section{Introduction}
 
-Python is a modern, high level language that uses dynamic typing and is run within an interpreter.  It manages memory for the programmer, and is considered by many to be a good ``prototyping'' language, in which programmers can quickly and easily develop an application.   Automatic memory management plays a large part in supporting this role, as it relieves the programmer from the tedious task of remembering when to de-allocate memory.  For language designers, deciding what form of memory management to incorporate into their language can be a difficult task.  The choice will depend on many factors, including the designer's vision on the general usefulness of the language, the environment where the language will be primary used, performance requirements, program semantics, integration with legacy systems and many other factors.  The choice also has significant implications on the implementation and therefore warrants careful consideration.  
+Python is a modern, high level language that uses dynamic typing and is run within an interpreter.  It manages memory for the programmer, and is considered by many to be a good ``prototyping'' language, in which programmers can quickly and easily develop an application.   Automatic memory management plays a large part in supporting this role, as it relieves the programmer from the tedious task of remembering when to deallocate memory.  For language designers, deciding what form of memory management to incorporate into their language can be a difficult task.  The choice will depend on many factors, including the designer's vision on the general usefulness of the language, the environment where the language will be primary used, performance requirements, program semantics, integration with legacy systems and many other factors.  The choice also has significant implications on the implementation and therefore warrants careful consideration.  
 
-There are currently two widely used strategies to perform automatic memory management.  One such strategy is tracing garbage collection, which periodically traverses the in-memory object graph starting from a currently reachable set of ``root'' objects.  This set of objects includes all global variables, as well as the objects which are reachable from the current stack frame.  Any objects that are traversed during this operation are considered reachable and therefore cannot be de-allocated.  Conversely, any objects not traversed are no longer reachable, and can be de-allocated.  The other primary strategy for automated memory management, is reference counting garbage collection. Reference counting works by keeping a count of references to a particular object.  References are tracked by incrementing and decrementing an object's reference count when an assignment to a pointer occurs, or when a pointer variable goes out of scope.  When the reference count reaches zero, it is safe to de-allocate the object.
+There are currently two widely used strategies to perform automatic memory management.  One such strategy is tracing garbage collection, which periodically traverses the in-memory object graph starting from a currently reachable set of ``root'' objects.  This set of objects includes all globals, as well as the objects which are reachable from the current stack frame.  Any objects that are traversed during this operation are considered reachable and therefore cannot be deallocated.  Conversely, any objects not traversed are no longer reachable, and can be deallocated.  The other primary strategy for automated memory management, is reference counting garbage collection. Reference counting works by keeping a count of references to a particular object.  References are tracked by incrementing and decrementing an object's reference count when an assignment to a pointer occurs, or when a pointer variable goes out of scope.  When the reference count reaches zero, it is safe to deallocate the object.
 
-The performance characteristics of each strategy can vary considerably, depending on implementation.   Tracing garbage collectors can sometimes be associated with long pause times, where application work must be temporarily stopped to allow the entire contents of the heap to be scanned by the garbage collector.  These long pause times have largely been solved with new algorithms that improve upon the original naive mark-and-sweep algorithm.  It is typical that these algorithms trade-off throughput for responsiveness.  However, these pause times can still be an issue, especially in real time systems, where a hard guarantees on latency are needed.  Reference counting has been discussed as a solution to this problem, but classic implementations of reference counting can have serious performance concerns when one de-allocation results in cascading de-allocations\cite{boehm}.  
+The performance characteristics of each strategy can vary considerably, depending on implementation.   Tracing garbage collectors can sometimes be associated with long pause times, where application work must be temporarily stopped to allow the entire contents of the heap to be scanned by the garbage collector.  These long pause times have largely been solved with new algorithms that improve upon the original naive mark-and-sweep algorithm.  It is typical that these algorithms trade-off throughput for responsiveness.  However, these pause times can still be an issue, especially in real time systems, where a hard guarantees on latency are needed.  Reference counting has been discussed as a solution to this problem since it incrementally deallocates objects at the program point where all references are destroyed, but classic implementations of reference counting can have serious performance concerns when one deallocation results in cascading deallocations\cite{boehm}.  
 
 Given an existing implementation of a Python to x86-assembly compiler which lacks any memory management, we explore the consequences of adding a reference counting garbage collector.  Our base Python-like language includes classes, objects, functions, lambdas, addition, unary subtraction, lists, dictionaries and integer primitives.  The remainder of the paper is organized as follows.  Section~\ref{sec:related} discusses related work.  Section~\ref{sec:implementation} discusses the implementation of reference counting for our compiler.  Section~\ref{sec:results} evaluates our compiler for performance and correctness.  Section~\ref{sec:future} discusses potential future work.  Finally, section~\ref{sec:conclusion} concludes.
 
 
 \section{Related Work}
 \label{sec:related}
-In general a reference count garbage collector will have shorter pause times for the garbage collection phase, but will incur a higher performance penalty \cite{joisha}\cite{blackburn}.  Reference-counting collectors have been implemented which defer the de-allocation, called lazy reference-counting, to some later time and some improvements on such strategies have been made \cite{boehm}.  Without extra work a strictly reference-counting collector will leak memory when references contain cycles, and multiple algorithms have been presented as solutions to this problem. \cite{lin}\cite{trancon}
+In general a reference count garbage collector will have shorter pause times for the garbage collection phase, but will incur a higher performance penalty \cite{joisha}\cite{blackburn}.  Reference-counting collectors have been implemented which defer the deallocation, called lazy reference-counting, to some later time and some improvements on such strategies have been made \cite{boehm}.  Without extra work a strictly reference-counting collector will leak memory when references contain cycles, and multiple algorithms have been presented as solutions to this problem. \cite{lin}\cite{trancon}
 
 One potential advantage that reference-counting garbage collectors have is the ability to be implemented in hardware \cite{joao}.  Given the significant cost of garbage collection \cite{hertz} any hardware assisted acceleration would be highly desirable if it is flexible enough to adapt across multiple garbage collection techniques. 
 
@@ -93,13 +100,13 @@ In \cite{levanoni}, Levanoni, et. al. show that reference counting is a valid ap
 \section{Implementation}
 \label{sec:implementation}
 
-We start with an existing compiler based upon previous work\cite{siek}.  This compiler converts a subset of the Python language to x86 assembly and supports one of the core features of Python, namely that everything is a first class object.  Prior to our modifications, the compiler does not perform any memory management, resulting in a language that is only useful for short lived programs, with minimal memory constraints.  After our modifications, the compiler properly maintains reference counts for all objects created, and automatically de-allocates objects when there are no longer any references to them.
+We start with an existing compiler based upon previous work\cite{siek}.  This compiler converts a subset of the Python language to x86 assembly and supports one of the core features of Python, namely that everything is a first class object.  Prior to our modifications, the compiler does not perform any memory management, resulting in a language that is only useful for short lived programs, with minimal memory constraints.  After our modifications, the compiler properly maintains reference counts for all objects created, and automatically deallocates objects when there are no longer any references to them.
 
 Implementing reference counting requires a minimum set of steps to be taken.
 
 \begin{itemize}
 \item Objects must include a counter that tracks the number of references to that object.
-\item Functions to increment and decrement an objects reference count must be created.
+\item Functions to increment and decrement an object's reference count must be created.
 \item Assignment of an object to a pointer or \textit{reference} should result in correct updates to an object's reference count.
 \item Reference counts must be decremented when a program reaches the end of a given scope, since local variables are destroyed.
 \item When an object's reference count reaches zero, it is no longer reachable and can be safely destroyed.
@@ -111,29 +118,29 @@ These steps require modifications to the architecture of our compiler, as well a
 \subsection{Runtime Modifications}
 Our runtime library is implemented in C so that it can be easily called by the assembly programs created by our compiler.  The runtime library contains abstractions such as \texttt{create\_list}, \texttt{create\_dict} and \texttt{create\_object} that take care of allocating and initializing memory for a new object of the specified type.  These functions return a pointer to the memory allocated, and the pointer is \textit{tagged} to indicate that it represents a non-primitive type.  In our reference compiler, any non-primitive object must be a pointer to a C structure called \texttt{big\_pyobj}.  To support reference counts, this C structure is modified to include an int field called \texttt{ref\_ctr}.  Then all of the functions to create objects are modified to set the initial reference count to zero.
 
-To support incrementing and decrementing an object's reference count, we create corresponding functions in our runtime called \texttt{inc\_ref\_ctr} and \texttt{dec\_ref\_ctr}.  The increment function is trivial in that it simply de-references the object pointer and increments the \texttt{ref\_ctr} field.   However, the decrement function potentially has more work to do than just de-referencing the pointer and decrementing the reference count.  According to the steps for reference counting mentioned previously, we need to de-allocate an object whenever its reference count reaches zero.  To provide this behavior, the \texttt{dec\_ref\_ctr} function has to check if the reference count has reached zero, and if so, delegate to a corresponding \texttt{free\_\textit{type}} method to free an object of the given type.
+To support incrementing and decrementing an object's reference count, we create corresponding functions in our runtime called \texttt{inc\_ref\_ctr} and \texttt{dec\_ref\_ctr}.  The increment function is trivial in that it simply de-references the object pointer and increments the \texttt{ref\_ctr} field.   However, the decrement function potentially has more work to do than just de-referencing the pointer and decrementing the reference count.  According to the steps for reference counting mentioned previously, we need to deallocate an object whenever its reference count reaches zero.  To provide this behavior, the \texttt{dec\_ref\_ctr} function has to check if the reference count has reached zero, and if so, delegate to a corresponding \texttt{free\_\textit{type}} method to free an object of the given type.
 
-In the \texttt{free\_\textit{type}} functions, it is necessary to add further calls to decrement the reference counter of any objects referenced by the object being de-allocated.  For the case of a list, we have the \texttt{free\_list} function, which iterates over each element in the list and decrements its reference count.  For a dictionary, we have the \texttt{free\_dict} function, which decrements the reference counter on keys as well as values contained in the dictionary, since both can be objects.  Note that for any case of an object that references other objects, this can can result in de-allocation of the referenced object, if the only reference to it is held by the parent object.  In the worst case, this could lead to a number of de-allocations equivalent to the number of nodes in the object graph created by the parent object.  
+In the \texttt{free\_\textit{type}} functions, it is necessary to add further calls to decrement the reference counter of any objects referenced by the object being deallocated.  For the case of a list, we have the \texttt{free\_list} function, which iterates over each element in the list and decrements its reference count.  For a dictionary, we have the \texttt{free\_dict} function, which decrements the reference counter on keys as well as values contained in the dictionary, since both can be objects.  Note that for any case of an object that references other objects, this can can result in deallocation of the referenced object, if the only reference to it is held by the parent object.  In the worst case, this could lead to a number of deallocations equivalent to the number of nodes in the object graph created by the parent object.  
 
 Since every object in our system may contain references to another object, we modify our runtime to correctly increment the reference count when such as reference is established.  For example, an assignment to a list or dictionary subscript results in a call to the \texttt{set\_subscript} runtime function.  This function is modified to first decrement the reference count for any object that may have been previously referenced by the given subscript, and then increment the reference count for the new object that is assigned to the given subscript.  Similarly, a closure maintains a reference to its list of free variables, and a class object maintains a reference to its base classes.  In each case, we modify the appropriate runtime function to ensure that these reference counts are correctly maintained.  
 
-In some cases, the type definition for an object in our runtime did not aggregate a \texttt{big\_pyobj} type, and instead maintained only a pointer to the non-generic version of the type (e.g., \texttt{class\_struct}).  For this reason, significant changes were made to the runtime to ensure that any type that references another type, has a generic pointer to a \texttt{big\_pyobj} structure, so that the reference counts can be correctly maintained.  To ensure that we did not make any mistakes in this process, we create a runtime test suite that uses the abstractions provided by the runtime library to create objects, increment and decrement their reference counts and ensure that all objects are de-allocated when their reference count reaches zero.  This runtime test suite is important to unit test the runtime library, before attempting to use it from our compiler.
+In some cases, the type definition for an object in our runtime did not aggregate a \texttt{big\_pyobj} type, and instead maintained only a pointer to the non-generic version of the type (e.g., \texttt{class\_struct}).  For this reason, significant changes were made to the runtime to ensure that any type that references another type, has a generic pointer to a \texttt{big\_pyobj} structure, so that the reference counts can be correctly maintained.  To ensure that we did not make any mistakes in this process, we create a runtime test suite that uses the abstractions provided by the runtime library to create objects, increment and decrement their reference counts and ensure that all objects are deallocated when their reference count reaches zero.  This runtime test suite is important to unit test the runtime library, before attempting to use it from our compiler.
 
 Finally, in order to verify the correctness of our implementation, we create a set of abstractions on top of the system allocation functions \texttt{malloc} and \texttt{free}.  These abstractions are part of our runtime and provide us the following benefits. 
 
 \begin{enumerate}
 \item Ability to detect memory leaks
 \item Ability to track allocations by type/size
-\item Ability to track the time of allocation/de-allocation
+\item Ability to track the time of allocation/deallocation
 \end{enumerate}
 
-The abstractions are implemented in a new module appropriately called \texttt{pymem}.  Every allocation of an object in our runtime is modified to use the \texttt{pymem\_new} and \texttt{pymem\_free} instead of \texttt{malloc} and \texttt{free}. As a result of this, we can determine exactly how much memory has been allocated and what objects have still not been de-allocated, by calling the \texttt{pymem\_print\_statistics} function at any given program point.  In practice, this is only called at the end of each program to ensure that all memory has been de-allocated.  Since we can track the time of allocation and de-allocation, this module can be beneficial for investigating object lifetime as well.  
+The abstractions are implemented in a new module appropriately called \texttt{pymem}.  Every allocation of an object in our runtime is modified to use the \texttt{pymem\_new} and \texttt{pymem\_free} instead of \texttt{malloc} and \texttt{free}. As a result of this, we can determine exactly how much memory has been allocated and what objects have still not been deallocated, by calling the \texttt{pymem\_print\_statistics} function at any given program point.  In practice, this is only called at the end of each program to ensure that all memory has been deallocated.  Since we can track the time of allocation and deallocation, this module can be beneficial for investigating object lifetime as well.  
 
-The \texttt{pymem\_new} routine works by allocating slightly more memory than is requested by the user.  This extra memory is used to store a pointer to a linked list node that contains the details of the allocation, including the type of object being created, the requested size, the pointer returned by \texttt{malloc} and the time of allocation.  The caller is then returned the portion of memory immediately after this pointer.  Subsequent calls to \texttt{pymem\_free} then have access to the linked list node via the pointer, and can update the node to mark the memory as de-allocated, as well as the de-allocation time.  The memory can then be freed independently of the linked list containing the statistics. 
+The \texttt{pymem\_new} routine works by allocating slightly more memory than is requested by the user.  This extra memory is used to store a pointer to a linked list node that contains the details of the allocation, including the type of object being created, the requested size, the pointer returned by \texttt{malloc} and the time of allocation.  The caller is then returned the portion of memory immediately after this pointer.  Subsequent calls to \texttt{pymem\_free} then have access to the linked list node via the pointer, and can update the node to mark the memory as deallocated, as well as the deallocation time.  The memory can then be freed independently of the linked list containing the statistics. 
 
 \subsection{Compiler}
 
-Figure~\ref{fig-comparch} shows the compiler data flow after modifying our compiler for reference counting.  Each stage operates on an abstract syntax tree (AST).  The relevant new stages are the pre-explicate flatten stage, and the reference counting AST transformation stage.  
+Figure~\ref{fig-comparch} shows the compiler data flow after modifying our compiler for reference counting.  Each stage operates on an abstract syntax tree (AST).  The relevant new stages are the intermediate flatten stage, and the reference counting AST transformation stage.  
 
 \begin{figure}
 \begin{center}
@@ -149,30 +156,27 @@ Recall that in order to properly maintain reference counts, we need to increment
 
 The most natural way to implement this in our compiler, is to transform our input programs AST such that any assignment to a variable is preceded by a decrement to the reference count for the object the variable refers to, and is succeeded by an increment to the reference count for the newly assigned object.  This is the approach we took, but there are some subtleties with respect to where this operation is placed within the compiler.  Our initial hypothesis was that we could easily add the increment and decrement reference counter operations in the existing ``Flatten AST'' stage.  We quickly realized that because this stage is after type explication, there exist variables which are not \textit{tagged} with a type.  Since we only want to decrement reference counts for \textit{tagged} types\footnote{Actually, we only want to modify reference counts for a subset of tagged types that only includes ``big'' types. However, to simplify our implementation, we transform our AST to always call our increment and decrement runtime functions, but these functions will ignore the primitive types of \texttt{int} and \texttt{boolean}.}, the only option is to put this transformation stage before type explication.  In addition to modifying the AST prior before/after an assignment, the reference counting transformation is also responsible for determining which variables are local to a given scope and decrementing the counts for these references at the end of the given program scope.
 
-\subsection{Challenges}
-We encountered a number of interesting challenges related to our design choices in modifying the compiler and summarize them below.
-
 \subsubsection{Expressions}
-Prior to our explicate phase, complex expressions are not flattened.  This leads to problems where memory is leaked, since no assignments ever occur to temporary objects.  Listing~\ref{lst:simpleleak} shows a program that assigns the result of addition between to lists to the variable \texttt{a}.  The assignment to the variable \texttt{a} results in a corresponding increment reference count on the result of the list addition.  However, the temporary lists, \texttt{[1]} and \texttt{[2]} are leaked if we don't take any additional steps.  To overcome this problem, we introduce a intermediate flattening stage, prior to our reference counting AST transformation.   This results in the corresponding code given in Listing~\ref{lst:flattened}.
+Prior to our explicate phase, complex expressions are not flattened.  This leads to problems where memory is leaked, since no assignments ever occur to temporary objects.  Listing~\ref{lst:simpleleak} shows a program that assigns the result of addition between to lists to the variable \texttt{x}.  The assignment to the variable \texttt{x} results in a corresponding increment reference count on the result of the list addition.  However, the temporary lists, \texttt{[1]} and \texttt{[2]} are leaked if we don't take any additional steps.  To overcome this problem, we introduce a intermediate flattening stage, prior to our reference counting AST transformation.   This results in the corresponding code given in Listing~\ref{lst:flattened} after flattening.  These temporary objects are then deallocated when their corresponding references go out of scope.
 
 \begin{figure}[h!]
 \begin{lstlisting}[
 language=Python,
-frame=topline,
+frame=none,
 caption={A simple input program that leaks memory if not flattened.},
 captionpos=b,
 label=lst:simpleleak
 ]
-a = [1] + [2]
-a = 0
-print a
+x = [1] + [2]
+x = 0
+print x
 \end{lstlisting}
 \end{figure}
 
 \begin{figure}[h!]
 \begin{lstlisting}[
 language=Python,
-frame=topline,
+frame=none,
 caption={The flattened version of listing \ref{lst:simpleleak}.},
 captionpos=b,
 label=lst:flattened
@@ -180,32 +184,32 @@ label=lst:flattened
 tmp0 = [1]
 tmp1 = [2]
 tmp2 = tmp0 + tmp1
-a = tmp2
-a = 0
-print a
+x = tmp2
+x = 0
+print x
 \end{lstlisting}
 \end{figure}
 
 \subsubsection{Temporary variables}
-As a result of introducing the intermediate flattening stage, we introduce additional references to an object which hang around until the end of the given program scope.  This is undesirable because it changes the de-allocation behavior of the program from the expected behavior.  For original input program in figure~\ref{lst:simpleleak}, the expectation is that when the variable \texttt{a} is assigned the value zero, the reference count for the list object should be decremented to zero and the object de-allocated.  However, in the flattened program, this is no longer the case since the \texttt{tmp2} variable continues to reference the object.  The de-allocation is therefore delayed until the end of the current scope.  To handle this situation, we keep track of all temporary variables introduced as a result of flattening an expression.  These temporary variables are then assigned a value of zero immediately after the statement containing the expression in which they were introduced.  This will lead to an immediate decrement of the reference count after the reference counting AST transformation.  Figure~\ref{lst:fixflattened} shows the result of the flattening transformation after this change is made.
+As a result of introducing the intermediate flattening stage, we introduce additional references to an object which hang around until the end of the given scope.  This is undesirable because it changes the deallocation behavior of the program from the expected behavior.  For original input program in figure~\ref{lst:simpleleak}, the expectation is that when the variable \texttt{x} is assigned the value zero, the reference count for the list object should be decremented to zero and the object deallocated.  However, in the flattened program, this is no longer the case since the \texttt{tmp2} variable continues to reference the object.  The deallocation is therefore delayed until the end of the current scope.  To handle this situation, we keep track of all temporary variables introduced as a result of flattening an expression.  These temporary variables are then assigned a value of zero immediately after the statement containing the expression in which they were introduced.  This will lead to an immediate decrement of the reference count after the reference counting AST transformation.  Figure~\ref{lst:fixflattened} shows the result of the flattening transformation after this change is made.
 
 \begin{figure}[h!]
 \begin{lstlisting}[
 language=Python,
-frame=topline,
-caption={The flattened version of listing \ref{lst:simpleleak} with immediate de-allocation of temporary variables.},
+frame=none,
+caption={The flattened version of listing \ref{lst:simpleleak} with immediate deallocation of temporary variables.},
 captionpos=b,
 label=lst:fixflattened
 ]
 tmp0 = [1]
 tmp1 = [2]
 tmp2 = tmp0 + tmp1
-a = tmp2
+x = tmp2
 tmp2 = 0
 tmp1 = 0
 tmp0 = 0
-a = 0
-print a
+x = 0
+print x
 \end{lstlisting}
 \end{figure}
 
@@ -228,35 +232,75 @@ We modified the x86 assembly to include calls to set up our memory tracking syst
 \section{Results}
 \label{sec:results}
 
-\subsection{Execution}
+We evaluated our reference counting implementation for correctness by using the \texttt{valgrind} utility against a simple application that uses a large number of language features.  The program is given below.
 
-\subsection{Memory}
-
-\subsubsection{Valgrind results}
-For the trivial program
 \begin{verbatim}
 i = 0
 list = []
-
 while i !=  10000:
     list = list + [[i]]
     i = i + 1
+\end{verbatim}
 
-\end{verbatim}
 Without any garbage collection, valgrind reports 
+
+\footnotesize
 \begin{verbatim}
-==23467== LEAK SUMMARY:
-==23467==    definitely lost: 560,028 bytes in 20,001 blocks
-==23467==    indirectly lost: 199,004,992 bytes in 20,191 blocks
-==23467==      possibly lost: 1,375,008 bytes in 19,810 blocks
+LEAK SUMMARY:
+   definitely lost: 560,028 bytes in 20,001 blocks
+   indirectly lost: 199,004,992 bytes in 20,191 blocks
+     possibly lost: 1,375,008 bytes in 19,810 blocks
 \end{verbatim}
+\normalsize
+
 With our reference counting for the same program
+
+\footnotesize
 \begin{verbatim}
-==23831== LEAK SUMMARY:
-==23831==    definitely lost: 0 bytes in 0 blocks
-==23831==    indirectly lost: 0 bytes in 0 blocks
-==23831==      possibly lost: 0 bytes in 0 blocks
+LEAK SUMMARY:
+   definitely lost: 0 bytes in 0 blocks
+   indirectly lost: 0 bytes in 0 blocks
+     possibly lost: 0 bytes in 0 blocks
 \end{verbatim}
+\normalsize
+
+
+\subsection{Reference counting overhead}
+
+To measure the overhead associated with reference counting, we run 
+
+\subsection{De-allocation latency}
+
+The latency introduced by the \textit{dec\_ref\_ctr} is linear with the number of nodes in the object graph being deallocated.  To illustrate this, the program given in listing~\ref{lst:tree} is run with different inputs, where the input is the height of a 4-ary tree.  The number of nodes in such a tree is given by $\frac{{k}^{\left(h+1\right)}-1}{k-1}$ where $k=4$, and $h$ is the height of tree.  The results are graphed in figure~\ref{fig:treelatency}.  In typical programs, we expect the number of deallocations triggered by any given call to \textit{dec\_ref\_ctr} to be relatively small, but further evaluation of this for real world programs would be needed to prove this hypothesis.
+
+\begin{figure}[h!]
+\begin{lstlisting}[
+language=Python,
+frame=none,
+caption={An example input program that creates a tree of objects contained in lists.},
+captionpos=b,
+label=lst:tree
+]
+def fill(list, i, height):
+    if i != height:
+        j=0
+        while j != 4:
+            list[j]=[0,1,2,3]
+            fill(list[j], i+1, height)
+            j = j + 1
+    else:
+        0
+head=[0,1,2,3]
+fill(head, 0, input())
+\end{lstlisting}
+\end{figure}
+
+\begin{figure}
+\normalsize % use normal font size in the figure
+\input{treelatency.tex}
+\caption{Latency of \textit{dec\_ref\_ctr} for various size object graphs}
+\label{fig:treelatency}
+\end{figure}
 
 \section{Future work}
 \label{sec:future}

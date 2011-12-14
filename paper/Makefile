@@ -3,8 +3,7 @@
 # Makefile for the paper
 
 PAPER = paper.tex
-#FIGURES = slot_runtime.pdf
-FIGURES =
+FIGURES = treelatency.pdf
 
 SUFFIXES = .pdf .eps .gnuplot
 
