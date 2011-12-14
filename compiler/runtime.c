@@ -168,12 +168,12 @@ static void print_bmethod(pyobj obj) {
     big_pyobj* b = project_big(obj);
     printf("bound method receiver ");
     print_pyobj(b->u.bm.receiver);
-    printf("    and fun at address %X\n", b->u.bm.fun);
+    printf("    and fun at address %p\n", (void *)b->u.bm.fun);
 }
 
 static void print_fun(pyobj obj) {
     big_pyobj* b = project_big(obj);
-    printf("function at address %X\n", b->u.f.function_ptr);
+    printf("function at address %p\n", b->u.f.function_ptr);
 }
 
 static void print_pyobj(pyobj x) {
@@ -290,7 +290,7 @@ static int list_equal(list x, list y)
 */
 
 static char inside;
-static list printing_list;
+static big_pyobj *printing_list = NULL;
 
 static void print_dict(pyobj dict)
 {
@@ -299,12 +299,12 @@ static void print_dict(pyobj dict)
     if(!inside) {
         inside = 1;
         inside_reset = 1;
-        printing_list.len = 0;
-        printing_list.data = 0;
+        printing_list = create_list(inject_int(0));
+        inc_ref_ctr(inject_big(printing_list));
     }
     d = project_big(dict);
 
-    if(is_in_list(printing_list, dict)) {
+    if(is_in_list(printing_list->u.l, dict)) {
         printf("{...}");
         return;
     }
@@ -319,18 +319,23 @@ static void print_dict(pyobj dict)
             pyobj v = *(pyobj *)hashtable_iterator_value(itr);
             print_pyobj(k);
             printf(": ");
-            if (is_in_list(printing_list, v)
+            if (is_in_list(printing_list->u.l, v)
                     || equal_pyobj(v,dict)) {
                 printf("{...}");
             }
             else {
                 /* tally this dictionary in our list of printing dicts */
-                list a;
-                a.len = 1;
-                a.data = (pyobj*)pymem_new(LIST, sizeof(pyobj) * a.len);
-                a.data[0] = dict;
+                big_pyobj *list;
+                big_pyobj *new_printing_list;
+                list = create_list(inject_int(1));
+                inc_ref_ctr(inject_big(list));
+                set_subscript(inject_big(list), inject_int(0), dict);
                 /* Yuk, concatenating (adding) lists is slow! */
-                printing_list = list_add(printing_list, a);
+                new_printing_list = list_to_big(list_add(printing_list->u.l, list->u.l));
+                inc_ref_ctr(inject_big(new_printing_list));
+                dec_ref_ctr(inject_big(list));
+                dec_ref_ctr(inject_big(printing_list));
+		printing_list = new_printing_list;
                 print_pyobj(v);
             }
             if(i != max - 1)
@@ -342,8 +347,8 @@ static void print_dict(pyobj dict)
 
     if(inside_reset) {
         inside = 0;
-        printing_list.len = 0;
-        printing_list.data = 0;
+        dec_ref_ctr(inject_big(printing_list));
+	printing_list = NULL;
     }
 }
 
@@ -1379,9 +1384,8 @@ void release(big_pyobj* o) {
 void inc_ref_ctr(pyobj v) {
     if (is_big(v)) {
         big_pyobj *val = project_big(v);
-        //printf("incrementing ref_ctr at %d addr %d on ", val->ref_ctr, val);
-        //print_any(v);
         val->ref_ctr ++;
+	//fprintf(stderr,"inc: %p: refcount is now %d\n", v, val->ref_ctr);
     }
 }
 
@@ -1393,6 +1397,7 @@ void dec_ref_ctr_rec(pyobj v) {
             dec_ref_ctr_rec(v);
         }
         val->ref_ctr --;
+	//fprintf(stderr,"dec: %p: refcount is now %d\n", v, val->ref_ctr);
         if ( val->ref_ctr < 0 ) {
             fprintf(stderr,"too many dec_ref on big_pyobj: ");
             print_any(v);
@@ -1408,20 +1413,22 @@ void dec_ref_ctr(pyobj v) {
     struct timeval start, end, result;
     int ret;
 
-    ret = gettimeofday(&start, NULL);
-    assert (ret > -1);
-    dec_ref_ctr_rec(v);
-    ret = gettimeofday(&end, NULL);
-    assert (ret > -1);
-    timeval_subtract(&result, &end, &start);
+    if (is_big(v)) {
+        ret = gettimeofday(&start, NULL);
+        assert (ret > -1);
+        dec_ref_ctr_rec(v);
+        ret = gettimeofday(&end, NULL);
+        assert (ret > -1);
+        timeval_subtract(&result, &end, &start);
 
-    if (result.tv_sec > decref_latency.tv_sec || 
-        (result.tv_sec == decref_latency.tv_sec &&
-         result.tv_usec > decref_latency.tv_usec)
-       )
-    {
-        decref_latency.tv_sec = result.tv_sec;
-        decref_latency.tv_usec = result.tv_usec;
+        if (result.tv_sec > decref_latency.tv_sec || 
+            (result.tv_sec == decref_latency.tv_sec &&
+             result.tv_usec > decref_latency.tv_usec)
+           )
+        {
+            decref_latency.tv_sec = result.tv_sec;
+            decref_latency.tv_usec = result.tv_usec;
+        }
     }
 }
 
