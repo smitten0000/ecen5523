@@ -6,9 +6,12 @@ if [ "$#" -ne "1" ] ; then
   exit 1
 fi
 
-PYFILE=$1
+PYFILE=`basename $1`
 BASENAME=`echo "$PYFILE" | cut -f1 -d.`
 SFILE="${BASENAME}.s"
 
-./compile.py $PYFILE
-gcc -o "$BASENAME" "$SFILE" -lm *.c -pg -m32
+echo ./compile.py "$PYFILE"
+./compile.py "$PYFILE"
+
+echo gcc -g -o "$BASENAME" "$SFILE" *.c -lm -m32
+gcc -g -o "$BASENAME" "$SFILE" *.c -lm -m32

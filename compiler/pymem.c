@@ -114,6 +114,10 @@ void pymem_shutdown()
     assert (ret > -1);
     fprintf (output_fd, "<--- %s: pymem_shutdown: %s\n", format_tv(&tv), cmdline);
 
+    if (cmdline != NULL) {
+        free(cmdline);
+        cmdline = NULL;
+    }
 
     /* now we can close the output file */
     if (output_fd != NULL) {

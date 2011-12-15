@@ -302,7 +302,6 @@ Finally, heapification presents some unique challenges that require additional w
 \subsection{Correctness}
 We evaluated our reference counting implementation for correctness by using the \texttt{valgrind} utility against a simple application that uses a large number of language features.  This program is given in listing~\ref{lst:allfeatures}.  Without garbage collection, valgrind reports many leaks.  With reference counting, valgrind reports only a single leak for the same program.  The valgrind results are given in figure~\ref{fig:valgrind}.
 
-
 \begin{figure}[ht]
 \footnotesize
 \begin{verbatim}

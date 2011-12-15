@@ -10,6 +10,9 @@
  * infrastructure.
  */
 
+void incref (big_pyobj *obj) { inc_ref_ctr(inject_big(obj)); }
+void decref (big_pyobj *obj) { dec_ref_ctr(inject_big(obj)); }
+
 int main (int argc, char *argv[])
 {
     big_pyobj *A, *B, *C;
@@ -23,16 +26,16 @@ int main (int argc, char *argv[])
      */
     pymem_init();
     A_parents = create_list(inject_int(0));
-    inc_ref_ctr(A_parents);
+    incref(A_parents);
 
     A = create_class(inject_big(A_parents));
-    inc_ref_ctr(A);
+    incref(A);
     assert (A_parents->ref_ctr == 2);
 
-    dec_ref_ctr(A);
+    decref(A);
     assert (A_parents->ref_ctr == 1);
 
-    dec_ref_ctr(A_parents);
+    decref(A_parents);
 
     pymem_print_stats();
     pymem_shutdown();
@@ -45,32 +48,32 @@ int main (int argc, char *argv[])
      */
     pymem_init();
     A_parents = create_list(inject_int(0));
-    inc_ref_ctr(A_parents);
+    incref(A_parents);
 
     A = create_class(inject_big(A_parents));
-    inc_ref_ctr(A);
+    incref(A);
     assert (A_parents->ref_ctr == 2);
 
     B_parents = create_list(inject_int(1));
-    inc_ref_ctr(B_parents);
+    incref(B_parents);
     set_subscript(inject_big(B_parents), inject_int(0), inject_big(A));
     assert (A->ref_ctr == 2);
 
     B = create_class(inject_big(B_parents));
-    inc_ref_ctr(B);
+    incref(B);
     assert (B_parents->ref_ctr == 2);
 
-    dec_ref_ctr(A_parents);
+    decref(A_parents);
     assert (A_parents->ref_ctr == 1);
 
-    dec_ref_ctr(A);
+    decref(A);
     assert (A->ref_ctr == 1);
 
-    dec_ref_ctr(B_parents);
+    decref(B_parents);
     assert (B_parents->ref_ctr == 1);
 
     pymem_print_stats();
-    dec_ref_ctr(B);  // everything should go away at this point.
+    decref(B);  // everything should go away at this point.
     pymem_print_stats();
     pymem_shutdown();
 
@@ -82,24 +85,24 @@ int main (int argc, char *argv[])
      */
     pymem_init();
     list = create_list(inject_int(0));
-    inc_ref_ctr(list);
+    incref(list);
 
     A_parents = create_list(inject_int(0));
-    inc_ref_ctr(A_parents);
+    incref(A_parents);
 
     A = create_class(inject_big(A_parents));
-    inc_ref_ctr(A);
+    incref(A);
     assert (A_parents->ref_ctr == 2);
 
     set_attr(inject_big(A), "a", inject_big(list));
-    dec_ref_ctr(list);                   // the list should not go away here.
+    decref(list);                   // the list should not go away here.
     assert (list->ref_ctr == 1);
 
-    dec_ref_ctr(A_parents);
+    decref(A_parents);
     assert (A_parents->ref_ctr == 1);
 
     pymem_print_stats();
-    dec_ref_ctr(A);                      // now everything should be de-allocated.
+    decref(A);                      // now everything should be de-allocated.
     pymem_print_stats();
     pymem_shutdown();
 }

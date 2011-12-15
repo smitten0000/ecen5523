@@ -11,13 +11,17 @@
  * infrastructure.
  */
 
+void incref (big_pyobj *obj) { inc_ref_ctr(inject_big(obj)); }
+void decref (big_pyobj *obj) { dec_ref_ctr(inject_big(obj)); }
+
+
 void make_list ()
 {
     big_pyobj *list = create_list(inject_int(100));
-    inc_ref_ctr(list);
+    incref(list);
     // comment out the decref and you'll see how much more memory is used.
     // use "top", and 'O' then 'q'<Enter> to sort by RSS (resident set size)
-    dec_ref_ctr(list);
+    decref(list);
 }
 
 int main (int argc, char *argv[])

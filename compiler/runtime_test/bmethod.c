@@ -10,6 +10,9 @@
  * infrastructure.
  */
 
+void incref (big_pyobj *obj) { inc_ref_ctr(inject_big(obj)); }
+void decref (big_pyobj *obj) { dec_ref_ctr(inject_big(obj)); }
+
 int dummy_function (int x)
 {
     return x;
@@ -42,47 +45,47 @@ int main (int argc, char *argv[])
     pymem_init();
 
     freevars = create_list(inject_int(0));
-    inc_ref_ctr(freevars);
+    incref(freevars);
 
     f = create_closure(dummy_function, inject_big(freevars));
-    inc_ref_ctr(f);
+    incref(f);
 
     A_parents = create_list(inject_int(0));
-    inc_ref_ctr(A_parents);
+    incref(A_parents);
 
     A = create_class(inject_big(A_parents));
-    inc_ref_ctr(A);
+    incref(A);
     assert (A_parents->ref_ctr == 2);
 
     set_attr(inject_big(A), "f", inject_big(f));
     assert (f->ref_ctr == 2);
 
     a = create_object(inject_big(A));
-    inc_ref_ctr(a);
+    incref(a);
 
     bmethod = project_big(get_attr(inject_big(a), "f"));
-    inc_ref_ctr(bmethod);
+    incref(bmethod);
     assert (a->ref_ctr == 2);
     assert (f->ref_ctr == 3);
 
-    dec_ref_ctr(freevars);
+    decref(freevars);
     assert (freevars->ref_ctr == 1);
     
-    dec_ref_ctr(f);
+    decref(f);
     assert (f->ref_ctr == 2);
 
-    dec_ref_ctr(A_parents);
+    decref(A_parents);
     assert(A_parents->ref_ctr == 1);
 
-    dec_ref_ctr(A);
+    decref(A);
     assert(A->ref_ctr == 1);
 
-    dec_ref_ctr(a);
+    decref(a);
     assert(a->ref_ctr == 1);
 
     // at this point only the unbound method is keeping stuff alive.
     pymem_print_stats();
-    dec_ref_ctr(bmethod);
+    decref(bmethod);
     pymem_print_stats();
     pymem_shutdown();
 }
