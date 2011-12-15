@@ -3,7 +3,7 @@
 # Makefile for the paper
 
 PAPER = paper.tex
-FIGURES = treelatency.pdf
+FIGURES = treelatency.pdf overhead.pdf
 
 SUFFIXES = .pdf .eps .gnuplot
 

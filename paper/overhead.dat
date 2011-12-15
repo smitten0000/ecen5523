@@ -1,0 +1,4 @@
+time "No memory management" "Reference counting"
+sys 0.160 0.324
+user 0.236 2.256
+real 0.400 2.586
